@@ -17,15 +17,21 @@
 | ADR-011 | Vestiário híbrido: monta no jogo, escolhe no painel | Aceito | 2026-09-01 |
 | ADR-012 | Combate de presentes: subidas e descidas se anulam, anda o líquido | Aceito | 2026-09-01 |
 
+## Resolvidas no Bloco 2
+- **Como o HUD mostra o combate (ADR-012).** Disputa contestada: o painel
+  lateral mostra o líquido grande e ganha etiqueta `DISPUTA` com as duas somas,
+  resultado primeiro e motivo depois, 4s em vez de 3s. Empate exato: selo
+  `EMPATE` dourado espelhado nas duas laterais, com pop de escala.
+  O motivo do segundo é o que não era óbvio: `COMBATE_ANULADO` chega **sem
+  nenhum `PRESENTE` junto**, porque delta 0 não existe no contrato. Sem
+  tratamento dedicado, a tela fica muda no exato momento em que mais gente
+  mandou presente ao mesmo tempo, e isso lê como travamento.
+
 ## Decisões pendentes
 - **O túnel é mesmo necessário?** O jogo roda no Roblox Studio, na mesma máquina
   que a ponte. A restrição de `localhost` que justifica o ADR-002 nunca foi
   testada no Studio. Cinco minutos de teste decidem se o túnel some, junto com a
   única exposição do sistema à internet e um terço do orçamento de latência.
-- **Como o HUD mostra o combate.** O ADR-012 cria dois estados novos que o
-  espectador precisa entender na tela: disputa contestada (a animação que toca
-  não é a do presente dele) e empate exato (ninguém anda). Se isso não aparecer,
-  parece falha. Decisão de design do Bloco 2.
 
 - **Roupa clássica própria (80 Robux por upload).** Adiada por padrão pela regra
   de custo. O campo `roupaCustomizada` já existe no schema. Decisão do dono.
