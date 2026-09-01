@@ -58,9 +58,9 @@ export function App() {
       definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios });
       // O que a ponte registrou ANTES do painel abrir. O que vem depois chega
       // pelo SSE, e o hook junta os dois.
-      api.logs().then((linhas) => fluxo.definirLogs(
-        (atuais) => [...atuais, ...linhas.map((l) => ({ ...l, origem: "ponte" }))],
-      )).catch(() => {});
+      api.logs()
+        .then((linhas) => fluxo.juntarLogs(linhas.map((l) => ({ ...l, origem: "ponte" }))))
+        .catch(() => {});
       definirPreset((atual) => atual ?? presets[0] ?? null);
       definirErroDeCarga(null);
     } catch (falha) {

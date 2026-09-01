@@ -11,8 +11,18 @@
  * Ver `docs/11_SEGURANCA`, camada 2.
  */
 
-/** A ponte roda em localhost. Nenhuma chave entra aqui — só endereço. */
-const BASE = import.meta.env?.VITE_BRIDGE_URL ?? "http://127.0.0.1:8788";
+/**
+ * Vazio significa MESMA ORIGEM, e é o caminho normal: o servidor de
+ * desenvolvimento do Vite encaminha `/api` para a ponte (ver vite.config.js).
+ *
+ * Sem isso o painel viveria em :5173 chamando :8788, que para o navegador são
+ * origens diferentes, e tudo morreria em CORS. `VITE_BRIDGE_URL` existe para
+ * quem servir o painel de outro jeito e precisar apontar direto — aí a ponte
+ * teria que autorizar a origem, o que é uma decisão que ninguém tomou ainda.
+ *
+ * Nenhuma chave entra aqui: o bundle do Vite é público por definição.
+ */
+const BASE = import.meta.env?.VITE_BRIDGE_URL ?? "";
 
 /** Erro com o código curto do contrato de erro de `docs/07_APIS`. */
 export class ErroDaPonte extends Error {

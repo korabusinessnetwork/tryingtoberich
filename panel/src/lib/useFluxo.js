@@ -30,6 +30,25 @@ export function useFluxo() {
    * junto, e o log da ponte para de chegar exatamente quando ele seria mais
    * útil. O painel precisa contar a própria versão dos fatos.
    */
+  /**
+   * Junta linhas ao log sem repetir.
+   *
+   * O painel busca o backlog em `/api/logs` E recebe as linhas novas pelo SSE.
+   * O que a ponte registrar entre a conexão do fluxo e a resposta da busca
+   * chega pelos dois caminhos, com o mesmo id. Sem esta checagem a linha
+   * aparece duas vezes na tela — e o React reclama de chave repetida, que foi
+   * como isto apareceu.
+   */
+  const juntarLogs = useCallback((novas) => {
+    definirLogs((atuais) => {
+      const vistos = new Set(atuais.map((l) => l.id));
+      const inéditas = novas.filter((l) => !vistos.has(l.id));
+      return [...atuais, ...inéditas]
+        .sort((a, b) => new Date(b.em) - new Date(a.em))
+        .slice(0, TETO_DE_LOG);
+    });
+  }, []);
+
   const registrarLocal = useCallback((nivel, evento, dados = {}) => {
     proximoId.current += 1;
     definirLogs((atuais) =>
@@ -67,9 +86,7 @@ export function useFluxo() {
 
     ouvir("estado", definirEstado);
 
-    ouvir("log", (linha) => {
-      definirLogs((atuais) => [{ ...linha, origem: "ponte" }, ...atuais].slice(0, TETO_DE_LOG));
-    });
+    ouvir("log", (linha) => juntarLogs([{ ...linha, origem: "ponte" }]));
 
     ouvir("presente", (dados) => {
       proximoId.current += 1;
@@ -92,7 +109,7 @@ export function useFluxo() {
     });
 
     return () => fonte.close();
-  }, [registrarLocal]);
+  }, [registrarLocal, juntarLogs]);
 
-  return { estado, eventos, naoMapeados, logs, conectado, registrarLocal, definirLogs };
+  return { estado, eventos, naoMapeados, logs, conectado, registrarLocal, juntarLogs, definirLogs };
 }
