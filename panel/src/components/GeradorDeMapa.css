@@ -135,3 +135,20 @@
   font-size: 12px;
   padding: 0 10px;
 }
+
+/* Confirmação armada: o mesmo âmbar de "olha isso" do resto do painel, e o
+   motivo escrito ao lado. Nunca vermelho — trocar de mapa não é erro, só tem
+   consequência que o streamer precisa saber antes de clicar de novo. */
+.gerador-de-mapa-item-botao-armado {
+  border-color: var(--estado-atencao);
+  color: var(--estado-atencao);
+  font-weight: 600;
+}
+
+.gerador-de-mapa-item-alerta {
+  flex-basis: 100%;
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--estado-atencao);
+}

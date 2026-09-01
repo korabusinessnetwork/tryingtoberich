@@ -29,10 +29,12 @@ test/     testes dos contratos (npm test)
 ## Rodar
 ```
 npm install      # instala a raiz e o workspace bridge/
-npm test         # 141 testes
+npm test         # 190 testes
 npm run validar  # relatório do estado dos contratos e do acervo
 npm run luau     # gate de sintaxe do jogo, sem abrir o Studio
 npm run gerar    # gera o índice de animações e os tokens visuais
+npm run painel:gate  # gate estrutural do painel: compila os 11 componentes
+npm run painel       # abre o painel em http://127.0.0.1:5173
 
 cp .env.example .env   # e preencha BRIDGE_TOKEN
 npm run semear         # instala o preset de exemplo em data/presets/
@@ -47,22 +49,24 @@ O último comando sobe a ponte inteira tocando um cenário de fixture em loop,
 3. **O valor do presente sugere, o streamer decide** (ADR-007).
 
 ## Estado
-**Blocos 0, 1 e 2 concluídos.** Os contratos existem, a ponte funciona ponta a
-ponta e o jogo está escrito: long-poll em Luau, movimento híbrido com watchdog,
-rastreio de plataforma por colisão, construtor de mapa que se recusa a entregar
-torre intransponível, as 20 animações, vestiário, HUD vertical e câmera.
+**Blocos 0, 1, 2 e 3 concluídos.** Os três processos existem: os contratos, a
+ponte, o jogo e o painel.
 
-Falta o **Bloco 3** (`panel/`, React + Vite). Ele consome só os contratos e a
-API local da ponte. Ver `docs/09_BACKLOG/`.
+Falta o **Bloco 4 — Validação**, que é onde este projeto encontra a realidade:
+abrir no Studio, abrir no navegador, medir a latência de verdade e fazer uma
+live de teste. Ver `docs/09_BACKLOG/`.
 
-O Bloco 2 foi construído por 9 agentes em paralelo, com dono exclusivo por
-arquivo. O relatório da síntese, com os defeitos que a validação achou, está em
-`docs/09_BACKLOG/validacao-bloco-2.md`.
+Os blocos 2 e 3 foram construídos por 15 agentes em paralelo, com dono
+exclusivo por arquivo. Os relatórios de síntese, com os defeitos que a
+validação achou em cada um, estão em `docs/09_BACKLOG/validacao-bloco-2.md` e
+`validacao-bloco-3.md`.
 
 Quatro coisas dependem de alguém agir fora do código:
-1. **Nada disto rodou dentro do Roblox ainda.** `npm run luau` prova que os 39
-   arquivos compilam; não prova que a torre sobe nem que o HUD lê no celular.
-   A primeira sessão no Studio é a validação de verdade.
+1. **Nada disto rodou de verdade ainda.** `npm run luau` prova que os 39
+   arquivos Luau compilam e `npm run painel:gate` que os 11 componentes
+   compõem; nenhum dos dois prova que a torre sobe, que o HUD lê no celular ou
+   que o painel é legível em 2 segundos. Abrir o Studio e o navegador é a
+   validação que falta.
 2. **Nenhum mapa pode ir ao ar** enquanto o acervo não for enviado e aprovado no
    Roblox. `npm run validar` mostra o que falta.
 3. **Testar se o HttpService do Studio alcança `127.0.0.1`.** Se alcançar, o

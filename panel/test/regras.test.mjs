@@ -14,10 +14,12 @@ import {
   SLOTS,
   avisoDeCurva,
   avisoDeDirecao,
+  combateDoEvento,
   corDaFaixa,
   faixaDeMoedas,
   formatarDelta,
   formatarLatencia,
+  medianaDeLatencia,
   presentesRepetidos,
   saudeDaLatencia,
   slotsDoPreset,
@@ -250,4 +252,54 @@ test("latência ausente vira travessão, não NaN na tela do streamer", () => {
   assert.equal(formatarLatencia(619.6), "620ms");
   assert.equal(formatarLatencia(null), "—");
   assert.equal(formatarLatencia(undefined), "—");
+});
+
+/* -------------------------------------------------------------- */
+/* ADR-012 — combate, e a latência do Princípio nº1                */
+/* -------------------------------------------------------------- */
+
+test("os dois formatos de combate viram a mesma leitura (ADR-012)", () => {
+  // Eles chegam por caminhos diferentes de propósito: disputa contestada vem
+  // junto do presente que moveu o boneco; empate exato vem sozinho, porque
+  // delta 0 não existe no contrato com o jogo.
+  const contestado = combateDoEvento({
+    delta: -49,
+    disputa: { contestado: true, somaSubida: 19, somaDescida: -68, liquido: -49, participantes: 5 },
+  });
+  assert.deepEqual(contestado, {
+    empate: false, somaSubida: 19, somaDescida: -68, liquido: -49, participantes: 5,
+  });
+
+  const empate = combateDoEvento({ anulado: true, somaSubida: 40, somaDescida: -40, participantes: 2 });
+  assert.equal(empate.empate, true);
+  assert.equal(empate.liquido, 0, "empate é zero por definição: ninguém andou");
+});
+
+test("presente comum não é disputa: combate de um lado só devolve null", () => {
+  assert.equal(combateDoEvento({ delta: 40, disputa: null }), null);
+  assert.equal(combateDoEvento({ delta: 40 }), null);
+  assert.equal(
+    combateDoEvento({ delta: 15, disputa: { contestado: false, somaSubida: 15, somaDescida: 0 } }),
+    null,
+    "sem os dois lados ninguém brigou, e a etiqueta de disputa se gastaria à toa",
+  );
+});
+
+test("a latência típica é a mediana, e um pico não pinta o painel de vermelho", () => {
+  // Nove presentes no prazo e um pico de 3s: a média daria 840ms, acima do
+  // alvo. A mediana diz o que a plateia está sentindo.
+  const amostras = [520, 540, 560, 580, 600, 610, 620, 640, 660, 3000];
+  assert.equal(medianaDeLatencia(amostras), 605);
+  assert.equal(saudeDaLatencia(medianaDeLatencia(amostras)), "atencao");
+
+  const media = amostras.reduce((s, v) => s + v, 0) / amostras.length;
+  assert.equal(saudeDaLatencia(media), "atencao");
+  assert.ok(media > medianaDeLatencia(amostras), "a média é arrastada pelo pico; a mediana não");
+});
+
+test("sem amostra válida a latência é desconhecida, não zero", () => {
+  // Zero seria a melhor latência possível, e envenenaria a leitura para baixo.
+  assert.equal(medianaDeLatencia([]), null);
+  assert.equal(medianaDeLatencia([undefined, null, NaN]), null);
+  assert.equal(saudeDaLatencia(medianaDeLatencia([])), "desconhecida");
 });

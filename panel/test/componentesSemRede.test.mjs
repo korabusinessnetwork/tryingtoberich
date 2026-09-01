@@ -126,3 +126,24 @@ export function MonitorAoVivo() { return null; }
   const comentarioEDepoisCodigo = `${docComentario}\nconst fonte = new EventSource("/api/sessao/stream");`;
   assert.ok(chamadaDeRedeDireta(comentarioEDepoisCodigo), "removeu a chamada de verdade junto com o comentário");
 });
+
+test("nenhum componente usa diálogo nativo do navegador", async () => {
+  // window.confirm/alert/prompt travam o navegador inteiro, e o painel fica
+  // aberto numa segunda tela DURANTE a live. Confirmação existe — o Stop da
+  // barra de sessão e a troca de mapa têm — mas em dois tempos, dentro da
+  // tela, no mesmo âmbar do resto do painel.
+  const arquivos = (await readdir(DIR_COMPONENTES)).filter((f) => f.endsWith(".jsx"));
+
+  const infratores = [];
+  for (const arquivo of arquivos) {
+    const fonte = semComentarios(await readFile(path.join(DIR_COMPONENTES, arquivo), "utf8"));
+    if (/\b(window\.)?(confirm|alert|prompt)\s*\(/.test(fonte)) infratores.push(arquivo);
+  }
+
+  assert.deepEqual(infratores, []);
+});
+
+test("o teste de diálogo nativo morde de verdade", () => {
+  const mentira = 'function x() { if (window.confirm("tem certeza?")) return; }';
+  assert.equal(/\b(window\.)?(confirm|alert|prompt)\s*\(/.test(semComentarios(mentira)), true);
+});

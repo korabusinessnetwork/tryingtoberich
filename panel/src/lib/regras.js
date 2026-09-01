@@ -126,6 +126,74 @@ export function presentesRepetidos(preset) {
   return [...repetidos];
 }
 
+/* ---------------------------------------------------------------- */
+/* ADR-012 — combate de presentes                                    */
+/* ---------------------------------------------------------------- */
+
+const numeroOuZero = (valor) => (Number.isFinite(valor) ? valor : 0);
+
+const contarParticipantes = (valor) => {
+  if (Array.isArray(valor)) return valor.length;
+  return Number.isFinite(valor) ? valor : null;
+};
+
+/**
+ * Normaliza os dois formatos de combate do ADR-012 numa leitura só.
+ *
+ * Eles chegam por caminhos diferentes de propósito: disputa contestada vem
+ * junto de um presente que moveu o boneco, e empate exato vem sozinho, porque
+ * delta 0 não existe no contrato com o jogo. Quem desenha não deveria precisar
+ * saber disso.
+ *
+ * Devolve `null` para presente comum — combate de um lado só não é disputa:
+ * ninguém brigou, e mostrar "disputa" ali gastaria a etiqueta à toa.
+ *
+ * Mora aqui e não no componente porque é regra do ADR, não desenho: o HUD do
+ * jogo faz a mesma leitura em Luau, e uma delas divergir mostraria coisas
+ * diferentes nas duas telas para o mesmo evento.
+ */
+export function combateDoEvento(evento) {
+  if (evento?.anulado) {
+    return {
+      empate: true,
+      somaSubida: numeroOuZero(evento.somaSubida),
+      somaDescida: numeroOuZero(evento.somaDescida),
+      liquido: 0,
+      participantes: contarParticipantes(evento.participantes),
+    };
+  }
+
+  const disputa = evento?.disputa;
+  if (!disputa?.contestado) return null;
+
+  return {
+    empate: false,
+    somaSubida: numeroOuZero(disputa.somaSubida),
+    somaDescida: numeroOuZero(disputa.somaDescida),
+    liquido: Number.isFinite(disputa.liquido) ? disputa.liquido : numeroOuZero(evento.delta),
+    participantes: contarParticipantes(disputa.participantes),
+  };
+}
+
+/* ---------------------------------------------------------------- */
+/* Latência — o Princípio nº1                                        */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Mediana, não média.
+ *
+ * Um pico isolado de 3s arrastaria a média em 300ms e pintaria o painel de
+ * vermelho com nove presentes dentro do prazo. A mediana descreve o que a
+ * plateia está sentindo; o pico aparece na faixa de amostras, ao lado.
+ */
+export function medianaDeLatencia(valores) {
+  const validos = (valores ?? []).filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+  if (validos.length === 0) return null;
+
+  const meio = Math.floor(validos.length / 2);
+  return validos.length % 2 === 0 ? (validos[meio - 1] + validos[meio]) / 2 : validos[meio];
+}
+
 /** Milissegundos como o streamer lê de canto de olho: inteiro, com unidade. */
 export const formatarLatencia = (ms) => (Number.isFinite(ms) ? `${Math.round(ms)}ms` : "—");
 

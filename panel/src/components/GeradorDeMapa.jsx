@@ -30,7 +30,16 @@ export function GeradorDeMapa({
   travado = false,
 }) {
   const [descricao, definirDescricao] = useState("");
+  // Qual mapa está com a troca armada, esperando o segundo clique. Mesmo padrão
+  // do Stop na barra de sessão: confirmação DENTRO da tela. window.confirm
+  // travaria o navegador inteiro num painel que fica aberto durante a live.
+  const [armado, definirArmado] = useState(null);
   const gerandoAntes = useRef(gerando);
+
+  // Sessão que termina desarma sozinha: a confirmação existia só por causa dela.
+  useEffect(() => {
+    if (!travado) definirArmado(null);
+  }, [travado]);
 
   // Limpa o campo só quando uma geração TERMINA COM SUCESSO. Em erro, o texto
   // fica — o streamer não devia digitar tudo de novo para tentar de novo.
@@ -54,14 +63,11 @@ export function GeradorDeMapa({
     // avisar não bloqueia (mesmo espírito de R3), mas exige confirmação
     // explícita quando a sessão está rodando, que é a hora em que o streamer
     // pode achar que o painel quebrou ao não ver nada mudar no jogo.
-    if (travado) {
-      const confirmar = window.confirm(
-        `Trocar para "${mapa.nome}" agora não muda o mapa dentro do Roblox: ` +
-          "a sessão está rodando e a troca só vale na próxima entrada na " +
-          "experiência. Trocar mesmo assim?",
-      );
-      if (!confirmar) return;
+    if (travado && armado !== mapa.mapaId) {
+      definirArmado(mapa.mapaId);
+      return;
     }
+    definirArmado(null);
     aoEscolher(mapa.mapaId);
   }
 
@@ -129,13 +135,23 @@ export function GeradorDeMapa({
                     )}
                   </div>
                   <button
-                    className="gerador-de-mapa-item-botao"
+                    className={
+                      armado === mapa.mapaId
+                        ? "gerador-de-mapa-item-botao gerador-de-mapa-item-botao-armado"
+                        : "gerador-de-mapa-item-botao"
+                    }
                     type="button"
                     onClick={() => escolher(mapa)}
                     disabled={ativo}
                   >
-                    {ativo ? "Em uso" : "Usar este mapa"}
+                    {ativo ? "Em uso" : armado === mapa.mapaId ? "Confirmar troca" : "Usar este mapa"}
                   </button>
+                  {armado === mapa.mapaId && (
+                    <p className="gerador-de-mapa-item-alerta" role="status">
+                      A sessão está rodando: a troca só vale quando você reentrar na experiência
+                      do Roblox. Reconstruir 250 plataformas ao vivo travaria a partida (F4).
+                    </p>
+                  )}
                 </li>
               );
             })}

@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  NOME_DA_FAIXA,
-  corDaFaixa,
-  faixaDeMoedas,
-  formatarDelta,
-  formatarLatencia,
-  saudeDaLatencia,
-} from "../lib/regras.js";
+import { NOME_DA_FAIXA, combateDoEvento, corDaFaixa, faixaDeMoedas, formatarDelta, formatarLatencia, medianaDeLatencia, saudeDaLatencia } from "../lib/regras.js";
 import "./MonitorAoVivo.css";
 
 /**
@@ -86,43 +79,6 @@ function amostrasDeLatencia(eventos, janela) {
  * prazo. A mediana descreve o que a plateia está sentindo; o pico aparece
  * separado, no "pior", que é onde ele significa alguma coisa.
  */
-function medianaDeLatencia(valores) {
-  if (valores.length === 0) return NaN;
-  const ordenados = [...valores].sort((a, b) => a - b);
-  const meio = Math.floor(ordenados.length / 2);
-  if (ordenados.length % 2 === 1) return ordenados[meio];
-  return (ordenados[meio - 1] + ordenados[meio]) / 2;
-}
-
-/**
- * Normaliza os dois formatos de combate do ADR-012 numa leitura só.
- *
- * Devolve `null` para presente comum — combate de um lado só não é disputa:
- * ninguém brigou, e mostrar "disputa" ali gastaria a etiqueta à toa.
- */
-function combateDoEvento(evento) {
-  if (evento?.anulado) {
-    return {
-      empate: true,
-      somaSubida: numero(evento.somaSubida),
-      somaDescida: numero(evento.somaDescida),
-      liquido: 0,
-      participantes: contarParticipantes(evento.participantes),
-    };
-  }
-
-  const disputa = evento?.disputa;
-  if (!disputa?.contestado) return null;
-
-  return {
-    empate: false,
-    somaSubida: numero(disputa.somaSubida),
-    somaDescida: numero(disputa.somaDescida),
-    liquido: Number.isFinite(disputa.liquido) ? disputa.liquido : numero(evento.delta),
-    participantes: contarParticipantes(disputa.participantes),
-  };
-}
-
 const classeDaDirecao = (delta) => (delta > 0 ? "monitor--subida" : delta < 0 ? "monitor--descida" : "monitor--neutro");
 
 const classes = (...nomes) => nomes.filter(Boolean).join(" ");

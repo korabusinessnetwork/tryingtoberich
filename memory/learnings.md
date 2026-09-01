@@ -68,6 +68,31 @@ grandes porque a live é vista no celular. Aplicar isso ao HUD do jogo.
   `Size.Y` como espessura; as animações usaram Attachment e WeldConstraint
   porque leram que `movimento.lua` ancora a raiz durante o Tween.
 
+## 2026-09-01 — Bloco 3: o mesmo padrão, de novo
+Quinze agentes em paralelo ao todo, entre os blocos 2 e 3. Os achados se
+repetiram com uma constância que vale registrar como regra, não como anedota:
+
+- **Todo guarda que eu escrevi sem verificar acabou vazio.** O gate do painel
+  compilava só o que o App alcançava; o teste de RemoteEvent do Bloco 2 casava
+  por padrão de chamada que o código real não usa. Nos dois casos o verde era
+  falso. Desde então todo teste de varredura ganha um segundo teste ao lado
+  provando que ele acusa, e isso já pegou os dois.
+- **Paralelismo não gera conflito de escrita, gera duplicação silenciosa.** No
+  Bloco 2 foi o `prenderNoPersonagem` em dois módulos; no Bloco 3 foi o aviso
+  de curva escrito duas vezes e a fórmula do ADR-009 numa terceira cópia. Dono
+  exclusivo por arquivo resolve merge, não resolve contrato.
+- **A duplicação mais perigosa é a que não quebra nada.** A cópia da fórmula no
+  painel só desenharia uma barra mentindo sobre um mapa que a ponte já aprovou.
+  Nada falharia. As duplicações que quebram se resolvem sozinhas.
+- **Instruir o agente a reportar em vez de contornar continua sendo o que
+  funciona.** Todas as lacunas do compartilhado — efeito permanente, tokens do
+  painel, flash da Fênix, e agora os helpers do painel — vieram documentadas no
+  relatório em vez de escondidas no código.
+- **Agente lendo o arquivo do colega achou o que eu não teria achado.** O
+  construtor de mapa escolheu Block em vez de Cylinder por causa de como o
+  rastreio lê `Size.Y`; o agente do aviso de curva viu a duplicação no cartão
+  de slot. Nenhum dos dois estava na tarefa deles.
+
 ## Conferido no Bloco 1, falta confirmar ao vivo
 As fixtures de `data/fixtures/tiktok-cru/` foram reescritas contra a forma real
 do `tiktok-live-connector` 2.4.4 (`WebcastGiftMessage` de `tiktok-live-proto/v3`):

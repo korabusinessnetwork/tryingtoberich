@@ -93,15 +93,34 @@ arquivo. Relatório da síntese em `validacao-bloco-2.md`, neste diretório.
 - [ ] **Som:** `des_ancora` pede som de metal e o `SoundId` está vazio de
       propósito — som no Roblox também é asset com moderação (ADR-004).
 
-## Bloco 3 — Painel (`panel/`)
-- [ ] Seletor de modalidade e botão start/stop
-- [ ] Editor de preset com os 6 slots
-- [ ] Seletor de look: lista os looks salvos com a grade de ícones das peças
-- [ ] Seletor de presente com busca, ícone oficial e cor por faixa
-- [ ] Seletor de animação com filtro por direção e peso
-- [ ] Aviso de vínculo fora da curva (não bloqueante)
-- [ ] Gerador de mapa com pré-visualização do spec
-- [ ] Monitor ao vivo: eventos, latência medida, contador de não mapeado
+## Bloco 3 — Painel (`panel/`) — **concluído**
+Construído por 6 agentes em paralelo, em duas levas. Relatório da síntese em
+`validacao-bloco-3.md`, neste diretório.
+
+- [x] Seletor de modalidade e botão start/stop, com os três estados sempre
+      visíveis e coloridos, sempre com texto junto
+- [x] Editor de preset com os 6 slots lado a lado, sem scroll
+- [x] Seletor de look com a grade de ícones das peças — **sem** prévia de corpo
+      inteiro, que só existe no vestiário dentro do jogo (ADR-011)
+- [x] Seletor de presente com busca, ícone oficial e cor por faixa, avisando
+      quando o catálogo veio da semente e os valores não são confirmados
+- [x] Seletor de animação com filtro por direção e peso, sem desabilitar nada:
+      qualquer animação em qualquer slot (R1.5)
+- [x] Aviso de vínculo fora da curva, não bloqueante (R3)
+- [x] Gerador de mapa com pré-visualização do spec, e o estado que mais importa
+      ali: spec válido que **ainda não pode ir ao ar** (ADR-004)
+- [x] Monitor ao vivo: eventos, latência medida pela mediana, contador de não
+      mapeado e os dois estados do combate (ADR-012)
+- [x] Gate estrutural (`npm run painel:gate`) e 190 testes
+
+### Aberto pelo Bloco 3
+- [ ] **Abrir o painel num navegador.** O gate prova que compila e que a fiação
+      bate; não prova que a tela é legível em 2 segundos nem que os 6 slots
+      cabem lado a lado. `npm run painel` e olhar.
+- [ ] **Subir painel e ponte juntos.** A camada de serviços é testada com
+      `fetch` substituído; os dois nunca se falaram de verdade.
+- [ ] **Teste de componente renderizado.** Exigiria vitest e testing-library, e
+      instalar dependência é decisão de arquitetura que não foi tomada.
 
 ## Bloco 4 — Validação
 - [ ] Medir latência ponta a ponta e registrar em `memory/learnings.md`
