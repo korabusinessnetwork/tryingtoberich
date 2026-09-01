@@ -10,7 +10,7 @@
 
 import { REGRAS } from "./config.mjs";
 import { ErroDeDominio } from "./erros.mjs";
-import { log } from "./log.mjs";
+import { log, ouvirLog } from "./log.mjs";
 import { Despachante } from "./fila/despachante.mjs";
 import { RegistroDeLongPoll } from "./longpoll/registro.mjs";
 import { Sessao } from "./sessao/sessao.mjs";
@@ -127,7 +127,21 @@ export class Nucleo {
   ouvir(ouvinte) {
     this.#ouvintes.add(ouvinte);
     ouvinte("estado", this.estado);
-    return () => this.#ouvintes.delete(ouvinte);
+
+    // O log vai junto pelo mesmo fluxo: quando algo falha durante a live, o
+    // streamer precisa ver no painel, não no terminal do Node atrás da janela.
+    const pararDeOuvirLog = ouvirLog((linha) => {
+      try {
+        ouvinte("log", linha);
+      } catch {
+        // Ouvinte de SSE que caiu já vai ser removido pelo `close` da rota.
+      }
+    });
+
+    return () => {
+      pararDeOuvirLog();
+      this.#ouvintes.delete(ouvinte);
+    };
   }
 
   #publicar(evento, dados) {

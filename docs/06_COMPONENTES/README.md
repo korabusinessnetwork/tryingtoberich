@@ -17,6 +17,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `PreviaDeMapa` | Mostra paleta, altura, densidade do spec gerado | mapa |
 | `MonitorAoVivo` | Últimos eventos, latência medida, não mapeados | fluxo do SSE |
 | `TestadorDePresente` | Dispara presente à mão, um ou vários juntos | preset, catálogo |
+| `PainelDeLogs` | O que a ponte e o painel registraram, para quando algo falha | fluxo do SSE |
 
 ## Regras
 - `CartaoDeSlot` é o componente mais importante do produto. Ele precisa mostrar
@@ -36,3 +37,10 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 - O testador é **âmbar e diz que não é a live**, pelo mesmo motivo que o Start
   em modo fixture: teste nunca pode se parecer com produção numa tela que
   controla uma transmissão ao vivo.
+- `PainelDeLogs` é a **única tela do painel feita para ler**, e não para olhar
+  de canto de olho: o streamer só vem aqui depois que algo falhou, e nesse
+  momento ele já parou de jogar. Por isso ela pode ter densidade de texto e
+  fonte monoespaçada, ao contrário do resto.
+- Ele mistura log da ponte (pelo SSE) com log do próprio painel. Os dois
+  precisam existir porque a falha mais provável é a ponte cair — e aí o SSE cai
+  junto, e o log dela para de chegar exatamente quando seria mais útil.

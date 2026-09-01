@@ -8,6 +8,7 @@
 import express from "express";
 
 import { ErroDeDominio } from "../erros.mjs";
+import { logRecente } from "../log.mjs";
 import { carregarAnimacoes } from "../repos/animacoes.mjs";
 import { listarLooks } from "../repos/looks.mjs";
 import { listarMapas } from "../repos/mapas.mjs";
@@ -74,6 +75,18 @@ export function rotasDoPainel(nucleo) {
   rotas.post("/teste/presentes", (req, res) => {
     const presentes = Array.isArray(req.body?.presentes) ? req.body.presentes : [];
     res.json({ resultados: nucleo.injetarPresentesDeTeste(presentes) });
+  });
+
+  /**
+   * O log recente da ponte, para o painel ter o que aconteceu ANTES de ele
+   * abrir. O que vem depois chega pelo SSE.
+   *
+   * As linhas já saem higienizadas de `log.mjs`: nickname e id de espectador
+   * nunca entram no buffer. Ver 11_SEGURANCA, camada 4.
+   */
+  rotas.get("/logs", (req, res) => {
+    const limite = Number.parseInt(req.query.limite ?? "100", 10);
+    res.json({ linhas: logRecente(Number.isFinite(limite) ? Math.min(limite, 200) : 100) });
   });
 
   /** Cenários de fixture, para o painel oferecer o modo sem live. */

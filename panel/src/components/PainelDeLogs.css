@@ -1,0 +1,100 @@
+/* Log da ponte e do painel.
+
+   Esta é a única tela do painel feita para LER, não para olhar de canto de
+   olho. O streamer só vem aqui quando algo já falhou, e nesse momento ele
+   parou de jogar. Por isso ela pode ter densidade de texto e fonte
+   monoespaçada, ao contrário do resto. */
+
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--espaco);
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+}
+
+.log-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.log-filtros { display: flex; gap: 4px; }
+
+.log-filtro {
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  font-size: 12px;
+  background: var(--painel-fundo);
+}
+
+.log-filtro-ativo {
+  border-color: var(--painel-texto-secundario);
+  color: var(--painel-texto-primario);
+  font-weight: 600;
+}
+
+.log-limpar {
+  min-height: var(--alvo-minimo);
+  font-size: 12px;
+  background: var(--painel-fundo);
+}
+
+.log-vazio { margin: 0; font-size: 12px; }
+
+.log-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  /* Teto de altura com rolagem própria: o log não pode empurrar o editor de
+     preset para fora da tela, que é o que o streamer usa de verdade. */
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.log-linha {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 6px;
+  border-left: 2px solid transparent;
+}
+
+.log-linha:nth-child(even) { background: var(--painel-fundo); }
+
+/* Cor só na borda esquerda, e o nível já vem escrito no evento: cor sozinha
+   não comunica, e aqui há muitas linhas seguidas. */
+.log-linha-erro { border-left-color: var(--estado-erro); }
+.log-linha-aviso { border-left-color: var(--estado-atencao); }
+.log-linha-info { border-left-color: var(--painel-borda); }
+
+.log-hora {
+  color: var(--painel-texto-secundario);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-origem {
+  padding: 0 6px;
+  border-radius: 999px;
+  border: var(--borda);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--painel-texto-secundario);
+}
+
+.log-evento { font-weight: 600; }
+
+.log-detalhe {
+  grid-column: 3;
+  word-break: break-word;
+}

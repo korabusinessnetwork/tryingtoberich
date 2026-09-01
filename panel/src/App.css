@@ -49,3 +49,47 @@
 @media (max-width: 1100px) {
   .app-colunas { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Abas do monitor e do log.
+
+   O log fica atrás de uma aba porque o streamer não olha log por iniciativa —
+   ele olha quando algo já falhou. O contador de problemas não vistos é o que
+   impede a aba de ficar invisível justamente nesse momento. */
+.app-abas {
+  display: flex;
+  gap: 4px;
+}
+
+.app-aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--alvo-minimo);
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--painel-superficie);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.app-aba-ativa {
+  border-color: var(--painel-texto-secundario);
+  color: var(--painel-texto-primario);
+}
+
+/* Vermelho, e com o número junto: o design system proíbe cor sozinha, e aqui
+   a quantidade é a informação — 1 falha e 40 falhas pedem reações diferentes. */
+.app-aba-contador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--estado-erro);
+  color: var(--painel-fundo);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

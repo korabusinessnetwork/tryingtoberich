@@ -104,5 +104,8 @@ export const api = {
    */
   testarPresentes: (presentes) => chamar("/api/teste/presentes", json("POST", { presentes })),
 
+  /** O que aconteceu antes do painel abrir. O que vem depois chega pelo SSE. */
+  logs: (limite = 100) => chamar(`/api/logs?limite=${limite}`).then((r) => r.linhas),
+
   urlDoFluxo: () => `${BASE}/api/sessao/stream`,
 };

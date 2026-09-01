@@ -6,6 +6,7 @@ import { BarraDeSessao } from "./components/BarraDeSessao.jsx";
 import { EditorDePreset } from "./components/EditorDePreset.jsx";
 import { GeradorDeMapa } from "./components/GeradorDeMapa.jsx";
 import { MonitorAoVivo } from "./components/MonitorAoVivo.jsx";
+import { PainelDeLogs } from "./components/PainelDeLogs.jsx";
 import { PreviaDeMapa } from "./components/PreviaDeMapa.jsx";
 import { SeletorDeAnimacao } from "./components/SeletorDeAnimacao.jsx";
 import { SeletorDeLook } from "./components/SeletorDeLook.jsx";
@@ -37,6 +38,10 @@ export function App() {
   const [prontidao, definirProntidao] = useState(null);
   const [disparando, definirDisparando] = useState(false);
   const [aviso, definirAviso] = useState(null);
+  const [aba, definirAba] = useState("monitor");
+  // Quantos problemas já estavam no log da última vez que a aba foi aberta.
+  // Sem isso o contador nunca zera e vira enfeite permanente.
+  const [problemasVistos, definirProblemasVistos] = useState(0);
 
   // Qual slot está com um modal aberto, e qual modal. Um de cada vez: dois
   // modais empilhados num painel de segunda tela é jeito de perder o clique.
@@ -51,12 +56,17 @@ export function App() {
         api.looks(), api.mapas(), api.sessao(), api.cenarios(),
       ]);
       definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios });
+      // O que a ponte registrou ANTES do painel abrir. O que vem depois chega
+      // pelo SSE, e o hook junta os dois.
+      api.logs().then((linhas) => fluxo.definirLogs(
+        (atuais) => [...atuais, ...linhas.map((l) => ({ ...l, origem: "ponte" }))],
+      )).catch(() => {});
       definirPreset((atual) => atual ?? presets[0] ?? null);
       definirErroDeCarga(null);
     } catch (falha) {
       definirErroDeCarga(falha);
     }
-  }, []);
+  }, [fluxo]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -66,11 +76,14 @@ export function App() {
       return await acao();
     } catch (falha) {
       const texto = falha?.message ?? "Algo falhou.";
+      // O aviso some da tela; a linha de log fica. Quando o streamer perceber
+      // que algo parou, é no log que ele vai olhar.
+      fluxo.registrarLocal("erro", falha?.codigo ?? "acao_falhou", { mensagem: texto });
       if (aoFalhar) aoFalhar(falha);
       else definirAviso(texto);
       return null;
     }
-  }, []);
+  }, [fluxo]);
 
   const mudarSlot = useCallback((posicao, campos) => {
     definirPreset((atual) => {
@@ -141,6 +154,12 @@ export function App() {
     [dados, preset],
   );
 
+  const problemas = useMemo(
+    () => fluxo.logs.filter((l) => l.nivel === "erro" || l.nivel === "aviso").length,
+    [fluxo.logs],
+  );
+  const naoVistos = Math.max(0, problemas - problemasVistos);
+
   // A sessão rodando trava o que não pode mudar no meio da partida: modalidade,
   // look (ADR-011) e troca de mapa (F4).
   const aoVivo = fluxo.estado?.sessao === "rodando" || dados?.sessao?.estado?.sessao === "rodando";
@@ -194,12 +213,49 @@ export function App() {
             aoEditarAnimacao={(posicao) => definirEditando({ posicao, tipo: "animacao" })}
           />
 
-          <MonitorAoVivo
-            eventos={fluxo.eventos}
-            naoMapeados={fluxo.naoMapeados}
-            estado={fluxo.estado}
-            conectado={fluxo.conectado}
-          />
+          <nav className="app-abas" role="tablist" aria-label="Monitor e log">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={aba === "monitor"}
+              className={aba === "monitor" ? "app-aba app-aba-ativa" : "app-aba"}
+              onClick={() => definirAba("monitor")}
+            >
+              Monitor
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={aba === "logs"}
+              className={aba === "logs" ? "app-aba app-aba-ativa" : "app-aba"}
+              onClick={() => {
+                definirAba("logs");
+                definirProblemasVistos(problemas);
+              }}
+            >
+              Log
+              {/* O contador é o que impede o log de ficar invisível justamente
+                  quando importa: atrás de uma aba, ninguém olha por iniciativa. */}
+              {naoVistos > 0 ? <span className="app-aba-contador">{naoVistos}</span> : null}
+            </button>
+          </nav>
+
+          {aba === "monitor" ? (
+            <MonitorAoVivo
+              eventos={fluxo.eventos}
+              naoMapeados={fluxo.naoMapeados}
+              estado={fluxo.estado}
+              conectado={fluxo.conectado}
+            />
+          ) : (
+            <PainelDeLogs
+              logs={fluxo.logs}
+              aoLimpar={() => {
+                fluxo.definirLogs([]);
+                definirProblemasVistos(0);
+              }}
+            />
+          )}
 
           <TestadorDePresente
             preset={preset}
