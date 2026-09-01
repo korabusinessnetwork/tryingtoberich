@@ -11,6 +11,7 @@ import { SeletorDeAnimacao } from "./components/SeletorDeAnimacao.jsx";
 import { SeletorDeLook } from "./components/SeletorDeLook.jsx";
 import { SeletorDePresente } from "./components/SeletorDePresente.jsx";
 import { SeletorModalidade } from "./components/SeletorModalidade.jsx";
+import { TestadorDePresente } from "./components/TestadorDePresente.jsx";
 import "./App.css";
 
 /**
@@ -34,6 +35,7 @@ export function App() {
   const [gerando, definirGerando] = useState(false);
   const [erroDeMapa, definirErroDeMapa] = useState(null);
   const [prontidao, definirProntidao] = useState(null);
+  const [disparando, definirDisparando] = useState(false);
   const [aviso, definirAviso] = useState(null);
 
   // Qual slot está com um modal aberto, e qual modal. Um de cada vez: dois
@@ -123,6 +125,12 @@ export function App() {
     definirGerando(false);
   }, [executar]);
 
+  const testarPresentes = useCallback(async (presentes) => {
+    definirDisparando(true);
+    await executar(() => api.testarPresentes(presentes));
+    definirDisparando(false);
+  }, [executar]);
+
   const slotEditado = useMemo(
     () => (editando ? (preset?.slots ?? []).find((s) => s.posicao === editando.posicao) ?? null : null),
     [editando, preset],
@@ -191,6 +199,14 @@ export function App() {
             naoMapeados={fluxo.naoMapeados}
             estado={fluxo.estado}
             conectado={fluxo.conectado}
+          />
+
+          <TestadorDePresente
+            preset={preset}
+            catalogo={dados.catalogo}
+            sessaoRodando={aoVivo}
+            disparando={disparando}
+            aoDisparar={testarPresentes}
           />
         </section>
 

@@ -1,0 +1,161 @@
+/* Testador de presente.
+
+   O bloco inteiro é âmbar de propósito. Ele fica na mesma tela que controla a
+   live de verdade, e o pior resultado possível seria o streamer disparar um
+   teste achando que era live, ou o contrário. Mesma escolha do Start em modo
+   fixture na barra de sessão: teste nunca se parece com produção. */
+
+.testador {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--espaco);
+  border: 1px dashed var(--estado-atencao);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+}
+
+.testador-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.testador-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.testador-etiqueta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--estado-atencao);
+}
+
+.testador-explicacao {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.testador-bloqueio {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--raio);
+  border: var(--borda);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.testador-slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.testador-slot { display: flex; }
+
+.testador-slot-vazio {
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  min-height: var(--alvo-minimo);
+  font-size: 12px;
+  border: 1px dashed var(--painel-borda);
+  border-radius: var(--raio);
+}
+
+/* Alvo de clique inteiro, não só o texto: o streamer clica com pressa. */
+.testador-botao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  text-align: left;
+  background: var(--painel-fundo);
+}
+
+.testador-botao-escolhido {
+  border-color: var(--estado-atencao);
+  color: var(--estado-atencao);
+}
+
+.testador-posicao {
+  flex: 0 0 auto;
+  width: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--painel-texto-secundario);
+}
+
+.testador-nome {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.testador-faixa {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Número com largura fixa: com seis linhas empilhadas, coluna que dança
+   atrapalha a leitura de relance mais que o próprio valor ajuda. */
+.testador-delta {
+  flex: 0 0 auto;
+  min-width: 46px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.testador-sobe { color: var(--estado-ok); }
+.testador-desce { color: var(--estado-erro); }
+
+.testador-controles {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.testador-repeticoes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}
+
+.testador-repeticoes input {
+  width: 72px;
+  font-variant-numeric: tabular-nums;
+}
+
+.testador-disparar {
+  flex: 1 1 auto;
+  border-color: var(--estado-atencao);
+  color: var(--estado-atencao);
+  font-weight: 700;
+}
+
+.testador-nota {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.testador-combate { color: var(--estado-atencao); }

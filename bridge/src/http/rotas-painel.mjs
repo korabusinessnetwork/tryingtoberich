@@ -65,6 +65,17 @@ export function rotasDoPainel(nucleo) {
 
   rotas.post("/sessao/stop", async (req, res) => res.json(await nucleo.encerrarSessao()));
 
+  /**
+   * Dispara presente à mão, para testar um slot sem depender de espectador.
+   *
+   * Existe só nesta superfície: a porta do painel não é publicada pelo túnel.
+   * Se um dia esta rota vazasse, qualquer um moveria o boneco da live.
+   */
+  rotas.post("/teste/presentes", (req, res) => {
+    const presentes = Array.isArray(req.body?.presentes) ? req.body.presentes : [];
+    res.json({ resultados: nucleo.injetarPresentesDeTeste(presentes) });
+  });
+
   /** Cenários de fixture, para o painel oferecer o modo sem live. */
   rotas.get("/cenarios", async (req, res) => {
     res.json({ cenarios: (await listarCenarios()).map((n) => n.replace(".json", "")) });

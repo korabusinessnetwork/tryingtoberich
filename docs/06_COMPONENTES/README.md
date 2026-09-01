@@ -16,6 +16,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `GeradorDeMapa` | Campo de descrição, botão gerar, estado de carregando | mapas |
 | `PreviaDeMapa` | Mostra paleta, altura, densidade do spec gerado | mapa |
 | `MonitorAoVivo` | Últimos eventos, latência medida, não mapeados | fluxo do SSE |
+| `TestadorDePresente` | Dispara presente à mão, um ou vários juntos | preset, catálogo |
 
 ## Regras
 - `CartaoDeSlot` é o componente mais importante do produto. Ele precisa mostrar
@@ -26,3 +27,12 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 - Nenhum componente monta prompt de IA. Isso vive na ponte (ver `10_PROMPTS`).
 - `SeletorDeLook` **não** tenta renderizar o boneco montado. Prévia de corpo
   inteiro só existe no vestiário dentro do jogo. Ver ADR-011.
+- `TestadorDePresente` dispara pelo **mesmo caminho** de um presente de verdade:
+  casamento com slot (R1), combo (R4), combate (ADR-012), long-poll e SSE.
+  Testador com atalho provaria que o atalho funciona, e é justamente a fiação
+  que costuma estar errada. Dois ou mais presentes no mesmo disparo chegam no
+  mesmo instante, que é como se testa o combate sem depender de dois
+  espectadores clicarem juntos.
+- O testador é **âmbar e diz que não é a live**, pelo mesmo motivo que o Start
+  em modo fixture: teste nunca pode se parecer com produção numa tela que
+  controla uma transmissão ao vivo.

@@ -97,5 +97,12 @@ export const api = {
   /** Cenários de fixture: é o que permite montar o painel sem estar ao vivo. */
   cenarios: () => chamar("/api/cenarios").then((r) => r.cenarios),
 
+  /**
+   * Dispara presente à mão. Vários no mesmo pedido chegam no mesmo instante,
+   * que é como se testa o combate do ADR-012 sem depender de dois espectadores
+   * clicarem juntos.
+   */
+  testarPresentes: (presentes) => chamar("/api/teste/presentes", json("POST", { presentes })),
+
   urlDoFluxo: () => `${BASE}/api/sessao/stream`,
 };

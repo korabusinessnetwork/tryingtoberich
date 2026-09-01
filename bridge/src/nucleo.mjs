@@ -37,6 +37,7 @@ export class Nucleo {
   #relogio = null;
   #estadoDaLive = ESTADO.DESLIGADA;
   #ouvintes = new Set();
+  #catalogoEmMemoria = null;
 
   constructor({ config, gemini, roblox } = {}) {
     this.config = config;
@@ -169,6 +170,7 @@ export class Nucleo {
           aoCatalogo: (presentes) => this.#aoCatalogo(presentes),
         });
 
+    await this.prepararCatalogoEmMemoria();
     this.#iniciarRelogio();
     await this.#conector.conectar();
     log.info("sessao_iniciada", { sessaoId: this.#sessao.id, presetId, cenario });
@@ -209,6 +211,65 @@ export class Nucleo {
     salvarColeta(presentes)
       .then((catalogo) => this.#publicar("catalogo", { total: catalogo.presentes.length }))
       .catch((erro) => log.aviso("catalogo_nao_persistiu", { motivo: erro.message }));
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Teste de presente, disparado do painel                            */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Injeta presente à mão, pelo MESMO caminho de um presente de verdade.
+   *
+   * O valor inteiro disto está em não ter atalho: o evento entra por
+   * `#aoEventoDaLive`, casa com o slot (R1), passa pelo combo (R4), disputa o
+   * combate (ADR-012), sai pelo long-poll e aparece no SSE. Um testador que
+   * chamasse o despachante por dentro provaria que o despachante funciona, e é
+   * justamente a fiação que costuma estar errada.
+   *
+   * Vários presentes no mesmo instante é o modo mais útil: é como se testa o
+   * combate sem depender de dois espectadores clicarem juntos.
+   *
+   * Só existe na superfície local. O túnel publica outra porta.
+   */
+  injetarPresentesDeTeste(presentes) {
+    if (!this.#sessao) {
+      throw new ErroDeDominio(
+        "sem_sessao",
+        "O teste de presente precisa de uma sessão rodando: é ela que carrega o preset e abre o long-poll do jogo.",
+        { status: 409 },
+      );
+    }
+    if (!Array.isArray(presentes) || presentes.length === 0) {
+      throw new ErroDeDominio("presente_obrigatorio", "Escolha ao menos um presente para disparar.", { status: 400 });
+    }
+
+    const agora = Date.now();
+    const catalogo = new Map((this.#catalogoEmMemoria?.presentes ?? []).map((p) => [p.presenteId, p]));
+
+    const resultados = presentes.map(({ presenteId, repeticoes }) => {
+      const doCatalogo = catalogo.get(presenteId);
+      const evento = {
+        presenteId: String(presenteId ?? "").trim(),
+        presenteNome: doCatalogo?.nome ?? String(presenteId ?? "teste"),
+        moedas: doCatalogo?.moedas ?? 0,
+        repeticoes: Number.isInteger(repeticoes) && repeticoes > 0 ? repeticoes : 1,
+        rajadaEncerrada: true,
+        nomeDoador: "Teste do painel",
+        recebidoEm: agora,
+      };
+      return this.#despachante.receber(evento, agora);
+    });
+
+    // O combate fecha quando a animação corrente termina; o relógio da sessão
+    // já cuida disso. Aqui só devolvemos o que aconteceu com cada um.
+    log.info("presente_de_teste", { quantidade: presentes.length });
+    return resultados;
+  }
+
+  /** O catálogo fica em memória só para o testador dar nome e moedas ao evento. */
+  async prepararCatalogoEmMemoria() {
+    this.#catalogoEmMemoria = await carregarCatalogo();
+    return this.#catalogoEmMemoria;
   }
 
   /* ---------------------------------------------------------------- */

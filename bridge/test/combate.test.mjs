@@ -162,3 +162,56 @@ test("o empate chega ao JOGO, não só ao painel", async () => {
 
   nucleo.longpoll.fecharTodos();
 });
+
+test("o presente de teste do painel entra pelo mesmo caminho de um de verdade", async () => {
+  // O valor do testador está em não ter atalho: se ele chamasse o despachante
+  // por dentro, provaria que o despachante funciona — e é justamente a fiação
+  // que costuma estar errada.
+  const { Nucleo } = await import("../src/nucleo.mjs");
+  const { salvarPreset } = await import("../src/repos/presets.mjs");
+  const { apagar, caminhoDeDados } = await import("../src/repos/arquivo.mjs");
+  const { carregarExemplo } = await import("../src/repos/fixtures.mjs");
+
+  const PRESET_ID = "teste-injecao";
+  await salvarPreset({ ...(await carregarExemplo("preset-escalada-padrao")), presetId: PRESET_ID });
+
+  const nucleo = new Nucleo({
+    config: { token: "w".repeat(32), portaJogo: 0, portaPainel: 0, host: "127.0.0.1",
+      usuarioTiktok: "", chaveGemini: "", longpollTimeoutMs: 300, combateMaxMs: 2000 },
+  });
+  await nucleo.carregarAnimacoesNaMemoria();
+
+  const entregues = [];
+  const resposta = { status: () => ({ json: (c) => entregues.push(c), end: () => {} }), on: () => {} };
+
+  try {
+    await nucleo.iniciarSessao({ presetId: PRESET_ID, cenario: "01-presente-unico" });
+    nucleo.longpoll.registrar(resposta, { desde: 0 });
+
+    // Um presente que está no slot 5 do preset de exemplo.
+    nucleo.injetarPresentesDeTeste([{ presenteId: "sem-galaxy", repeticoes: 1 }]);
+
+    assert.ok(entregues.length >= 1, "saiu pelo long-poll, como um presente de verdade sairia");
+    const evento = entregues[0].eventos.at(-1);
+    assert.equal(evento.animacaoId, "sub_cometa", "casou com o slot 5");
+    assert.equal(evento.delta, 40);
+  } finally {
+    const resumo = await nucleo.encerrarSessao().catch(() => null);
+    nucleo.longpoll.fecharTodos();
+    if (resumo) await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));
+    await apagar(caminhoDeDados("presets", `${PRESET_ID}.json`));
+  }
+});
+
+test("o teste de presente exige sessão, porque é ela que carrega o preset", async () => {
+  const { Nucleo } = await import("../src/nucleo.mjs");
+  const nucleo = new Nucleo({
+    config: { token: "v".repeat(32), portaJogo: 0, portaPainel: 0, host: "127.0.0.1",
+      usuarioTiktok: "", chaveGemini: "", longpollTimeoutMs: 300, combateMaxMs: 2000 },
+  });
+
+  assert.throws(
+    () => nucleo.injetarPresentesDeTeste([{ presenteId: "sem-rose", repeticoes: 1 }]),
+    (erro) => erro.codigo === "sem_sessao",
+  );
+});

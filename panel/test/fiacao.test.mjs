@@ -51,7 +51,7 @@ test("todo componente do painel é montado por alguém", async () => {
   // os cartões de slot, e o cartão monta o aviso de curva. O que este teste
   // proíbe é componente que ninguém monta — código morto que passa no build.
   const arquivos = (await readdir(COMPONENTES)).filter((f) => f.endsWith(".jsx"));
-  assert.equal(arquivos.length, 11, "o 06_COMPONENTES lista 11 componentes");
+  assert.equal(arquivos.length, 12, "o 06_COMPONENTES lista os 12 componentes do painel");
 
   const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
   const fontes = await Promise.all(arquivos.map(lerComponente));
