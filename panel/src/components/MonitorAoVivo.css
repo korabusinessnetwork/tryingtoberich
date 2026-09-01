@@ -1,0 +1,442 @@
+/* MonitorAoVivo — a janela do streamer para a live enquanto ela roda.
+
+   Nenhuma cor literal: tudo sai de token (styles/tokens.css, gerado de
+   data/tokens.json) ou de variável de base (styles/base.css). É o que permite
+   o white-label da Fase 3 sem reescrever componente (02_DESIGN_SYSTEM).
+
+   Regra de leitura do arquivo: tamanho e posição carregam a hierarquia, cor
+   carrega só significado — verde é subida, vermelho é descida, âmbar é
+   combate, e nunca cor sozinha (sempre com texto junto). O streamer olha por
+   2 segundos por vez, então o que ele precisa saber está em três números
+   grandes no topo; a lista existe para quando sobra tempo.
+
+   Nada de animação: o doc é explícito, e movimento numa segunda tela rouba
+   atenção da live. O que mudou salta por posição (o último evento é um bloco
+   grande, separado) e por tempo relativo, não por transição. */
+
+.monitor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+  min-width: 0;
+}
+
+/* Painel cego é o estado mais urgente desta tela: o streamer está olhando
+   passado e não sabe. Barra preenchida, no topo, antes de qualquer número. */
+.monitor--cego {
+  border-color: var(--estado-erro);
+}
+
+.monitor-alarme {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--raio);
+  background: var(--estado-erro);
+  color: var(--painel-fundo);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Topo: as três métricas que se leem sem ler                        */
+/* ---------------------------------------------------------------- */
+
+.monitor-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--espaco);
+}
+
+.monitor-metrica {
+  --cor-da-metrica: var(--painel-texto-primario);
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-left: 3px solid var(--cor-da-metrica);
+  border-radius: var(--raio);
+}
+
+.monitor-metrica--ok { --cor-da-metrica: var(--estado-ok); }
+.monitor-metrica--atencao { --cor-da-metrica: var(--estado-atencao); }
+.monitor-metrica--erro { --cor-da-metrica: var(--estado-erro); }
+.monitor-metrica--desconhecida { --cor-da-metrica: var(--painel-borda); }
+
+.monitor-rotulo {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--painel-texto-secundario);
+}
+
+.monitor-rotulo-nota {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* O número grande vale mais que o rótulo bonito: é o único elemento desta
+   tela que se lê de relance, de longe, com o olho de volta para o jogo. */
+.monitor-numerao {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.monitor-metrica .monitor-numerao {
+  color: var(--cor-da-metrica);
+}
+
+.monitor-metrica-nota {
+  margin: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-metrica-alarme {
+  margin: 0;
+  color: var(--estado-erro);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- */
+/* Tendência da latência: degradação como inclinação, não como número */
+/* ---------------------------------------------------------------- */
+
+.monitor-tendencia {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 28px;
+  margin: 2px 0;
+}
+
+.monitor-barra {
+  flex: 1 1 0;
+  min-width: 3px;
+  border-radius: 1px;
+  background: var(--painel-borda);
+}
+
+.monitor-barra--ok { background: var(--estado-ok); }
+.monitor-barra--atencao { background: var(--estado-atencao); }
+.monitor-barra--erro { background: var(--estado-erro); }
+
+/* A linha do alvo de 600ms do Princípio nº1. Barra que a ultrapassa já saiu
+   do alvo, mesmo antes de o número mudar de cor. */
+.monitor-tendencia-alvo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--painel-texto-secundario);
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------- */
+/* Não mapeado: o que está passando batido                           */
+/* ---------------------------------------------------------------- */
+
+.monitor-perdidos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-perdido {
+  --faixa-do-item: var(--painel-borda);
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+/* Cor da faixa com o algarismo junto: cor sozinha não comunica (R3 e o doc de
+   design são explícitos), e a faixa é o que diz se o descarte foi 1 moeda ou
+   5000. */
+.monitor-perdido-faixa {
+  flex: none;
+  min-width: 20px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--faixa-do-item);
+  color: var(--painel-fundo);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.monitor-perdido-nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-perdido-contagem {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- */
+/* Último evento: o bloco grande, separado da lista                  */
+/* ---------------------------------------------------------------- */
+
+.monitor-destaque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+/* Disputa e empate ganham moldura âmbar porque são os dois estados do ADR-012
+   que o streamer precisa narrar ao vivo — e o empate ainda por cima é o que
+   parece travamento se ninguém explicar. */
+.monitor-destaque--disputa,
+.monitor-destaque--empate {
+  border-color: var(--estado-atencao);
+}
+
+.monitor-destaque--empate {
+  border-style: dashed;
+}
+
+.monitor-destaque-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.monitor-destaque-presente {
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 22ch;
+}
+
+.monitor-destaque-tempo {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-destaque-frase {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--estado-atencao);
+}
+
+.monitor-destaque-rodape {
+  margin: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-slot {
+  flex: none;
+  padding: 1px 5px;
+  border: var(--borda);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--painel-texto-secundario);
+}
+
+.monitor-etiqueta {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.monitor-etiqueta--combate {
+  background: var(--estado-atencao);
+  color: var(--painel-fundo);
+}
+
+.monitor-etiqueta--curto {
+  border: 1px solid var(--estado-atencao);
+  color: var(--estado-atencao);
+}
+
+/* ---------------------------------------------------------------- */
+/* Combate: a balança e as somas                                     */
+/* ---------------------------------------------------------------- */
+
+/* Quem venceu e por quanto, sem ler número nenhum. No empate os dois lados
+   saem exatamente iguais, e a simetria é o próprio recado. */
+.monitor-balanca {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.monitor-balanca-lado {
+  display: block;
+  min-width: 2px;
+}
+
+.monitor-balanca-subida { background: var(--estado-ok); }
+.monitor-balanca-descida { background: var(--estado-erro); }
+
+.monitor-somas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-soma-subida { color: var(--estado-ok); }
+.monitor-soma-descida { color: var(--estado-erro); }
+.monitor-soma-empate { color: var(--estado-atencao); }
+.monitor-somas-sinal { font-weight: 600; }
+.monitor-somas-nota { font-weight: 600; font-size: 12px; }
+
+.monitor-soma-liquido.monitor--subida { color: var(--estado-ok); }
+.monitor-soma-liquido.monitor--descida { color: var(--estado-erro); }
+.monitor-soma-liquido.monitor--neutro { color: var(--estado-atencao); }
+
+.monitor--subida { color: var(--estado-ok); }
+.monitor--descida { color: var(--estado-erro); }
+.monitor--neutro { color: var(--estado-atencao); }
+.monitor--alerta { color: var(--estado-atencao); font-weight: 700; }
+
+/* ---------------------------------------------------------------- */
+/* Lista de anteriores: densa, para conferir, não para estudar       */
+/* ---------------------------------------------------------------- */
+
+.monitor-anteriores {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.monitor-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-left: 2px solid var(--painel-borda);
+  border-radius: 0 3px 3px 0;
+  font-size: 12px;
+}
+
+.monitor-linha:nth-child(odd) {
+  background: var(--painel-fundo);
+}
+
+.monitor-linha--disputa,
+.monitor-linha--empate {
+  border-left-color: var(--estado-atencao);
+}
+
+.monitor-linha-tempo {
+  flex: none;
+  width: 6ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-linha-delta {
+  flex: none;
+  width: 5ch;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-linha-corpo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.monitor-linha-presente {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-linha-disputa {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-linha-latencia {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-vazio {
+  margin: 0;
+  padding: var(--espaco) 0;
+  font-size: 13px;
+}
+
+/* Segunda tela pode ser estreita e vertical (o streamer usa o que sobra da
+   mesa). Abaixo disso a linha vira duas, em vez de espremer o delta. */
+@media (max-width: 520px) {
+  .monitor-linha {
+    flex-wrap: wrap;
+  }
+
+  .monitor-linha-latencia {
+    margin-left: auto;
+  }
+}
