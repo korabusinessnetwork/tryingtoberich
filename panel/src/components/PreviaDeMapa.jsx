@@ -1,3 +1,4 @@
+import { alcanceHorizontalDoPulo, FATOR_SALTO_VERTICAL } from "../lib/regras.js";
 import "./PreviaDeMapa.css";
 
 /**
@@ -5,22 +6,12 @@ import "./PreviaDeMapa.css";
  * densidade, contagem de plataformas (06_COMPONENTES). Não é render 3D — o
  * mapa de verdade só existe dentro do Roblox.
  *
- * As contas de ADR-009 abaixo (teto de espaçamento vertical e de alcance
- * horizontal do pulo) espelham `bridge/src/dominio/regras.mjs` só para desenhar
- * a barra de proporção. Não existe equivalente em `panel/src/lib/regras.js`
- * hoje, então ficam locais aqui — ver relatório final da tarefa.
+ * As contas do ADR-009 vêm de lib/regras.js, que é onde elas moram no painel.
+ * Um teste em test/jogo.test.mjs trava esse número junto com a ponte e o Luau:
+ * divergir aqui não quebraria nada visivelmente, só desenharia uma barra
+ * mentindo sobre um mapa que a ponte já aprovou.
  */
-const FATOR_SALTO_VERTICAL = 0.7; // ADR-009.1 — espacamentoVertical nunca passa de jumpHeight * 0,7.
 const FATOR_DERIVA_HORIZONTAL = 1.2; // Teto de geometria da variacaoHorizontal (04_MODELAGEM).
-const GRAVIDADE_ROBLOX = 196.2;
-const VELOCIDADE_ANDAR_ROBLOX = 16;
-
-/** Alcance horizontal do pulo, já com a margem do ADR-009. Espelha alcanceHorizontalDoPulo. */
-function alcanceHorizontalDoPulo(jumpHeight) {
-  const velocidadeVertical = Math.sqrt(2 * GRAVIDADE_ROBLOX * jumpHeight);
-  const tempoDeVoo = (2 * velocidadeVertical) / GRAVIDADE_ROBLOX;
-  return VELOCIDADE_ANDAR_ROBLOX * tempoDeVoo * FATOR_SALTO_VERTICAL;
-}
 
 /** Stud como o streamer lê de relance: no máximo 2 casas, vírgula pt-BR. */
 function numero(valor, casas = 2) {

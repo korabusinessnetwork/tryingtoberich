@@ -93,6 +93,40 @@ test("o alcance horizontal do pulo é o mesmo na ponte e no jogo", async () => {
   assert.equal(alcanceHorizontalDoPulo(7.2).toFixed(2), "6.07");
 });
 
+test("a fórmula do ADR-009 dá o mesmo número nas TRÊS linguagens", async () => {
+  // Ela vive em JavaScript duas vezes (ponte e painel) e em Luau uma. O painel
+  // não importa do Node e o Luau não importa de ninguém, então a duplicação é
+  // assumida — e é justamente por isso que precisa de trava.
+  //
+  // Divergir aqui não quebra nada de forma visível: o painel só desenharia uma
+  // barra mentindo sobre um mapa que a ponte já aprovou e o jogo já construiu.
+  const ponte = await import("../bridge/src/dominio/regras.mjs");
+  const painel = await import("../panel/src/lib/regras.js");
+  const luau = await lerJogo("server", "jogabilidade.lua");
+
+  assert.equal(painel.FATOR_SALTO_VERTICAL, ponte.FATOR_SALTO_VERTICAL);
+  assert.equal(painel.GRAVIDADE_ROBLOX, ponte.GRAVIDADE_ROBLOX);
+  assert.equal(painel.VELOCIDADE_ANDAR_ROBLOX, ponte.VELOCIDADE_ANDAR_ROBLOX);
+  assert.equal(constanteLuau(luau, "local GRAVIDADE"), painel.GRAVIDADE_ROBLOX);
+
+  for (const jumpHeight of [7, 7.2, 9, 10, 12]) {
+    assert.equal(
+      painel.alcanceHorizontalDoPulo(jumpHeight).toFixed(6),
+      ponte.alcanceHorizontalDoPulo(jumpHeight).toFixed(6),
+      `jumpHeight ${jumpHeight}`,
+    );
+  }
+});
+
+test("a faixa de moedas é a mesma no painel e na ponte (R3)", async () => {
+  const ponte = await import("../bridge/src/dominio/regras.mjs");
+  const painel = await import("../panel/src/lib/regras.js");
+
+  for (const moedas of [0, 1, 9, 10, 99, 100, 999, 1000, 4999, 5000, 29999, 44999]) {
+    assert.equal(painel.faixaDeMoedas(moedas), ponte.faixaDeMoedas(moedas), `${moedas} moedas`);
+  }
+});
+
 test("o exemplo de mapa respeita os dois tetos horizontais", async () => {
   const { alcanceHorizontalDoPulo, FATOR_DERIVA_HORIZONTAL } = await import("../bridge/src/dominio/regras.mjs");
   const mapa = JSON.parse(await readFile(path.join(RAIZ, "data", "exemplos", "mapa-torre-vulcanica-01.json"), "utf8"));

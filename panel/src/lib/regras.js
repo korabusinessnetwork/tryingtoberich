@@ -6,6 +6,40 @@
  * nunca decide.** Ele ordena, colore e avisa. Nenhuma regra de jogo lê faixa.
  */
 
+/* ---------------------------------------------------------------- */
+/* ADR-009 — jogabilidade do mapa                                    */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Estas três constantes existem em três linguagens: aqui, em
+ * `bridge/src/dominio/regras.mjs` e em `game/src/server/jogabilidade.lua`.
+ * Duplicação assumida — o painel não importa do Node e o Luau não importa de
+ * ninguém —, com um teste em `test/jogo.test.mjs` travando as três no mesmo
+ * número. Divergência aqui não quebra nada visivelmente: o painel só mostraria
+ * uma barra mentindo sobre um mapa que a ponte já aprovou.
+ */
+export const FATOR_SALTO_VERTICAL = 0.7;
+export const GRAVIDADE_ROBLOX = 196.2;
+export const VELOCIDADE_ANDAR_ROBLOX = 16;
+
+/** Teto de espaçamento entre plataformas. ADR-009.1. */
+export const tetoVertical = (jumpHeight) => jumpHeight * FATOR_SALTO_VERTICAL;
+
+/**
+ * Quanto o personagem cobre na horizontal durante um pulo, já com a margem do
+ * ADR-009. O Roblox dá controle total no ar, então é velocidade de andar vezes
+ * o tempo de voo.
+ */
+export function alcanceHorizontalDoPulo(jumpHeight) {
+  const velocidadeVertical = Math.sqrt(2 * GRAVIDADE_ROBLOX * jumpHeight);
+  const tempoDeVoo = (2 * velocidadeVertical) / GRAVIDADE_ROBLOX;
+  return VELOCIDADE_ANDAR_ROBLOX * tempoDeVoo * FATOR_SALTO_VERTICAL;
+}
+
+/* ---------------------------------------------------------------- */
+/* R3 — o valor sugere, nunca decide                                 */
+/* ---------------------------------------------------------------- */
+
 /** Espelha `faixaDeMoedas` de bridge/src/dominio/regras.mjs. Ver R3. */
 export function faixaDeMoedas(moedas) {
   if (moedas >= 5000) return 5;
