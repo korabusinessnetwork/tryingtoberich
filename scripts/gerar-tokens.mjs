@@ -38,6 +38,13 @@ Tokens.hud = {
 ${Object.entries(tokens.hud).map(([k, v]) => `\t${k} = ${luaCor(v)},`).join("\n")}
 }
 
+-- O bloco do painel também vem para o Luau porque o vestiário é uma GUI dentro
+-- do jogo (ADR-011) e usa a mesma linguagem visual escura e densa do painel.
+-- Sem isto, ela repetiria os hex à mão e sairia do white-label.
+Tokens.painel = {
+${Object.entries(tokens.painel).map(([k, v]) => `\t${k} = ${luaCor(v)},`).join("\n")}
+}
+
 return Tokens
 `;
 

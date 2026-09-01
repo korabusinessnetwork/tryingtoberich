@@ -27,4 +27,15 @@ Tokens.hud = {
 	combate = Color3.fromRGB(234, 179, 8),
 }
 
+-- O bloco do painel também vem para o Luau porque o vestiário é uma GUI dentro
+-- do jogo (ADR-011) e usa a mesma linguagem visual escura e densa do painel.
+-- Sem isto, ela repetiria os hex à mão e sairia do white-label.
+Tokens.painel = {
+	fundo = Color3.fromRGB(17, 17, 17),
+	superficie = Color3.fromRGB(27, 27, 27),
+	borda = Color3.fromRGB(42, 42, 42),
+	textoPrimario = Color3.fromRGB(245, 245, 245),
+	textoSecundario = Color3.fromRGB(163, 163, 163),
+}
+
 return Tokens

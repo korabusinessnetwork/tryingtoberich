@@ -38,7 +38,12 @@ Eventos.VESTIARIO_SALVAR = "VestiarioSalvar"
 	  disparo é resultado de um combate (ADR-012).
 
 	ESTADO (servidor → cliente), no máximo a cada 2s ou quando muda
-	  { plataformaReferencia, plataformaMaxima, emAnimacao, totalPlataformas }
+	  { plataformaReferencia, plataformaMaxima, emAnimacao, totalPlataformas,
+	    sessaoAtiva }
+	  `sessaoAtiva` existe para o vestiário saber quando se trancar: o ADR-011
+	  proíbe abri-lo com a sessão rodando, porque streamer parado num menu é a
+	  tela estática que o ADR-009 evita. Sem este campo, o cliente só poderia
+	  adivinhar por heurística de tempo, e adivinhar erra.
 
 	COMBATE_ANULADO (servidor → cliente)
 	  { somaSubida, somaDescida, participantes }
