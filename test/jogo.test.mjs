@@ -268,28 +268,52 @@ test("o orquestrador só chama função que existe nos outros módulos", async (
   assert.deepEqual(faltando, []);
 });
 
-test("o cliente só escuta evento que o servidor emite, e vice-versa", async () => {
+test("todo RemoteEvent do contrato tem os dois lados ligados", async () => {
   // O outro lado do mesmo risco: HUD escutando um RemoteEvent que ninguém
   // dispara é feature morta sem erro nenhum. Foi exatamente o que aconteceu
-  // com COMBATE_ANULADO antes da síntese.
-  const emitidos = new Set();
-  const escutados = new Set();
+  // com COMBATE_ANULADO até a síntese.
+  //
+  // Casa por NOME da constante e não por padrão de chamada: o código real liga
+  // por variável intermediária (`local remoto = Eventos.obter(...)` e depois
+  // `remoto.OnClientEvent`), e um regex preso à forma da chamada passa vazio —
+  // que é pior que não ter teste, porque parece verde.
+  const contrato = await lerJogo("shared", "eventos.lua");
+  const definidos = [...contrato.matchAll(/^Eventos\.([A-Z_]+)\s*=\s*"/gm)].map((m) => m[1]);
+  assert.ok(definidos.length >= 8, `esperava os eventos do contrato, achei ${definidos.length}`);
 
-  const varrer = async (subdir, arquivos, destino, padrao) => {
-    for (const arquivo of arquivos) {
-      const fonte = await lerJogo(subdir, arquivo);
-      for (const achado of fonte.matchAll(padrao)) destino.add(achado[1]);
-    }
+  const juntar = async (subdir) => {
+    const arquivos = (await readdir(path.join(RAIZ, "game", "src", subdir))).filter((f) => f.endsWith(".lua"));
+    const partes = await Promise.all(arquivos.map((a) => lerJogo(subdir, a)));
+    return partes.join("\n");
   };
 
-  const servidor = (await readdir(path.join(RAIZ, "game", "src", "server"))).filter((f) => f.endsWith(".lua"));
-  const cliente = (await readdir(path.join(RAIZ, "game", "src", "client"))).filter((f) => f.endsWith(".lua"));
+  // efeitos.lua dispara TREMOR, CAMERA e FLASH, e mora em shared/ porque as
+  // animações o usam. Para efeito de "quem emite", ele conta como servidor.
+  const ladoServidor = `${await juntar("server")}\n${await juntar("shared")}`;
+  const ladoCliente = await juntar("client");
 
-  await varrer("server", servidor, emitidos, /Eventos\.obter\(Eventos\.(\w+)\)\s*:\s*Fire/g);
-  await varrer("client", cliente, escutados, /Eventos\.obter\(Eventos\.(\w+)\)\s*\.\s*OnClientEvent/g);
+  const soltos = [];
+  for (const evento of definidos) {
+    const usa = (fonte) => new RegExp(`Eventos\\.${evento}\\b`).test(fonte);
+    const noServidor = usa(ladoServidor);
+    const noCliente = usa(ladoCliente);
+    // PASTA é o nome da Folder, não um evento.
+    if (evento === "PASTA") continue;
+    if (noCliente && !noServidor) soltos.push(`${evento}: cliente escuta, ninguém dispara`);
+    if (noServidor && !noCliente) soltos.push(`${evento}: servidor dispara, ninguém escuta`);
+  }
 
-  const orfaos = [...escutados].filter((e) => !emitidos.has(e));
-  assert.deepEqual(orfaos, [], "o cliente escuta evento que nenhum módulo do servidor dispara");
+  assert.deepEqual(soltos, []);
+});
+
+test("o teste de evento solto pega um evento solto", async () => {
+  // Guarda que nunca acusa passa sempre — e o anterior já passou vazio uma vez
+  // por regex preso à forma da chamada. Este confere que ele morde.
+  const contrato = 'Eventos.INVENTADO = "Inventado"\nEventos.PRESENTE = "Presente"\n';
+  const definidos = [...contrato.matchAll(/^Eventos\.([A-Z_]+)\s*=\s*"/gm)].map((m) => m[1]);
+
+  assert.deepEqual(definidos, ["INVENTADO", "PRESENTE"]);
+  assert.equal(/Eventos\.INVENTADO\b/.test("nada aqui"), false);
 });
 
 /* -------------------------------------------------------------- */

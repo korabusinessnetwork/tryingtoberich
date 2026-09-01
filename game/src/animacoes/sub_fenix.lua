@@ -3,11 +3,13 @@ local Compartilhado = game:GetService("ReplicatedStorage"):WaitForChild("KoraCom
 local Efeitos = require(Compartilhado.efeitos)
 
 --[[
-	"Tela dourada" pede um flash de tela inteira, e isso só existe no cliente
-	via ScreenGui — não há RemoteEvent pra isso em eventos.lua (só TREMOR e
-	CAMERA), e criar um novo é fora dos 10 arquivos deste agente (ver relatório
-	final). Aqui o substituto é o mais forte que o servidor consegue sozinho:
-	Highlight quase opaco + PointLight forte, os dois dourados, no personagem.
+	A animação mais pesada da biblioteca: peso 5, a única com tela dourada e
+	câmera afastando ao mesmo tempo. É o presente mais caro da live virando o
+	momento mais caro da tela.
+
+	O clarão de tela é do cliente (Efeitos.flash), porque Highlight e PointLight
+	iluminam geometria e "tela dourada" precisa cobrir também o pixel que não
+	tem nada atrás.
 ]]
 local DURACAO_BASE = 3.0
 
@@ -61,7 +63,9 @@ return {
 
 			Efeitos.luz(raiz, { Color = dourado, Brightness = 10 * fator, Range = 26 * fator }, DURACAO_BASE)
 
-			-- Elemento explícito da tabela: peso 5 afasta a câmera do cliente.
+			-- Os dois elementos de tela da tabela do doc, os dois só possíveis
+			-- no cliente: o clarão dourado e a câmera afastando.
+			Efeitos.flash(dourado, 0.9, 0.6 * fator)
 			Efeitos.afastarCamera(DURACAO_BASE)
 		end)
 	end,

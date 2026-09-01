@@ -219,6 +219,21 @@ function Efeitos.tremor(intensidade, duracao)
 	remoto:FireAllClients({ intensidade = intensidade or 1, duracao = duracao or 0.3 })
 end
 
+--[[
+	Clarão de tela inteira. Efeito de TELA, não de mundo: Highlight e PointLight
+	iluminam geometria, e a "tela dourada" que a Fênix pede precisa cobrir
+	também o pixel que não tem nada atrás. Só o cliente consegue, então o
+	servidor avisa.
+]]
+function Efeitos.flash(cor, duracao, opacidade)
+	local remoto = Eventos.obter(Eventos.FLASH)
+	remoto:FireAllClients({
+		cor = cor or Color3.fromRGB(255, 255, 255),
+		duracao = duracao or 0.4,
+		opacidade = opacidade or 0.55,
+	})
+end
+
 function Efeitos.afastarCamera(duracao)
 	local remoto = Eventos.obter(Eventos.CAMERA)
 	remoto:FireAllClients({ afastar = true, duracao = duracao or 1 })

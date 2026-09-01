@@ -21,6 +21,7 @@ Eventos.ESTADO = "Estado"
 Eventos.COMBATE_ANULADO = "CombateAnulado"
 Eventos.TREMOR = "Tremor"
 Eventos.CAMERA = "Camera"
+Eventos.FLASH = "Flash"
 
 -- Cliente → servidor (só vestiário, ver ADR-011)
 Eventos.VESTIARIO_BUSCAR = "VestiarioBuscar"
@@ -54,6 +55,13 @@ Eventos.VESTIARIO_SALVAR = "VestiarioSalvar"
 
 	CAMERA (servidor → cliente)
 	  { afastar, duracao } — afasta em animação de peso visual 4 ou 5.
+
+	FLASH (servidor → cliente)
+	  { cor, duracao, opacidade }
+	  Clarão de tela inteira. Existe porque efeito de TELA não é efeito de
+	  mundo: nenhum Highlight ou PointLight cobre a tela, e a Fênix (peso 5)
+	  pede "tela dourada". É o único jeito de uma animação alcançar o pixel
+	  que não tem geometria atrás.
 ]]
 
 local function garantirPasta()
@@ -98,7 +106,7 @@ end
 function Eventos.criarTodos()
 	local nomes = {
 		Eventos.PRESENTE, Eventos.ESTADO, Eventos.COMBATE_ANULADO,
-		Eventos.TREMOR, Eventos.CAMERA,
+		Eventos.TREMOR, Eventos.CAMERA, Eventos.FLASH,
 		Eventos.VESTIARIO_BUSCAR, Eventos.VESTIARIO_EQUIPAR, Eventos.VESTIARIO_SALVAR,
 	}
 	for _, nome in ipairs(nomes) do
