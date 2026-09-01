@@ -1,0 +1,22 @@
+{
+  "name": "kora-stream-games",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "KoraCompartilhado": { "$path": "src/shared" },
+      "KoraAnimacoes": { "$path": "src/animacoes" }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "KoraServidor": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "KoraCliente": { "$path": "src/client" }
+      }
+    }
+  }
+}

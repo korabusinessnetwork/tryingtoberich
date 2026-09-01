@@ -7,10 +7,11 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.mjs\" \"bridge/test/**/*.test.mjs\"",
     "validar": "node scripts/validar-contratos.mjs",
-    "gerar": "node scripts/gerar-animacoes.mjs",
-    "pretest": "node scripts/gerar-animacoes.mjs --silencioso",
+    "gerar": "node scripts/gerar-animacoes.mjs && node scripts/gerar-tokens.mjs",
+    "pretest": "node scripts/gerar-animacoes.mjs --silencioso && node scripts/gerar-tokens.mjs --silencioso",
     "ponte": "node --env-file=.env bridge/src/index.mjs",
-    "semear": "node scripts/semear-dev.mjs"
+    "semear": "node scripts/semear-dev.mjs",
+    "luau": "node scripts/verificar-luau.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

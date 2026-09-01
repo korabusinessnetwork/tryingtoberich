@@ -1,0 +1,22 @@
+/* GERADO por scripts/gerar-tokens.mjs a partir de data/tokens.json.
+   Não editar à mão. O HUD do jogo espelha o mesmo arquivo.
+   Toda cor de marca vem daqui, nunca literal no componente: é o que permite
+   white-label na Fase 3 sem reescrever componente. Ver docs/02_DESIGN_SYSTEM. */
+
+:root {
+  --faixa-1: #8A8A8A; /* 1 a 9 moedas, cinza */
+  --faixa-2: #3B82F6; /* 10 a 99 moedas, azul */
+  --faixa-3: #8B5CF6; /* 100 a 999 moedas, roxo */
+  --faixa-4: #F97316; /* 1000 a 4999 moedas, laranja */
+  --faixa-5: #EAB308; /* 5000 ou mais, dourado */
+
+  --estado-ok: #22C55E;
+  --estado-atencao: #F59E0B;
+  --estado-erro: #EF4444;
+
+  --painel-fundo: #111111;
+  --painel-superficie: #1B1B1B;
+  --painel-borda: #2A2A2A;
+  --painel-texto-primario: #F5F5F5;
+  --painel-texto-secundario: #A3A3A3;
+}

@@ -72,11 +72,24 @@ Roblox / Luau, experiência privada. Responsabilidades:
 Estrutura:
 ```
 game/src/
-  server/     ponte.lua (long-poll), sessao.lua, construtorMapa.lua
+  server/     ponte.lua (long-poll), sessao.lua (orquestra), movimento.lua
+              (ADR-005), plataformas.lua (R9/R10), construtorMapa.lua e
+              jogabilidade.lua (ADR-009), personagem.lua (ADR-010)
   client/     hud.lua, camera.lua, vestiario.lua
-  shared/     tipos.lua, indiceAnimacoes.lua
+  shared/     tipos.lua, eventos.lua, configuracao.lua, efeitos.lua,
+              tokens.lua e indiceAnimacoes.lua (os dois últimos GERADOS)
   animacoes/  20 ModuleScripts, um por animação
 ```
+
+`game/default.project.json` mapeia isso para o Studio via Rojo. `shared/` e
+`animacoes/` vão para o `ReplicatedStorage` porque o cliente também precisa
+deles; `server/` fica no `ServerScriptService`, que o cliente nunca enxerga —
+é por isso que o token da ponte nunca chega ao jogador. Ver `game/README.md`.
+
+O jogo é escrito no subconjunto **Lua 5.1** de propósito: Luau é superconjunto
+dele, e isso permite validar a sintaxe de todos os arquivos fora do Studio com
+`npm run luau`. Sem esse gate, erro de sintaxe só aparece quando o Studio
+carrega o lugar.
 
 ## O caminho crítico, passo a passo
 
