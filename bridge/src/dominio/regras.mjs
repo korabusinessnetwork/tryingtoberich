@@ -11,6 +11,25 @@ export const FATOR_SALTO_VERTICAL = 0.7;
 /** Teto de deriva horizontal em função do raio da plataforma. Ver P1. */
 export const FATOR_DERIVA_HORIZONTAL = 1.2;
 
+/** Gravidade e velocidade de andar padrão do Roblox. Espelham game/src/server/jogabilidade.lua. */
+export const GRAVIDADE_ROBLOX = 196.2;
+export const VELOCIDADE_ANDAR_ROBLOX = 16;
+
+/**
+ * Quanto o personagem cobre na horizontal durante um pulo, já com a margem do
+ * ADR-009. O Roblox dá controle total no ar, então é velocidade de andar vezes
+ * o tempo de voo.
+ *
+ * Esta conta existe nos dois lados de propósito: a ponte precisa recusar um
+ * spec intransponível antes de gravar, senão o mapa só falharia na hora de
+ * construir, dentro do Roblox, no meio da live.
+ */
+export function alcanceHorizontalDoPulo(jumpHeight) {
+  const velocidadeVertical = Math.sqrt(2 * GRAVIDADE_ROBLOX * jumpHeight);
+  const tempoDeVoo = (2 * velocidadeVertical) / GRAVIDADE_ROBLOX;
+  return VELOCIDADE_ANDAR_ROBLOX * tempoDeVoo * FATOR_SALTO_VERTICAL;
+}
+
 /**
  * R1.4 — um mesmo presente não pode ocupar dois slots do mesmo preset.
  * Não é expressável em JSON Schema porque o conjunto de presenteId é aberto.
@@ -42,11 +61,24 @@ export function problemasDeJogabilidade(mapa) {
     );
   }
 
-  const tetoHorizontal = raioBase * FATOR_DERIVA_HORIZONTAL;
-  if (variacaoHorizontal > tetoHorizontal) {
+  // Duas regras mordem a deriva horizontal, e vale a menor das duas.
+  // A de geometria (P1) impede plataforma solta longe da torre; a de
+  // jogabilidade (ADR-009.2) impede salto que o pulo não alcança. Para
+  // jumpHeight 7,2 a segunda é bem mais apertada que a primeira, e é ela que
+  // decide — foi o que apareceu ao implementar o teste dentro do jogo.
+  const tetoGeometria = raioBase * FATOR_DERIVA_HORIZONTAL;
+  if (variacaoHorizontal > tetoGeometria) {
     problemas.push(
-      `variacaoHorizontal ${variacaoHorizontal} passa do teto ${tetoHorizontal.toFixed(2)} ` +
+      `variacaoHorizontal ${variacaoHorizontal} passa do teto de geometria ${tetoGeometria.toFixed(2)} ` +
         `(raioBase ${raioBase} × ${FATOR_DERIVA_HORIZONTAL}).`,
+    );
+  }
+
+  const tetoAlcance = alcanceHorizontalDoPulo(jumpHeight);
+  if (variacaoHorizontal > tetoAlcance) {
+    problemas.push(
+      `variacaoHorizontal ${variacaoHorizontal} passa do alcance horizontal do pulo ` +
+        `${tetoAlcance.toFixed(2)} (jumpHeight ${jumpHeight}). Ver ADR-009.2.`,
     );
   }
 

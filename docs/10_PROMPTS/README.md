@@ -23,7 +23,8 @@ Regras de faixa (obrigatórias):
 - raioBase: número entre 4 e 14
 - variacaoRaio: entre 0 e 0.5
 - espacamentoVertical: entre 3 e (jumpHeight * 0.7), NUNCA acima disso
-- variacaoHorizontal: entre 0 e (raioBase * 1.2)
+- variacaoHorizontal: entre 0 e 6, NUNCA acima. Este é o alcance horizontal do
+  pulo e é o limite que manda; ele é bem mais apertado que o raio da plataforma
 - paleta: três cores em hexadecimal
 - props: no máximo 3 tipos, todos escolhidos da lista de acervo, densidade
   entre 0 e 1
@@ -62,7 +63,9 @@ Formato de saída exato:
 4. Verificar que `skyboxAssetId`, `materialAssetId` e cada `props[].tipo`
    **existem no acervo**. O modelo vai tentar inventar id: barrar isso é
    obrigação do código, não do prompt.
-5. Verificar todas as faixas numéricas.
+5. Verificar todas as faixas numéricas, inclusive o teto de
+   `variacaoHorizontal` pelo alcance horizontal do pulo (ADR-009.2), que
+   depende do `jumpHeight` escolhido e não é constante.
 5b. **Verificar jogabilidade:** `espacamentoVertical <= jumpHeight * 0.7`. Spec
     que violar isso é rejeitado sem negociação. Ver ADR-009.
 6. Falhou: uma retentativa acrescentando ao prompt o que veio errado. Falhou de

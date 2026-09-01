@@ -14,7 +14,7 @@
     "raioBase": 8,
     "variacaoRaio": 0.3,
     "espacamentoVertical": 5,
-    "variacaoHorizontal": 9,
+    "variacaoHorizontal": 6,
     "materialAssetId": "textura_rocha_vulcanica"
   },
   "props": [

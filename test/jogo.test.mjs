@@ -79,6 +79,32 @@ test("a margem do ADR-009 é a mesma na ponte e no jogo", async () => {
   );
 });
 
+test("o alcance horizontal do pulo é o mesmo na ponte e no jogo", async () => {
+  const fonte = await lerJogo("server", "jogabilidade.lua");
+  const { alcanceHorizontalDoPulo, GRAVIDADE_ROBLOX, VELOCIDADE_ANDAR_ROBLOX } =
+    await import("../bridge/src/dominio/regras.mjs");
+
+  assert.equal(constanteLuau(fonte, "local GRAVIDADE"), GRAVIDADE_ROBLOX);
+  assert.equal(constanteLuau(fonte, "local VELOCIDADE_HORIZONTAL_PADRAO"), VELOCIDADE_ANDAR_ROBLOX);
+
+  // A conta em si é a mesma fórmula nos dois lados; se a constante bate, o
+  // resultado bate. O que este teste impede é a ponte aceitar um spec que o
+  // jogo depois recusa dentro do Studio, no meio da live.
+  assert.equal(alcanceHorizontalDoPulo(7.2).toFixed(2), "6.07");
+});
+
+test("o exemplo de mapa respeita os dois tetos horizontais", async () => {
+  const { alcanceHorizontalDoPulo, FATOR_DERIVA_HORIZONTAL } = await import("../bridge/src/dominio/regras.mjs");
+  const mapa = JSON.parse(await readFile(path.join(RAIZ, "data", "exemplos", "mapa-torre-vulcanica-01.json"), "utf8"));
+  const { variacaoHorizontal, raioBase } = mapa.plataformas;
+
+  assert.ok(variacaoHorizontal <= raioBase * FATOR_DERIVA_HORIZONTAL, "teto de geometria");
+  assert.ok(
+    variacaoHorizontal <= alcanceHorizontalDoPulo(mapa.jumpHeight),
+    "teto de alcance do pulo: é o que manda na prática, e é o que o doc dizia sem ninguém ter implementado",
+  );
+});
+
 test("o teto de duração do jogo é o mesmo que o schema aceita", async () => {
   const fonte = await lerJogo("shared", "tipos.lua");
   const schema = JSON.parse(await readFile(path.join(RAIZ, "data", "schemas", "animacoes.schema.json"), "utf8"));

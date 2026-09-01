@@ -102,7 +102,7 @@ migração de todos os arquivos. Ver ADR-003.
     "raioBase": 8,
     "variacaoRaio": 0.3,
     "espacamentoVertical": 5,
-    "variacaoHorizontal": 9,
+    "variacaoHorizontal": 6,
     "materialAssetId": "textura_rocha_vulcanica"
   },
   "props": [
@@ -118,6 +118,18 @@ migração de todos os arquivos. Ver ADR-003.
 `espacamentoVertical` **nunca** pode passar de `jumpHeight * 0,7`. Essa é a
 condição que garante que o mapa é escalável só com habilidade, sem presente
 nenhum. Spec que violar é rejeitado. Ver ADR-009.
+
+`variacaoHorizontal` tem **dois** tetos e vale o menor. O de geometria,
+`raioBase * 1,2`, impede plataforma solta longe da torre. O de jogabilidade,
+o alcance horizontal do pulo com a mesma margem de 30%, impede salto que o
+personagem não alcança — para `jumpHeight` 7,2 isso dá **6,07 studs**, bem mais
+apertado que os 9,6 da geometria. É o segundo que decide na prática.
+
+O alcance horizontal sai da física do Roblox: o personagem tem controle total
+no ar, então é `velocidadeDeAndar * tempoDeVoo`, com o tempo de voo saindo de
+`jumpHeight` e da gravidade padrão. A conta existe em
+`bridge/src/dominio/regras.mjs` e em `game/src/server/jogabilidade.lua`, e um
+teste confere que as duas dão o mesmo número.
 
 `skyboxAssetId` e `materialAssetId` **só podem** referenciar itens do acervo
 pré-aprovado em `data/acervo.json`. O Gemini escolhe do acervo, não inventa.

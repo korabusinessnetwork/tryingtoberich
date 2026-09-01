@@ -54,10 +54,10 @@
           "maximum": 8.4
         },
         "variacaoHorizontal": {
-          "description": "Teto absoluto 16,8 = raioBase máximo (14) * 1,2. O teto real depende do raioBase deste mapa e é checado no validador.",
+          "description": "Dois tetos, vale o menor: geometria (raioBase * 1,2) e alcance horizontal do pulo com a margem do ADR-009. O teto absoluto 7,83 é o alcance no jumpHeight máximo (12); o teto real deste mapa depende do jumpHeight dele e é checado no validador.",
           "type": "number",
           "minimum": 0,
-          "maximum": 16.8
+          "maximum": 7.83
         },
         "materialAssetId": { "$ref": "#/$defs/idAcervo" }
       }
