@@ -1,0 +1,19 @@
+.env
+node_modules/
+dist/
+
+# Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
+data/sessoes/*
+!data/sessoes/.gitkeep.md
+
+# Cache de ícone baixado da TikTok e do Roblox: gerado, nunca versionado.
+data/icones/*
+!data/icones/.gitkeep.md
+data/icones-itens/*
+!data/icones-itens/.gitkeep.md
+
+# Catálogo real, coletado da live. A semente versionada é catalogo-presentes.seed.json.
+data/catalogo-presentes.json
+
+# Espelho gerado a partir do índice Luau, nunca editado à mão (04_MODELAGEM).
+data/animacoes.json
