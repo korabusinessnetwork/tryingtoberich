@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/estado-jogo.schema.json",
+  "title": "Estado reportado pelo jogo (Roblox → ponte)",
+  "description": "Corpo de POST /jogo/estado. O jogo é a fonte de verdade da posição porque só ele vê o streamer jogando (R9). A ponte apenas repassa ao painel: nunca calcula, nunca acumula. Valor fora da faixa é DESCARTADO, não corrigido (11_SEGURANCA, camada 3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plataformaReferencia", "plataformaMaxima", "emAnimacao"],
+  "properties": {
+    "plataformaReferencia": {
+      "description": "Última plataforma que o personagem ENCOSTOU, por colisão real. Nunca por altura nem por proximidade. Ver R9.2.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 400
+    },
+    "plataformaMaxima": {
+      "description": "Só estatística. Nunca é usada como destino. Ver R9.4.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 400
+    },
+    "emAnimacao": { "type": "boolean" },
+    "quedasNaturais": { "type": "integer", "minimum": 0 },
+    "enviadoEm": { "type": "integer", "minimum": 0 }
+  }
+}

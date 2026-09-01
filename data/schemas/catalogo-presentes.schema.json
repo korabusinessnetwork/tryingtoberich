@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/catalogo-presentes.schema.json",
+  "title": "Catálogo de presentes",
+  "description": "Vale para os dois arquivos: a semente de desenvolvimento (data/catalogo-presentes.seed.json, origem=semente) e o catálogo real coletado da live (data/catalogo-presentes.json, origem=live). O catálogo da TikTok muda sem aviso: a fonte de verdade é sempre a própria live. Ver 04_MODELAGEM/catalogo-presentes.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["streamerId", "origem", "confirmado", "presentes"],
+  "properties": {
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "origem": { "type": "string", "enum": ["semente", "live"] },
+    "confirmado": {
+      "description": "Falso na semente: valor em moedas ali é referência não confirmada e não deve ser tratado como verdade. Vira verdadeiro só depois de coleta real.",
+      "type": "boolean"
+    },
+    "atualizadoEm": {
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    },
+    "presentes": { "type": "array", "items": { "$ref": "#/$defs/presente" } }
+  },
+  "allOf": [
+    {
+      "description": "Catálogo vindo da live é confirmado por definição; semente nunca é.",
+      "if": { "properties": { "origem": { "const": "semente" } }, "required": ["origem"] },
+      "then": { "properties": { "confirmado": { "const": false } } }
+    }
+  ],
+  "$defs": {
+    "presente": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presenteId", "nome", "moedas", "faixa", "combavel", "ativo"],
+      "properties": {
+        "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
+        "nome": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "moedas": { "type": "integer", "minimum": 0 },
+        "faixa": { "$ref": "comuns.schema.json#/$defs/faixa" },
+        "iconeUrl": { "type": ["string", "null"], "maxLength": 500 },
+        "iconeLocal": { "type": ["string", "null"], "maxLength": 200 },
+        "combavel": {
+          "description": "Se pode chegar com repeticoes maior que 1 (R4).",
+          "type": "boolean"
+        },
+        "ativo": {
+          "description": "Presente que sumiu da live vira ativo:false e NÃO é apagado: preset antigo pode referenciar.",
+          "type": "boolean"
+        },
+        "vistoEm": {
+          "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+        }
+      }
+    }
+  }
+}

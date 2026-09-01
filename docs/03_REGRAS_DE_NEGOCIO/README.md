@@ -56,6 +56,12 @@ Se chegarem eventos enquanto uma animação está tocando:
 4. A fila nunca segura evento por mais de 2 segundos. Passou disso, aplica o
    delta sem animação completa (só o efeito curto de impacto).
 
+> **Em aberto (2026-09-01):** a regra 1 manda somar delta e disparar uma vez, e
+> não diz nada sobre intensidade. A fixture `03-rajada-mesmo-slot` segue a
+> leitura literal e mantém a intensidade do slot. Se coalescência também devesse
+> subir um nível como o combo do R4, esta regra precisa dizer isso e o `esperado`
+> da fixture muda junto. Decisão do dono.
+
 ## R6 — Limites do tabuleiro
 - Plataforma mínima é 0. Delta negativo que passaria de 0 para o boneco em 0.
 - Plataforma máxima é o tamanho do mapa gerado. Chegar no topo dispara o evento

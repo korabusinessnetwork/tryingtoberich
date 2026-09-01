@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/evento-presente.schema.json",
+  "title": "Evento de presente normalizado",
+  "description": "A forma que sai do conector da TikTok e entra no resto da ponte. É a fronteira que isola a biblioteca não oficial (ADR-006): trocar de conector é reescrever bridge/src/tiktok e nada mais. Repare no que NÃO está aqui: nenhum identificador persistente de espectador (userId, uniqueId, foto de perfil). O nome do doador entra porque vai para a tela do jogo e some em 3 segundos; ele nunca é persistido junto com id. Ver 11_SEGURANCA, camada 4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["presenteId", "presenteNome", "repeticoes", "recebidoEm"],
+  "properties": {
+    "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
+    "presenteNome": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "moedas": { "type": "integer", "minimum": 0 },
+    "repeticoes": {
+      "description": "repeatCount da TikTok. O delta do slot é multiplicado por isto; a animação toca UMA vez com intensidade +1. Ver R4.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "rajadaEncerrada": {
+      "description": "repeatEnd. Rajada ainda aberta é evento parcial: o conector só entrega quando fecha, senão o mesmo presente dispara N vezes.",
+      "type": "boolean"
+    },
+    "nomeDoador": { "$ref": "#/$defs/nomeDoador" },
+    "recebidoEm": {
+      "description": "Epoch em milissegundos, carimbado na entrada da ponte. É o t0 da medição de latência do Princípio nº1.",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "nomeDoador": {
+      "description": "Texto NÃO confiável vindo da TikTok. Sanitizado e limitado antes de virar texto na tela do jogo (11_SEGURANCA, camada 3).",
+      "type": ["string", "null"],
+      "maxLength": 24
+    }
+  }
+}

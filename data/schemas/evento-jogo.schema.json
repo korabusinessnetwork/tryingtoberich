@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/evento-jogo.schema.json",
+  "title": "Resposta do long-poll (ponte → Roblox)",
+  "description": "O corpo de GET /jogo/eventos quando há evento. A ponte manda {animacaoId, delta, intensidade} e nada de comando visual: como aquilo aparece na tela é decisão do Luau. É o que mantém a ponte agnóstica de jogo e permite a Fase 2 reusá-la inteira. Ver 07_APIS e memory/patterns.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cursor", "eventos"],
+  "properties": {
+    "cursor": {
+      "description": "Monotônico. O Roblox devolve em ?desde= para não reprocessar evento já entregue.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "eventos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/evento" }
+    }
+  },
+  "$defs": {
+    "evento": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "animacaoId", "delta", "intensidade", "emitidoEm"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "animacaoId": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
+        "delta": {
+          "description": "Já multiplicado por repeticoes (R4) e já coalescido (R5). Por isso a faixa é maior que a do slot: 6 slots de 200 em rajada cabem aqui.",
+          "type": "integer",
+          "minimum": -40000,
+          "maximum": 40000,
+          "not": { "const": 0 }
+        },
+        "intensidade": { "$ref": "comuns.schema.json#/$defs/intensidade" },
+        "efeitoCurto": {
+          "description": "Verdadeiro quando a fila segurou o evento por mais de 2s: aplica o delta sem animação completa. Ver R5.4.",
+          "type": "boolean",
+          "default": false
+        },
+        "nomeDoador": { "$ref": "evento-presente.schema.json#/$defs/nomeDoador" },
+        "presenteNome": { "type": ["string", "null"], "maxLength": 60 },
+        "emitidoEm": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

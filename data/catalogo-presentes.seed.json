@@ -1,0 +1,21 @@
+{
+  "streamerId": "local",
+  "origem": "semente",
+  "confirmado": false,
+  "atualizadoEm": null,
+  "presentes": [
+    { "presenteId": "sem-rose",            "nome": "Rose",           "moedas": 1,     "faixa": 1, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-tiktok",          "nome": "TikTok",         "moedas": 1,     "faixa": 1, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-finger-heart",    "nome": "Finger Heart",   "moedas": 5,     "faixa": 1, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-tiny-diny",       "nome": "Tiny Diny",      "moedas": 10,    "faixa": 2, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-perfume",         "nome": "Perfume",        "moedas": 20,    "faixa": 2, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-doughnut",        "nome": "Doughnut",       "moedas": 30,    "faixa": 2, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-hand-hearts",     "nome": "Hand Hearts",    "moedas": 100,   "faixa": 3, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-sunglasses",      "nome": "Sunglasses",     "moedas": 199,   "faixa": 3, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-corgi",           "nome": "Corgi",          "moedas": 299,   "faixa": 3, "iconeUrl": null, "iconeLocal": null, "combavel": true,  "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-galaxy",          "nome": "Galaxy",         "moedas": 1000,  "faixa": 4, "iconeUrl": null, "iconeLocal": null, "combavel": false, "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-fireworks",       "nome": "Fireworks",      "moedas": 1088,  "faixa": 4, "iconeUrl": null, "iconeLocal": null, "combavel": false, "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-lion",            "nome": "Lion",           "moedas": 29999, "faixa": 5, "iconeUrl": null, "iconeLocal": null, "combavel": false, "ativo": true, "vistoEm": null },
+    { "presenteId": "sem-tiktok-universe", "nome": "TikTok Universe","moedas": 44999, "faixa": 5, "iconeUrl": null, "iconeLocal": null, "combavel": false, "ativo": true, "vistoEm": null }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "cenario": "04-rajada-slots-diferentes",
+  "regra": "R5.2 e R5.3",
+  "descricao": "Chegam eventos de slots diferentes enquanto sub_cometa (1,6s) está tocando. A fila tem no máximo 3 posições. Com a fila cheia, o evento de maior delta absoluto substitui o MENOR da fila. Nada de descartar o mais novo só por ser o mais novo.",
+  "presetId": "escalada-padrao",
+  "filaMax": 3,
+  "entrada": [
+    { "emMs": 0,   "evento": { "presenteId": "sem-galaxy",      "presenteNome": "Galaxy",       "moedas": 1000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "A", "recebidoEm": 1756742620000 } },
+    { "emMs": 100, "evento": { "presenteId": "sem-rose",        "presenteNome": "Rose",         "moedas": 1,    "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "B", "recebidoEm": 1756742620100 } },
+    { "emMs": 150, "evento": { "presenteId": "sem-finger-heart","presenteNome": "Finger Heart", "moedas": 5,    "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "C", "recebidoEm": 1756742620150 } },
+    { "emMs": 200, "evento": { "presenteId": "sem-doughnut",    "presenteNome": "Doughnut",     "moedas": 30,   "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "D", "recebidoEm": 1756742620200 } },
+    { "emMs": 250, "evento": { "presenteId": "sem-lion",        "presenteNome": "Lion",         "moedas": 29999,"repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "E", "recebidoEm": 1756742620250 } },
+    { "emMs": 300, "evento": { "presenteId": "sem-hand-hearts", "presenteNome": "Hand Hearts",  "moedas": 100,  "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "F", "recebidoEm": 1756742620300 } }
+  ],
+  "esperado": {
+    "disparos": [
+      { "emMs": 0, "slot": 5, "animacaoId": "sub_cometa", "delta": 40, "intensidade": 3 }
+    ],
+    "filaApos": [
+      { "slot": 3, "animacaoId": "sub_foguete",      "delta": 12,  "intensidade": 2 },
+      { "slot": 6, "animacaoId": "des_buraco_negro", "delta": -60, "intensidade": 5 },
+      { "slot": 4, "animacaoId": "des_chumbo",       "delta": -8,  "intensidade": 2 }
+    ],
+    "descartados": [
+      { "slot": 1, "delta": 2, "motivo": "fila cheia, menor delta absoluto, substituído pelo Lion (|-60| > |2|)" },
+      { "slot": 2, "delta": 5, "motivo": "fila cheia, menor delta absoluto, substituído pelo Hand Hearts (|-8| > |5|)" }
+    ],
+    "naoMapeados": []
+  },
+  "nota": "A fila nunca segura evento por mais de 2s (R5.4). Este cenário cabe dentro dos 1,6s do sub_cometa, então nenhum item vira efeito curto."
+}

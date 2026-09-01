@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/mapa.schema.json",
+  "title": "Spec de mapa",
+  "description": "Layout da torre. Gerado pelo Gemini a partir de descrição em texto (F4, P1) e validado antes de tocar o disco. Duas regras deste schema são cruzadas entre campos e vivem em scripts/validar-contratos.mjs: (a) espacamentoVertical <= jumpHeight * 0,7, que é o ADR-009 e é o que garante mapa vencível sem presente nenhum; (b) skyboxAssetId, materialAssetId e props[].tipo têm que existir em data/acervo.json com status aprovado, que é o ADR-004.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mapaId", "streamerId", "nome", "geradoPor", "totalPlataformas", "jumpHeight", "skyboxAssetId", "paleta", "plataformas", "marcos"],
+  "properties": {
+    "mapaId": { "$ref": "comuns.schema.json#/$defs/identificador" },
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "nome": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "geradoPor": { "type": "string", "enum": ["gemini", "manual"] },
+    "promptOriginal": {
+      "description": "A descrição que o streamer digitou. Guardada para ele poder regenerar variações.",
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "geradoEm": { "$ref": "comuns.schema.json#/$defs/instante" },
+    "totalPlataformas": { "type": "integer", "minimum": 100, "maximum": 400 },
+    "jumpHeight": {
+      "description": "Altura de pulo do personagem em studs, aplicada no Humanoid. É o que define o teto de espacamentoVertical. Ver ADR-009.3.",
+      "type": "number",
+      "minimum": 7,
+      "maximum": 12
+    },
+    "skyboxAssetId": { "$ref": "#/$defs/idAcervo" },
+    "paleta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primaria", "secundaria", "destaque"],
+      "properties": {
+        "primaria": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "secundaria": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "destaque": { "$ref": "comuns.schema.json#/$defs/corHex" }
+      }
+    },
+    "plataformas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formato", "raioBase", "variacaoRaio", "espacamentoVertical", "variacaoHorizontal", "materialAssetId"],
+      "properties": {
+        "formato": {
+          "description": "A Fase 1 constrói só disco. Formato é uma das alavancas de variedade do ADR-009: acrescentar valor aqui exige implementar no construtor de mapa (Bloco 2) e citar no prompt P1.",
+          "type": "string",
+          "enum": ["disco"]
+        },
+        "raioBase": { "type": "number", "minimum": 4, "maximum": 14 },
+        "variacaoRaio": { "type": "number", "minimum": 0, "maximum": 0.5 },
+        "espacamentoVertical": {
+          "description": "Teto absoluto 8,4 = jumpHeight máximo (12) * 0,7. O teto real depende do jumpHeight deste mapa e é checado no validador. Ver ADR-009.1.",
+          "type": "number",
+          "minimum": 3,
+          "maximum": 8.4
+        },
+        "variacaoHorizontal": {
+          "description": "Teto absoluto 16,8 = raioBase máximo (14) * 1,2. O teto real depende do raioBase deste mapa e é checado no validador.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16.8
+        },
+        "materialAssetId": { "$ref": "#/$defs/idAcervo" }
+      }
+    },
+    "props": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tipo", "densidade", "aCadaNPlataformas"],
+        "properties": {
+          "tipo": { "$ref": "#/$defs/idAcervo" },
+          "densidade": { "type": "number", "minimum": 0, "maximum": 1 },
+          "aCadaNPlataformas": { "type": "integer", "minimum": 1, "maximum": 100 }
+        }
+      }
+    },
+    "marcos": {
+      "description": "Um checkpoint visual a cada 50 plataformas e um marco topo na última. Ver P1.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plataforma", "tipo"],
+        "properties": {
+          "plataforma": { "type": "integer", "minimum": 1, "maximum": 400 },
+          "tipo": { "type": "string", "enum": ["checkpoint_visual", "topo"] }
+        }
+      },
+      "contains": {
+        "type": "object",
+        "required": ["tipo"],
+        "properties": { "tipo": { "const": "topo" } }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    }
+  },
+  "$defs": {
+    "idAcervo": {
+      "description": "Id de item do acervo pré-aprovado (data/acervo.json). O Gemini ESCOLHE daqui, nunca inventa. Ver ADR-004.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 64
+    }
+  }
+}

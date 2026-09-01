@@ -1,0 +1,19 @@
+{
+  "_comentario": "Rajada AINDA ABERTA (repeatEnd false). O conector emite vários destes durante o combo. O normalizador tem que ignorar até repeatEnd virar true, senão o mesmo presente dispara N animações e quebra R4.",
+  "giftId": 5827,
+  "giftName": "Rose",
+  "giftType": 1,
+  "diamondCount": 1,
+  "repeatCount": 4,
+  "repeatEnd": false,
+  "groupId": "7040000000000000002",
+  "timestamp": 1756742601000,
+  "giftPictureUrl": "https://exemplo.invalid/icones/rose.png",
+  "userId": "0000000000000000002",
+  "uniqueId": "outro_espectador",
+  "nickname": "Outro Espectador",
+  "profilePictureUrl": "https://exemplo.invalid/perfis/0002.jpg",
+  "followRole": 0,
+  "isModerator": false,
+  "isSubscriber": false
+}

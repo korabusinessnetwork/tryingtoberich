@@ -4,12 +4,29 @@ Ordem pensada para o Claude Code. Cada bloco é entregável e testável sozinho.
 Os três diretórios (`bridge/`, `panel/`, `game/`) têm dono exclusivo e podem ser
 construídos em paralelo depois do bloco 0.
 
-## Bloco 0 — Contratos (bloqueante, faz primeiro, sequencial)
-- [ ] `data/schemas/*.schema.json` para preset, mapa, catálogo e animação
-- [ ] `data/acervo.json` com a estrutura do acervo (pode nascer vazio)
-- [ ] `data/catalogo-presentes.seed.json` com a semente de desenvolvimento
-- [ ] `.env.example`
-- [ ] Fixtures de evento da TikTok para teste sem estar ao vivo
+## Bloco 0 — Contratos (bloqueante, faz primeiro, sequencial) — **concluído**
+- [x] `data/schemas/*.schema.json` — 11 schemas: preset, mapa, look, acervo,
+      catálogo, animação, sessão, evento normalizado, resposta de long-poll,
+      estado do jogo e os tipos comuns
+- [x] `data/acervo.json` com a estrutura do acervo — 6 skybox, 6 texturas e 5
+      props, todos `pendente-upload` até serem enviados e aprovados (ADR-004)
+- [x] `data/catalogo-presentes.seed.json` com a semente de desenvolvimento,
+      marcada `confirmado: false` e cobrindo as cinco faixas
+- [x] `.env.example`
+- [x] Fixtures de evento da TikTok para teste sem estar ao vivo —
+      `data/fixtures/`, com 4 payloads crus e 6 cenários de R4, R5 e F2
+- [x] `npm test` valida os contratos: 36 testes, cada regra com o caso válido e
+      o caso que ela tem que rejeitar
+
+### Aberto pelo Bloco 0, para os blocos seguintes
+- [ ] **Montar o acervo de verdade** (manual, véspera): subir e aprovar as
+      imagens no Roblox, preencher `assetId` e mudar `status` para `aprovado`.
+      Enquanto isso não acontecer, nenhum mapa pode ir ao ar.
+- [ ] **Conferir a forma do payload cru da TikTok** contra a versão instalada do
+      conector na primeira conexão real, e corrigir `data/fixtures/tiktok-cru/`.
+      Ver `memory/learnings.md`.
+- [ ] **Decidir a intensidade na coalescência (R5.1).** Ver a nota em
+      `03_REGRAS_DE_NEGOCIO` e a fixture `03-rajada-mesmo-slot`.
 
 ## Bloco 1 — Ponte (`bridge/`)
 - [ ] Repositórios JSON com escrita atômica (temp + rename)

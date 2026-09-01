@@ -1,0 +1,16 @@
+{
+  "cenario": "01-presente-unico",
+  "regra": "F2",
+  "descricao": "Caminho feliz: presente casa com um slot e dispara uma vez.",
+  "presetId": "escalada-padrao",
+  "entrada": [
+    { "emMs": 0, "evento": { "presenteId": "sem-galaxy", "presenteNome": "Galaxy", "moedas": 1000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Espectador de Teste", "recebidoEm": 1756742591123 } }
+  ],
+  "esperado": {
+    "disparos": [
+      { "emMs": 0, "slot": 5, "animacaoId": "sub_cometa", "delta": 40, "intensidade": 3 }
+    ],
+    "naoMapeados": [],
+    "descartados": []
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/preset.schema.json",
+  "title": "Preset",
+  "description": "A configuração de uma live: modalidade, mapa, look e os 6 slots de presente. Ver R1, R2 e ADR-007. A unicidade de presenteId entre slots (R1.4) não é expressável em JSON Schema e é checada em scripts/validar-contratos.mjs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["presetId", "streamerId", "nome", "modalidade", "slots"],
+  "properties": {
+    "presetId": { "$ref": "comuns.schema.json#/$defs/identificador" },
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "nome": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "modalidade": { "$ref": "comuns.schema.json#/$defs/modalidade" },
+    "mapaId": {
+      "description": "Mapa usado por este preset. Nulo enquanto o streamer não gerou nenhum.",
+      "oneOf": [
+        { "$ref": "comuns.schema.json#/$defs/identificador" },
+        { "type": "null" }
+      ]
+    },
+    "atualizadoEm": { "$ref": "comuns.schema.json#/$defs/instante" },
+    "personagem": {
+      "description": "Referência a um look montado no vestiário dentro do jogo. A composição vive em data/looks/. Ver ADR-011.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lookId"],
+      "properties": {
+        "lookId": {
+          "oneOf": [
+            { "$ref": "comuns.schema.json#/$defs/identificador" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "slots": {
+      "description": "No máximo 6. Slot vazio simplesmente não aparece: preset com menos de 6 preenchidos é válido (R1.3).",
+      "type": "array",
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/slot" },
+      "allOf": [
+        { "contains": { "$ref": "#/$defs/naPosicao1" }, "minContains": 0, "maxContains": 1 },
+        { "contains": { "$ref": "#/$defs/naPosicao2" }, "minContains": 0, "maxContains": 1 },
+        { "contains": { "$ref": "#/$defs/naPosicao3" }, "minContains": 0, "maxContains": 1 },
+        { "contains": { "$ref": "#/$defs/naPosicao4" }, "minContains": 0, "maxContains": 1 },
+        { "contains": { "$ref": "#/$defs/naPosicao5" }, "minContains": 0, "maxContains": 1 },
+        { "contains": { "$ref": "#/$defs/naPosicao6" }, "minContains": 0, "maxContains": 1 }
+      ]
+    }
+  },
+  "$defs": {
+    "slot": {
+      "description": "Um presente ligado a uma animação, com delta e intensidade. O vínculo é escolha explícita do streamer: o valor em moedas nunca decide nada (R3, ADR-007).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["posicao", "presenteId", "animacaoId", "delta", "intensidade"],
+      "properties": {
+        "posicao": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
+        "animacaoId": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
+        "delta": { "$ref": "comuns.schema.json#/$defs/delta" },
+        "intensidade": { "$ref": "comuns.schema.json#/$defs/intensidade" },
+        "cooldownMs": { "type": "integer", "minimum": 0, "maximum": 60000, "default": 0 }
+      }
+    },
+    "naPosicao1": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 1 } } },
+    "naPosicao2": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 2 } } },
+    "naPosicao3": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 3 } } },
+    "naPosicao4": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 4 } } },
+    "naPosicao5": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 5 } } },
+    "naPosicao6": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 6 } } }
+  }
+}

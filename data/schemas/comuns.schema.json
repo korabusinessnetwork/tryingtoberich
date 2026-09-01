@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/comuns.schema.json",
+  "title": "Definições comuns",
+  "description": "Tipos reusados pelos demais schemas. Não valida arquivo nenhum sozinho.",
+  "$defs": {
+    "streamerId": {
+      "description": "Sempre \"local\" na Fase 1. Existe para a Fase 3 não exigir migração. Ver ADR-003.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "identificador": {
+      "description": "Id legível usado em nome de arquivo. Sem espaço, sem acento, sem barra.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "corHex": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "instante": {
+      "description": "Data e hora em ISO 8601 UTC.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "assetIdRoblox": {
+      "description": "Id numérico de asset do Roblox.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "modalidade": {
+      "description": "Fase 1 entrega só escalada. O seletor existe desde já (00_VISAO).",
+      "type": "string",
+      "enum": ["escalada"]
+    },
+    "faixa": {
+      "description": "Faixa de valor do presente, I a V. Campo de EXIBIÇÃO. Nenhuma regra de jogo lê isto. Ver R3.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "direcaoAnimacao": {
+      "description": "Informativo. Quem decide a direção efetiva é o sinal do delta. Ver R2.",
+      "type": "string",
+      "enum": ["subida", "descida"]
+    },
+    "animacaoId": {
+      "type": "string",
+      "pattern": "^(sub|des)_[a-z_]+$",
+      "maxLength": 48
+    },
+    "delta": {
+      "description": "Inteiro de plataformas. Positivo sobe, negativo desce. Nunca 0. Ver R2.",
+      "type": "integer",
+      "minimum": -200,
+      "maximum": 200,
+      "not": { "const": 0 }
+    },
+    "intensidade": {
+      "description": "1 a 5. Multiplica escala, densidade de partícula e volume, nunca a duração acima de 3,5s.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "presenteId": {
+      "description": "Id do presente vindo da TikTok. String porque a origem não garante inteiro.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  }
+}

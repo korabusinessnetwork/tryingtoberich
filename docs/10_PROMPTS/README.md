@@ -25,7 +25,8 @@ Regras de faixa (obrigatórias):
 - espacamentoVertical: entre 3 e (jumpHeight * 0.7), NUNCA acima disso
 - variacaoHorizontal: entre 0 e (raioBase * 1.2)
 - paleta: três cores em hexadecimal
-- props: no máximo 3 tipos, densidade entre 0 e 1
+- props: no máximo 3 tipos, todos escolhidos da lista de acervo, densidade
+  entre 0 e 1
 - marcos: um checkpoint visual a cada 50 plataformas, e um marco "topo" na
   última plataforma
 
@@ -38,20 +39,29 @@ Um ambiente noturno não recebe paleta clara.
 Descrição do streamer: {DESCRICAO}
 
 Acervo de skybox disponível:
-{LISTA_SKYBOX}   // id + tags, vindo de data/acervo.json
+{LISTA_SKYBOX}   // id + tags de status "aprovado", vindo de data/acervo.json
 
 Acervo de textura de plataforma disponível:
 {LISTA_TEXTURA}
+
+Acervo de props disponível:
+{LISTA_PROPS}     // id + tags, vindo de data/acervo.json
 
 Formato de saída exato:
 {SCHEMA_RESUMIDO}   // o schema de mapa de docs/04_MODELAGEM
 ```
 
+> As três listas injetadas trazem só item com status `aprovado`. Item pendente
+> de moderação nunca entra no prompt: se entrasse, o mapa nasceria referenciando
+> um asset que o jogo não consegue aplicar.
+
 ### Pós-processamento obrigatório
 1. Remover cerca de código se o modelo devolver mesmo assim.
 2. `JSON.parse` em `try/catch`.
 3. Validar contra `data/schemas/mapa.schema.json`.
-4. Verificar que `skyboxAssetId` e `materialAssetId` **existem no acervo**.
+4. Verificar que `skyboxAssetId`, `materialAssetId` e cada `props[].tipo`
+   **existem no acervo**. O modelo vai tentar inventar id: barrar isso é
+   obrigação do código, não do prompt.
 5. Verificar todas as faixas numéricas.
 5b. **Verificar jogabilidade:** `espacamentoVertical <= jumpHeight * 0.7`. Spec
     que violar isso é rejeitado sem negociação. Ver ADR-009.

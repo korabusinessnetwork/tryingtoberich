@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/acervo.schema.json",
+  "title": "Acervo pré-aprovado",
+  "description": "O inventário fechado do qual o Gemini ESCOLHE ao gerar um mapa. Ele nunca inventa id nem cria asset. Ver ADR-004. Skybox e textura são imagens que passam por moderação do Roblox, então carregam status e assetId. Props são efeitos nativos (ParticleEmitter, Beam, Trail), não passam por moderação e por isso não têm assetId. Só item aprovado entra no prompt e só item aprovado pode ser referenciado por mapa que vai ao ar.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skybox", "texturas", "props"],
+  "properties": {
+    "atualizadoEm": {
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    },
+    "skybox": { "type": "array", "items": { "$ref": "#/$defs/itemDeUpload" } },
+    "texturas": { "type": "array", "items": { "$ref": "#/$defs/itemDeUpload" } },
+    "props": { "type": "array", "items": { "$ref": "#/$defs/itemNativo" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
+    "tags": {
+      "description": "Tags temáticas. É por elas que o Gemini casa a descrição do streamer com o item.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 32 },
+      "uniqueItems": true
+    },
+    "itemDeUpload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nome", "tags", "assetId", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nome": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "tags": { "$ref": "#/$defs/tags" },
+        "assetId": {
+          "description": "Nulo até a imagem ser enviada e aprovada. Montar o acervo é trabalho manual de véspera (ADR-004).",
+          "oneOf": [{ "$ref": "comuns.schema.json#/$defs/assetIdRoblox" }, { "type": "null" }]
+        },
+        "status": { "type": "string", "enum": ["pendente-upload", "em-moderacao", "aprovado", "rejeitado"] }
+      },
+      "allOf": [
+        {
+          "description": "Aprovado sem assetId é acervo quebrado: o mapa referenciaria um item que o jogo não consegue aplicar.",
+          "if": { "properties": { "status": { "const": "aprovado" } }, "required": ["status"] },
+          "then": { "properties": { "assetId": { "type": "integer" } } }
+        }
+      ]
+    },
+    "itemNativo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nome", "tags"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nome": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "tags": { "$ref": "#/$defs/tags" },
+        "descricao": { "type": "string", "maxLength": 200 }
+      }
+    }
+  }
+}

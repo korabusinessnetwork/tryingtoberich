@@ -1,0 +1,30 @@
+{
+  "mapaId": "torre-vulcanica-01",
+  "streamerId": "local",
+  "nome": "Torre Vulcânica",
+  "geradoPor": "gemini",
+  "promptOriginal": "torre vulcânica ao entardecer, plataformas de rocha",
+  "geradoEm": "2026-09-01T13:00:00Z",
+  "totalPlataformas": 250,
+  "jumpHeight": 7.2,
+  "skyboxAssetId": "skybox_entardecer_vulcanico",
+  "paleta": { "primaria": "#C4462A", "secundaria": "#2B1B18", "destaque": "#F5A623" },
+  "plataformas": {
+    "formato": "disco",
+    "raioBase": 8,
+    "variacaoRaio": 0.3,
+    "espacamentoVertical": 5,
+    "variacaoHorizontal": 9,
+    "materialAssetId": "textura_rocha_vulcanica"
+  },
+  "props": [
+    { "tipo": "fumaca", "densidade": 0.4, "aCadaNPlataformas": 10 }
+  ],
+  "marcos": [
+    { "plataforma": 50,  "tipo": "checkpoint_visual" },
+    { "plataforma": 100, "tipo": "checkpoint_visual" },
+    { "plataforma": 150, "tipo": "checkpoint_visual" },
+    { "plataforma": 200, "tipo": "checkpoint_visual" },
+    { "plataforma": 250, "tipo": "topo" }
+  ]
+}

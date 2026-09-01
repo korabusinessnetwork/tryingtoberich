@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/sessao.schema.json",
+  "title": "Sessão de live",
+  "description": "Efêmero. additionalProperties é false de propósito em toda a árvore: é o que impede alguém acrescentar nickname ou id de espectador no log sem passar por revisão. O log guarda tipo de presente, valor, delta e latência; nunca quem enviou. Ver 11_SEGURANCA, camada 4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessaoId", "streamerId", "presetId", "iniciadaEm", "encerradaEm"],
+  "properties": {
+    "sessaoId": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}$" },
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "presetId": { "$ref": "comuns.schema.json#/$defs/identificador" },
+    "mapaId": {
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/identificador" }, { "type": "null" }]
+    },
+    "iniciadaEm": { "$ref": "comuns.schema.json#/$defs/instante" },
+    "encerradaEm": {
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    },
+    "plataformaReferencia": {
+      "description": "Reportada pelo jogo via POST /jogo/estado. A ponte NUNCA calcula nem acumula posição. Ver R9.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 400
+    },
+    "plataformaMaxima": { "type": "integer", "minimum": 0, "maximum": 400 },
+    "quedasNaturais": { "type": "integer", "minimum": 0 },
+    "naoMapeados": {
+      "description": "Contagem de presente que chegou e não estava em nenhum slot (F2.4). Só contagem por presente, sem doador.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["presenteNome", "contagem"],
+        "properties": {
+          "presenteNome": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "moedas": { "type": "integer", "minimum": 0 },
+          "contagem": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "eventos": {
+      "description": "Detalhe por evento. Existe só enquanto a sessão está aberta.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/eventoAplicado" }
+    },
+    "resumo": { "$ref": "#/$defs/resumo" }
+  },
+  "allOf": [
+    {
+      "description": "Sessão encerrada é reduzida ao resumo agregado e o detalhe por evento é descartado (F5 e 11_SEGURANCA). Arquivo com encerradaEm preenchido e eventos dentro é vazamento, não é dado.",
+      "if": {
+        "required": ["encerradaEm"],
+        "properties": { "encerradaEm": { "type": "string" } }
+      },
+      "then": {
+        "required": ["resumo"],
+        "properties": {
+          "eventos": { "type": "array", "maxItems": 0 },
+          "resumo": { "$ref": "#/$defs/resumo" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "eventoAplicado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["em", "slot", "presenteId", "repeticoes", "delta", "animacaoId"],
+      "properties": {
+        "em": { "$ref": "comuns.schema.json#/$defs/instante" },
+        "slot": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
+        "repeticoes": { "type": "integer", "minimum": 1 },
+        "delta": { "type": "integer", "minimum": -40000, "maximum": 40000 },
+        "animacaoId": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
+        "latenciaMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "resumo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plataformaMaxima", "totalPresentes", "presentesPorSlot"],
+      "properties": {
+        "plataformaMaxima": { "type": "integer", "minimum": 0, "maximum": 400 },
+        "totalPresentes": { "type": "integer", "minimum": 0 },
+        "presentesPorSlot": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": { "^[1-6]$": { "type": "integer", "minimum": 0 } }
+        },
+        "latenciaMediaMs": { "type": ["integer", "null"], "minimum": 0 },
+        "quedasNaturais": { "type": "integer", "minimum": 0 },
+        "duracaoSegundos": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

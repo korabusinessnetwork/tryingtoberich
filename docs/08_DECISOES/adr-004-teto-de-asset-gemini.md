@@ -45,3 +45,20 @@ Dividir a geração em duas metades:
 ## Notas
 Ampliar o acervo é a alavanca de variedade. Cada skybox novo multiplica os mapas
 possíveis. Tratar o acervo como backlog contínuo, não como entrega única.
+
+## Nota de implementação — 2026-09-01, Bloco 0
+Ao escrever `data/acervo.json`, apareceu uma terceira coisa que o Gemini escolhe
+e que este ADR não tinha previsto: o **tipo de prop** (`fumaca`, `neve`,
+`folhas`). Props são efeitos nativos, não passam por moderação e não têm
+assetId, mas a lista do que existe é igualmente fechada. Fixar essa lista como
+`enum` no schema seria hardcodar catálogo dentro do código, exatamente o que a
+decisão evita para skybox e textura.
+
+Decisão: **`props` entra no acervo como terceira coleção**, com `id`, `nome` e
+`tags`, sem `assetId` e sem `status`. O prompt P1 passa a injetar as três listas
+e a validação passa a checar as três. O acervo deixa de ser "imagens
+pré-aprovadas" e passa a ser "o inventário fechado do qual o modelo escolhe",
+que é o que a decisão sempre quis dizer.
+
+Consequência prática: acrescentar um tipo de prop é editar `acervo.json` e
+implementar o efeito em `game/`, sem tocar em schema nem em prompt.

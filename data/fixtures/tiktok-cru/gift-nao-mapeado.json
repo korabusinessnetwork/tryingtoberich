@@ -1,0 +1,19 @@
+{
+  "_comentario": "Presente que não está em nenhum dos 6 slots do preset. Descartado e contabilizado (F2.4, ADR-007).",
+  "giftId": 6064,
+  "giftName": "Doughnut Gigante",
+  "giftType": 1,
+  "diamondCount": 3000,
+  "repeatCount": 1,
+  "repeatEnd": true,
+  "groupId": "7040000000000000003",
+  "timestamp": 1756742611000,
+  "giftPictureUrl": "https://exemplo.invalid/icones/doughnut-gigante.png",
+  "userId": "0000000000000000003",
+  "uniqueId": "terceiro_espectador",
+  "nickname": "Terceiro Espectador",
+  "profilePictureUrl": "https://exemplo.invalid/perfis/0003.jpg",
+  "followRole": 2,
+  "isModerator": false,
+  "isSubscriber": true
+}

@@ -1,0 +1,17 @@
+{
+  "presetId": "escalada-padrao",
+  "streamerId": "local",
+  "nome": "Escalada padrão",
+  "modalidade": "escalada",
+  "mapaId": "torre-vulcanica-01",
+  "atualizadoEm": "2026-09-01T13:00:00Z",
+  "personagem": { "lookId": "escalador-vulcanico" },
+  "slots": [
+    { "posicao": 1, "presenteId": "sem-rose",         "animacaoId": "sub_pulo",         "delta": 2,   "intensidade": 1, "cooldownMs": 0 },
+    { "posicao": 2, "presenteId": "sem-finger-heart", "animacaoId": "sub_impulso",      "delta": 5,   "intensidade": 1, "cooldownMs": 0 },
+    { "posicao": 3, "presenteId": "sem-doughnut",     "animacaoId": "sub_foguete",      "delta": 12,  "intensidade": 2, "cooldownMs": 0 },
+    { "posicao": 4, "presenteId": "sem-hand-hearts",  "animacaoId": "des_chumbo",       "delta": -8,  "intensidade": 2, "cooldownMs": 0 },
+    { "posicao": 5, "presenteId": "sem-galaxy",       "animacaoId": "sub_cometa",       "delta": 40,  "intensidade": 3, "cooldownMs": 0 },
+    { "posicao": 6, "presenteId": "sem-lion",         "animacaoId": "des_buraco_negro", "delta": -60, "intensidade": 5, "cooldownMs": 2000 }
+  ]
+}

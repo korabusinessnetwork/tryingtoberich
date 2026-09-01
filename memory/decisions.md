@@ -17,6 +17,10 @@
 | ADR-011 | Vestiário híbrido: monta no jogo, escolhe no painel | Aceito | 2026-09-01 |
 
 ## Decisões pendentes
+- **Intensidade na coalescência (R5.1).** A regra manda somar delta e disparar
+  uma vez, e não fala de intensidade. Os contratos seguem a leitura literal e
+  mantêm a intensidade do slot. Se coalescência devesse subir um nível como o
+  combo do R4, a regra e a fixture `03-rajada-mesmo-slot` mudam juntas.
 - **Roupa clássica própria (80 Robux por upload).** Adiada por padrão pela regra
   de custo. O campo `roupaCustomizada` já existe no schema. Decisão do dono.
 - Formato de captura na live: janela do Roblox recortada no TikTok Studio,

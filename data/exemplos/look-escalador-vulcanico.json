@@ -1,0 +1,11 @@
+{
+  "lookId": "escalador-vulcanico",
+  "streamerId": "local",
+  "nome": "Escalador Vulcânico",
+  "itensCatalogo": [123456, 234567],
+  "coresCorpo": { "torso": "#2B1B18", "cabeca": "#C4462A" },
+  "efeitoPermanente": { "tipo": "aura", "cor": "#F5A623", "intensidade": 2 },
+  "roupaCustomizada": null,
+  "fallbackItens": [111111],
+  "atualizadoEm": "2026-09-01T13:00:00Z"
+}

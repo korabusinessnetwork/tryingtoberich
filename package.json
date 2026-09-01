@@ -1,0 +1,18 @@
+{
+  "name": "kora-stream-games",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Contratos do Bloco 0: JSON Schemas, acervo, semente de catálogo e fixtures. Os três processos (bridge/, panel/, game/) têm package próprio.",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "validar": "node scripts/validar-contratos.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

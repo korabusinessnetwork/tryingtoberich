@@ -1,0 +1,17 @@
+{
+  "cenario": "06-combo-no-teto-de-intensidade",
+  "regra": "R4",
+  "descricao": "Combo em slot que já está na intensidade máxima. O nível de combo não pode empurrar a intensidade acima de 5, senão a duração estoura o teto de 3,5s da biblioteca e o bloqueio de controle do R11 fica longo demais.",
+  "presetId": "escalada-padrao",
+  "entrada": [
+    { "emMs": 0, "evento": { "presenteId": "sem-lion", "presenteNome": "Lion", "moedas": 29999, "repeticoes": 3, "rajadaEncerrada": true, "nomeDoador": "Quinto Espectador", "recebidoEm": 1756742630000 } }
+  ],
+  "esperado": {
+    "disparos": [
+      { "emMs": 0, "slot": 6, "animacaoId": "des_buraco_negro", "delta": -180, "intensidade": 5 }
+    ],
+    "naoMapeados": [],
+    "descartados": []
+  },
+  "nota": "delta -180 = -60 × 3. intensidade 5 = min(5 + 1, 5). O cooldownMs de 2000 do slot 6 não é exercitado aqui: combo é um evento só."
+}

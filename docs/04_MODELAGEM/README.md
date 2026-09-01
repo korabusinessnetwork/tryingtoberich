@@ -8,11 +8,22 @@ data/
   presets/<presetId>.json
   mapas/<mapaId>.json
   looks/<lookId>.json
-  catalogo-presentes.json      (gerado, não editar à mão)
-  animacoes.json               (espelho do índice Luau, gerado)
-  sessoes/<sessaoId>.json      (efêmero, apagado ao fim, ver 11_SEGURANCA)
+  acervo.json                   (à mão: o que o Gemini pode escolher, ver ADR-004)
+  catalogo-presentes.json       (gerado pela coleta, não editar à mão)
+  catalogo-presentes.seed.json  (semente de desenvolvimento, valores não confirmados)
+  animacoes.json                (espelho do índice Luau, gerado)
+  sessoes/<sessaoId>.json       (efêmero, reduzido a resumo ao fim, ver 11_SEGURANCA)
+  icones/<presenteId>.png       (cache do ícone oficial do presente)
+  icones-itens/<assetId>.png    (cache do ícone de peça do vestiário)
   schemas/*.schema.json
+  exemplos/                     (um arquivo válido de cada modelo, só para teste)
+  fixtures/                     (evento da TikTok para testar sem estar ao vivo)
 ```
+
+Os quatro últimos são contratos, não dado de produção: nenhum repositório em
+`bridge/src/repos/` lê `exemplos/` nem `fixtures/`. `npm test` valida cada
+arquivo daqui contra o schema correspondente — schema que não valida o próprio
+exemplo é schema quebrado.
 
 ## Preset
 
@@ -111,6 +122,42 @@ nenhum. Spec que violar é rejeitado. Ver ADR-009.
 `skyboxAssetId` e `materialAssetId` **só podem** referenciar itens do acervo
 pré-aprovado em `data/acervo.json`. O Gemini escolhe do acervo, não inventa.
 Ver ADR-004. Um spec com asset fora do acervo é rejeitado na validação.
+
+## Acervo
+
+O inventário fechado do qual o Gemini **escolhe** ao gerar um mapa. Ele nunca
+inventa id e nunca cria asset. Ver ADR-004.
+
+```json
+{
+  "skybox":   [ { "id": "skybox_entardecer_vulcanico", "nome": "Entardecer vulcânico",
+                  "tags": ["vulcanico", "entardecer", "quente"],
+                  "assetId": null, "status": "pendente-upload" } ],
+  "texturas": [ { "id": "textura_rocha_vulcanica", "nome": "Rocha vulcânica",
+                  "tags": ["rocha", "vulcanico", "escuro"],
+                  "assetId": null, "status": "pendente-upload" } ],
+  "props":    [ { "id": "fumaca", "nome": "Fumaça",
+                  "tags": ["vulcanico", "tempestade", "denso"],
+                  "descricao": "ParticleEmitter de fumaça subindo devagar." } ]
+}
+```
+
+`skybox` e `texturas` são imagens: passam por moderação do Roblox, então
+carregam `status` (`pendente-upload`, `em-moderacao`, `aprovado`, `rejeitado`) e
+`assetId`, que só é preenchido quando a imagem é aprovada. **Só item aprovado
+entra no prompt e só item aprovado pode ser referenciado por mapa que vai ao
+ar.** `npm test` verifica isso e hoje reporta o acervo inteiro como pendente,
+porque montá-lo é trabalho manual de véspera.
+
+`props` são efeitos **nativos** (ParticleEmitter, Beam, Trail): não passam por
+moderação e por isso não têm `assetId` nem `status`. Eles ficam no acervo pelo
+mesmo motivo que skybox e textura: o tipo de prop que um mapa pode pedir é
+escolha do Gemini dentro de uma lista fechada, e lista fechada é dado, não
+`enum` no código. Ver a nota de implementação no ADR-004.
+
+As `tags` são o que casa a descrição do streamer com o item. Ampliar o acervo é
+a alavanca de variedade do projeto: cada skybox novo multiplica os mapas
+possíveis.
 
 ## Catálogo de presentes
 Ver `catalogo-presentes.md` neste diretório.

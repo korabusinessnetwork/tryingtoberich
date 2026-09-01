@@ -1,0 +1,18 @@
+{
+  "sessaoId": "2026-09-01T20-00-00",
+  "streamerId": "local",
+  "presetId": "escalada-padrao",
+  "mapaId": "torre-vulcanica-01",
+  "iniciadaEm": "2026-09-01T20:00:00Z",
+  "encerradaEm": null,
+  "plataformaReferencia": 184,
+  "plataformaMaxima": 191,
+  "quedasNaturais": 12,
+  "naoMapeados": [
+    { "presenteNome": "Rose", "moedas": 1, "contagem": 7 }
+  ],
+  "eventos": [
+    { "em": "2026-09-01T20:03:11Z", "slot": 5, "presenteId": "sem-galaxy", "repeticoes": 1, "delta": 40, "animacaoId": "sub_cometa", "latenciaMs": 620 },
+    { "em": "2026-09-01T20:04:02Z", "slot": 1, "presenteId": "sem-rose",   "repeticoes": 9, "delta": 18, "animacaoId": "sub_pulo",   "latenciaMs": 580 }
+  ]
+}

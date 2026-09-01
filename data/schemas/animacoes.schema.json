@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/animacoes.schema.json",
+  "title": "Índice de animações (espelho)",
+  "description": "data/animacoes.json é GERADO a partir de game/src/shared/indiceAnimacoes.lua e consumido pelo painel para montar o seletor. Nunca editado à mão. Ver 04_MODELAGEM e 03_REGRAS_DE_NEGOCIO/biblioteca-animacoes.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["geradoEm", "animacoes"],
+  "properties": {
+    "geradoEm": { "$ref": "comuns.schema.json#/$defs/instante" },
+    "animacoes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/animacao" }
+    }
+  },
+  "$defs": {
+    "animacao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nome", "direcao", "pesoVisual", "duracaoBase", "aceitaDeltaVariavel"],
+      "properties": {
+        "id": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
+        "nome": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "direcao": { "$ref": "comuns.schema.json#/$defs/direcaoAnimacao" },
+        "pesoVisual": {
+          "description": "1 a 5, quanto de tela o efeito ocupa. Serve para o painel SUGERIR, nunca para decidir.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "duracaoBase": {
+          "description": "Teto de 3,5s. Acima disso as animações empilham e o bloqueio de controle do R11 fica longo demais.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3.5
+        },
+        "aceitaDeltaVariavel": { "type": "boolean" }
+      }
+    }
+  }
+}

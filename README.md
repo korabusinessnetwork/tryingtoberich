@@ -19,9 +19,18 @@ Projeto da Kora Business Network. Fundação no padrão `fundacao-de-projeto`.
 bridge/   Node.js: live, ponte long-poll, repositórios, Gemini
 panel/    React + Vite: painel local do streamer
 game/     Roblox / Luau: jogo, animações, HUD
-data/     JSON em disco (ADR-003) + schemas
+data/     JSON em disco (ADR-003): schemas, acervo, exemplos, fixtures
 docs/     00→11, document-first
 memory/   identidade, decisões, padrões, aprendizados, restrições, bugs
+scripts/  validação dos contratos
+test/     testes dos contratos (npm test)
+```
+
+## Rodar
+```
+npm install     # só ajv, para validar os schemas
+npm test        # 36 testes de contrato
+npm run validar # relatório do estado dos contratos e do acervo
 ```
 
 ## Três coisas que não são negociáveis
@@ -30,4 +39,15 @@ memory/   identidade, decisões, padrões, aprendizados, restrições, bugs
 3. **O valor do presente sugere, o streamer decide** (ADR-007).
 
 ## Estado
-Fundação documentada, **zero código escrito**. Comece pelo Bloco 0 do backlog.
+Fundação documentada e **Bloco 0 concluído**: os contratos existem, estão
+validados e são testáveis sem live e sem Roblox. Zero código de produto.
+
+Os blocos 1 (`bridge/`), 2 (`game/`) e 3 (`panel/`) dependiam só destes
+contratos e agora podem ser construídos em paralelo, com dono exclusivo por
+diretório. Ver `docs/09_BACKLOG/`.
+
+Duas coisas ficam bloqueadas até alguém agir fora do código:
+1. **Nenhum mapa pode ir ao ar** enquanto o acervo não for enviado e aprovado no
+   Roblox. `npm run validar` mostra o que falta.
+2. **As fixtures de payload cru da TikTok não estão verificadas** contra a
+   versão instalada do conector. Ver `memory/learnings.md`.

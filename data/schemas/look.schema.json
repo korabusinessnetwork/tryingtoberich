@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/look.schema.json",
+  "title": "Look do vestiário",
+  "description": "Composição do personagem, montada no vestiário dentro do jogo e referenciada pelo preset (ADR-011). Só item GRATUITO do catálogo do Roblox entra em itensCatalogo: o filtro de preço zero é aplicado na busca, senão o streamer monta um look que não consegue vestir. Aplicado por HumanoidDescription no início da sessão ou no próximo respawn de checkpoint, nunca no meio da jogatina.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lookId", "streamerId", "nome", "itensCatalogo", "fallbackItens"],
+  "properties": {
+    "lookId": { "$ref": "comuns.schema.json#/$defs/identificador" },
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "nome": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "itensCatalogo": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" }
+    },
+    "coresCorpo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cabeca": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "torso": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "bracoEsquerdo": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "bracoDireito": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "pernaEsquerda": { "$ref": "comuns.schema.json#/$defs/corHex" },
+        "pernaDireita": { "$ref": "comuns.schema.json#/$defs/corHex" }
+      }
+    },
+    "efeitoPermanente": {
+      "description": "Visual constante do personagem. SUSPENSO durante animação de presente e restaurado no fim, para não competir com o efeito que o espectador pagou. Vale para as 20 animações, sem exceção. Ver ADR-010.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tipo", "cor", "intensidade"],
+          "properties": {
+            "tipo": {
+              "description": "Construído com os mesmos primitivos nativos da biblioteca de animações: aura = ParticleEmitter, rastro = Trail, brilho = Highlight. Acrescentar um tipo aqui exige implementar em game/src/client.",
+              "type": "string",
+              "enum": ["aura", "rastro", "brilho"]
+            },
+            "cor": { "$ref": "comuns.schema.json#/$defs/corHex" },
+            "intensidade": { "$ref": "comuns.schema.json#/$defs/intensidade" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "roupaCustomizada": {
+      "description": "Asset de camisa ou calça própria. Fica null enquanto a rota paga (80 Robux por submissão) não for aprovada pelo dono. O campo existe desde já para não exigir migração depois. Ver ADR-010.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/assetIdRoblox" }, { "type": "null" }]
+    },
+    "fallbackItens": {
+      "description": "Obrigatório e não vazio: item despublicado não pode deixar o personagem nascer sem roupa numa live. Ver ADR-010.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" }
+    },
+    "atualizadoEm": { "$ref": "comuns.schema.json#/$defs/instante" }
+  }
+}

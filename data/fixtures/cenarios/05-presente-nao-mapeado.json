@@ -1,0 +1,20 @@
+{
+  "cenario": "05-presente-nao-mapeado",
+  "regra": "F2.4 e ADR-007",
+  "descricao": "Presente que não está em nenhum dos 6 slots. É descartado e contabilizado para o streamer ver no painel o que está deixando na mesa. O fluxo NÃO para: o presente seguinte, que está mapeado, dispara normalmente.",
+  "presetId": "escalada-padrao",
+  "entrada": [
+    { "emMs": 0,   "evento": { "presenteId": "sem-doughnut-gigante", "presenteNome": "Doughnut Gigante", "moedas": 3000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Terceiro Espectador", "recebidoEm": 1756742611000 } },
+    { "emMs": 900, "evento": { "presenteId": "sem-galaxy",           "presenteNome": "Galaxy",           "moedas": 1000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Quarto Espectador",  "recebidoEm": 1756742611900 } }
+  ],
+  "esperado": {
+    "disparos": [
+      { "emMs": 900, "slot": 5, "animacaoId": "sub_cometa", "delta": 40, "intensidade": 3 }
+    ],
+    "naoMapeados": [
+      { "presenteNome": "Doughnut Gigante", "moedas": 3000, "contagem": 1 }
+    ],
+    "descartados": []
+  },
+  "nota": "As 3000 moedas não compram nada. O valor sugere, nunca decide (R3): presente fora dos 6 slots não dispara nem o mais caro do catálogo."
+}

@@ -1,0 +1,17 @@
+{
+  "cenario": "02-combo",
+  "regra": "R4",
+  "descricao": "Rajada repetível de um presente só. O delta do slot é multiplicado pelas repetições, a animação toca UMA vez e a intensidade sobe um nível. Nunca 9 animações para 9 repetições: isso trava a tela e mata a latência das próximas.",
+  "presetId": "escalada-padrao",
+  "entrada": [
+    { "emMs": 0, "evento": { "presenteId": "sem-rose", "presenteNome": "Rose", "moedas": 1, "repeticoes": 9, "rajadaEncerrada": true, "nomeDoador": "Outro Espectador", "recebidoEm": 1756742603400 } }
+  ],
+  "esperado": {
+    "disparos": [
+      { "emMs": 0, "slot": 1, "animacaoId": "sub_pulo", "delta": 18, "intensidade": 2 }
+    ],
+    "naoMapeados": [],
+    "descartados": []
+  },
+  "nota": "delta 18 = delta 2 do slot × 9 repetições. intensidade 2 = intensidade 1 do slot + 1 nível de combo."
+}
