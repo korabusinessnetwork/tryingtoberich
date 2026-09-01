@@ -9,7 +9,7 @@ Dono exclusivo deste diretório. Ver `docs/01_ARQUITETURA`.
 ## Colocar no Studio
 
 O projeto usa [Rojo](https://rojo.space) para sincronizar os arquivos com o
-Studio. `default.project.json` mapeia:
+Studio. No Windows: `winget install Rojo.Rojo`. `default.project.json` mapeia:
 
 ```
 src/shared     → ReplicatedStorage.KoraCompartilhado
@@ -21,7 +21,14 @@ src/client     → StarterPlayer.StarterPlayerScripts.KoraCliente
 ```bash
 rojo serve game/default.project.json
 ```
-E no Studio: plugin Rojo → Connect.
+E no Studio: plugin Rojo → Connect. Ou clique **Abrir no Studio** na página
+"Jogo" do painel, que faz as duas coisas.
+
+Para conferir que a árvore monta sem abrir o Studio:
+
+```bash
+rojo build game/default.project.json --output /tmp/teste.rbxlx
+```
 
 ### Antes da primeira partida
 

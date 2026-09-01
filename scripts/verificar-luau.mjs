@@ -15,7 +15,7 @@
  * O preço é abrir mão dessas construções no jogo. Vale: são 30+ arquivos e
  * cada erro que este gate pega custaria uma viagem ao Studio.
  *
- * Instalar o parser: apt-get install lua5.1
+ * Instalar o parser: ver `INSTALAR_PARSER` abaixo — varia por sistema.
  * Uso: node scripts/verificar-luau.mjs [--silencioso]
  */
 
@@ -39,21 +39,46 @@ async function listarLua(dir) {
   return achados;
 }
 
-async function temParser() {
-  try {
-    await executar("luac5.1", ["-v"]);
-    return true;
-  } catch {
-    return false;
+/**
+ * O parser não se chama igual em todo lugar.
+ *
+ * `luac5.1` é o nome no Debian/Ubuntu. No Windows os binários do LuaBinaries e
+ * do Scoop instalam como `luac.exe` ou `luac5.1.exe`, e no macOS o Homebrew usa
+ * `luac`. Procurar só por `luac5.1` fazia o gate se declarar indisponível numa
+ * máquina que TEM o parser — guarda que não roda é pior que não ter guarda.
+ */
+const NOMES_DO_PARSER = ["luac5.1", "luac-5.1", "luac53", "luac54", "luac"];
+
+const INSTALAR_PARSER = {
+  win32: "winget install DEVCOM.Lua   (o luac 5.4 recusa a mesma sintaxe de Luau que o 5.1)",
+  darwin: "brew install lua",
+  linux: "apt-get install lua5.1",
+};
+
+/** Devolve o nome utilizável do parser, ou null. Exportado: o teste usa o mesmo. */
+export async function acharParser() {
+  for (const nome of NOMES_DO_PARSER) {
+    try {
+      await executar(nome, ["-v"]);
+      return nome;
+    } catch { /* tenta o próximo */ }
   }
+  return null;
+}
+
+/** A linha de instalação do sistema em que se está, não a do Debian sempre. */
+export function comoInstalarParser(plataforma = process.platform) {
+  return INSTALAR_PARSER[plataforma] ?? INSTALAR_PARSER.linux;
 }
 
 async function principal() {
   const silencioso = process.argv.includes("--silencioso");
 
-  if (!(await temParser())) {
-    console.error("luac5.1 não está instalado; o gate de sintaxe do jogo não rodou.");
-    console.error("  apt-get install lua5.1");
+  const parser = await acharParser();
+  if (!parser) {
+    console.error("Parser de Lua não encontrado; o gate de sintaxe do jogo NÃO rodou.");
+    console.error(`  procurei por: ${NOMES_DO_PARSER.join(", ")}`);
+    console.error(`  instale com: ${comoInstalarParser()}`);
     process.exitCode = 1;
     return;
   }
@@ -68,7 +93,7 @@ async function principal() {
   const problemas = [];
   for (const arquivo of arquivos) {
     try {
-      await executar("luac5.1", ["-p", arquivo]);
+      await executar(parser, ["-p", arquivo]);
     } catch (erro) {
       problemas.push(`${path.relative(RAIZ, arquivo)}: ${String(erro.stderr ?? erro.message).trim()}`);
     }

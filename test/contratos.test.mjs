@@ -349,13 +349,21 @@ test("nenhum arquivo de bridge, panel ou game importa fs fora de bridge/src/repo
   const IGNORADOS = new Set(["node_modules", "dist", "test"]);
   const PERMITIDO = path.join(RAIZ, "bridge", "src", "repos");
 
+  // Exceção NOMINAL, um arquivo só. `estudio.mjs` usa fs para localizar o
+  // executável do Roblox Studio e o `rojo` no PATH — procurar programa
+  // instalado não é acesso a DADO e não participa da migração para banco: na
+  // Fase 3 este arquivo continua idêntico. A exceção é por nome, e não por
+  // padrão, exatamente para não virar porta de entrada: qualquer arquivo novo
+  // que importe fs continua reprovando aqui.
+  const EXCECOES = new Set([path.join(RAIZ, "bridge", "src", "roblox", "estudio.mjs")]);
+
   const infratores = [];
   const varrer = async (dir) => {
     for (const entrada of await readdir(dir, { withFileTypes: true })) {
       const completo = path.join(dir, entrada.name);
       if (entrada.isDirectory()) {
         if (!IGNORADOS.has(entrada.name)) await varrer(completo);
-      } else if (EXTENSOES.has(path.extname(entrada.name)) && !completo.startsWith(PERMITIDO)) {
+      } else if (EXTENSOES.has(path.extname(entrada.name)) && !completo.startsWith(PERMITIDO) && !EXCECOES.has(completo)) {
         if (IMPORTA_FS.test(await readFile(completo, "utf8"))) infratores.push(path.relative(RAIZ, completo));
       }
     }

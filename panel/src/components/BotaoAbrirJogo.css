@@ -1,0 +1,26 @@
+/* Botão de abrir o jogo. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.abrir-jogo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.abrir-jogo-botao {
+  min-height: var(--alvo-minimo);
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--painel-fundo);
+}
+
+.abrir-jogo-passos {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}

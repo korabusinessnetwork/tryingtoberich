@@ -1,0 +1,41 @@
+/* Navegação principal do painel. Estilo separado do JSX para o white-label da
+   Fase 3 (ver CLAUDE.md e 02_DESIGN_SYSTEM). */
+
+.navegacao {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.navegacao-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 40px é o mínimo do design system: o streamer clica com pressa. */
+  min-height: var(--alvo-minimo);
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--painel-superficie);
+}
+
+/* A página aberta precisa ser óbvia de canto de olho, então o contraste sobe
+   na borda E no texto — não só na cor de fundo, que some em tela escura. */
+.navegacao-botao-ativo {
+  border-color: var(--painel-texto-secundario);
+  color: var(--painel-texto-primario);
+}
+
+.navegacao-contador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--estado-erro);
+  color: var(--painel-fundo);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

@@ -5,6 +5,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 
 | Componente | Papel | Estado que recebe |
 |---|---|---|
+| `NavegacaoDePaginas` | Troca entre as 3 páginas do painel, com contador de problemas | página atual |
 | `BarraDeSessao` | Start/stop, estado da live e do jogo, cronômetro | estado do SSE |
 | `SeletorModalidade` | Escolhe a modalidade (Fase 1: só Escalada) | lista de modalidades |
 | `EditorDePreset` | Container dos 6 slots, salva o preset | preset |
@@ -17,6 +18,8 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `PreviaDeMapa` | Mostra paleta, altura, densidade do spec gerado | mapa |
 | `MonitorAoVivo` | Últimos eventos, latência medida, não mapeados | fluxo do SSE |
 | `TestadorDePresente` | Dispara presente à mão, um ou vários juntos | preset, catálogo |
+| `TestadorDeAnimacao` | Um botão por animação, dispara direto no jogo sem preset | animações, estado do jogo |
+| `BotaoAbrirJogo` | Sobe o `rojo serve` e abre o Roblox Studio nesta máquina | — |
 | `PainelDeLogs` | O que a ponte e o painel registraram, para quando algo falha | fluxo do SSE |
 
 ## Regras
@@ -26,6 +29,17 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
   busca dado. Nada de tela em branco.
 - Nenhum componente conhece caminho de arquivo nem formato de resposta cru.
 - Nenhum componente monta prompt de IA. Isso vive na ponte (ver `10_PROMPTS`).
+- O painel tem 4 páginas: **Ao vivo** (6 slots, monitor, testador), **Configurar**
+  (modalidade, look, mapa e prévia), **Jogo** (abrir no Studio e testar as 20
+  animações) e **Log**. "Ao vivo" é a de abertura, e é
+  inegociável que ela carregue os 6 slots: o 02_DESIGN_SYSTEM exige os seis lado
+  a lado e sempre visíveis. O que foi para "Configurar" é o que já era pré-live
+  e trava com a sessão rodando, então sair da tela principal não custa nada.
+- `TestadorDeAnimacao` e `TestadorDePresente` respondem perguntas DIFERENTES e
+  por isso não se fundem: o de presente testa o CAMINHO (casa com slot, entra em
+  combate, sai pelo long-poll) e exige sessão; o de animação testa o DESTINO e
+  não exige sessão, preset nem live. Exigir configuração antes de "essa animação
+  toca?" é o que faz ninguém testar.
 - `SeletorDeLook` **não** tenta renderizar o boneco montado. Prévia de corpo
   inteiro só existe no vestiário dentro do jogo. Ver ADR-011.
 - `TestadorDePresente` dispara pelo **mesmo caminho** de um presente de verdade:

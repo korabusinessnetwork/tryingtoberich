@@ -73,6 +73,39 @@ export class Despachante {
     };
   }
 
+  /**
+   * Dispara uma animação direto, sem presente e sem preset.
+   *
+   * Existe para o painel testar as 20 animações no jogo antes da live, quando
+   * ainda não há preset montado nem espectador mandando nada. Por isso NÃO
+   * passa por `casar`: não há slot, e exigir preset transformaria "ver se a
+   * animação toca" numa tarefa de configuração.
+   *
+   * Passa pelo `#despachar` de propósito, e não direto no long-poll: é ele que
+   * é dono do `#cursor`. Cursor emitido por fora colidiria com o do caminho
+   * normal, e o `?desde=` do Roblox reprocessaria ou pularia evento.
+   */
+  testarAnimacao({ animacaoId, delta, intensidade }, agora = Date.now()) {
+    return this.#despachar(
+      {
+        animacaoId,
+        delta,
+        intensidade,
+        // Sem slot e sem presente: não veio de lugar nenhum do preset.
+        slot: null,
+        presenteId: null,
+        presenteNome: "Teste de animação",
+        nomeDoador: null,
+        repeticoes: 1,
+        recebidoEm: agora,
+        // Zero de propósito: cooldown é do slot, e aqui não há slot para travar.
+        cooldownMs: 0,
+      },
+      agora,
+      { efeitoCurto: false },
+    );
+  }
+
   /** Caminho quente. Devolve o que aconteceu com o evento, para o painel e para o teste. */
   receber(evento, agora = Date.now()) {
     const disparo = casar(evento, this.#indice);

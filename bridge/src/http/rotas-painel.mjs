@@ -9,6 +9,7 @@ import express from "express";
 
 import { ErroDeDominio } from "../erros.mjs";
 import { logRecente } from "../log.mjs";
+import { abrirNoStudio } from "../roblox/estudio.mjs";
 import { carregarAnimacoes } from "../repos/animacoes.mjs";
 import { listarLooks } from "../repos/looks.mjs";
 import { listarMapas } from "../repos/mapas.mjs";
@@ -76,6 +77,29 @@ export function rotasDoPainel(nucleo) {
     const presentes = Array.isArray(req.body?.presentes) ? req.body.presentes : [];
     res.json({ resultados: nucleo.injetarPresentesDeTeste(presentes) });
   });
+
+  /**
+   * Dispara uma animação direto no jogo, sem presente e sem preset.
+   *
+   * Este é o teste do Bloco 2: responde "a animação toca no Roblox?" sem exigir
+   * live, preset ou sessão. Mesma razão de morar só aqui que o teste de
+   * presente — a porta do painel não é publicada pelo túnel.
+   */
+  rotas.post("/teste/animacao", (req, res) => {
+    res.json(nucleo.injetarAnimacaoDeTeste({
+      animacaoId: req.body?.animacaoId,
+      intensidade: req.body?.intensidade,
+    }));
+  });
+
+  /**
+   * Abre o jogo no Roblox Studio, com o `rojo serve` de pé.
+   *
+   * Executa processo local, então vive nesta superfície e em nenhuma outra, e
+   * NÃO lê nada do corpo da requisição: o projeto e o binário são fixos no
+   * módulo. Ver bridge/src/roblox/estudio.mjs.
+   */
+  rotas.post("/jogo/abrir-studio", async (req, res) => res.json(await abrirNoStudio()));
 
   /**
    * O log recente da ponte, para o painel ter o que aconteceu ANTES de ele

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "./api.js";
 
@@ -111,5 +111,17 @@ export function useFluxo() {
     return () => fonte.close();
   }, [registrarLocal, juntarLogs]);
 
-  return { estado, eventos, naoMapeados, logs, conectado, registrarLocal, juntarLogs, definirLogs };
+  /**
+   * Memorizado de propósito.
+   *
+   * Devolver o literal direto criava um objeto novo a cada render, e todo
+   * consumidor que dependesse de `fluxo` num useCallback/useEffect entrava em
+   * laço infinito. Foi assim que o painel torrou os sockets do navegador.
+   * Aqui a identidade só muda quando os dados mudam de verdade — e ainda assim
+   * o consumidor deve depender da função de que precisa, não do objeto inteiro.
+   */
+  return useMemo(
+    () => ({ estado, eventos, naoMapeados, logs, conectado, registrarLocal, juntarLogs, definirLogs }),
+    [estado, eventos, naoMapeados, logs, conectado, registrarLocal, juntarLogs],
+  );
 }

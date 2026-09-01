@@ -71,6 +71,28 @@ test("escritas concorrentes deixam um arquivo inteiro, nunca meio arquivo", asyn
   });
 });
 
+/**
+ * Regressão do EPERM do Windows.
+ *
+ * O teste de 12 escritas acima já falhava aqui, mas 12 podem passar por sorte.
+ * Este sobe a concorrência a ponto de a corrida ser praticamente certa, e checa
+ * as DUAS coisas que o bug quebrava: o rename estourando EPERM (a escrita se
+ * perde) e o temporário ficando para trás (lixo no diretório de dados).
+ */
+test("dezenas de escritas concorrentes: nenhuma estoura, nenhum .tmp sobra", async () => {
+  await comDiretorioTemporario(async (dir) => {
+    const alvo = path.join(dir, "tumulto.json");
+    const lote = Array.from({ length: 40 }, (_, i) => ({ id: i, recheio: "y".repeat(20_000) }));
+
+    await Promise.all(lote.map((dado) => escreverJsonAtomico(alvo, dado)));
+
+    const final = await lerJson(alvo);
+    assert.ok(lote.some((g) => g.id === final.id), "sobrou um dos escritos, inteiro");
+    assert.equal(final.recheio.length, 20_000, "e não meio arquivo");
+    assert.deepEqual(await readdir(dir), ["tumulto.json"], "nenhum temporário para trás");
+  });
+});
+
 test("arquivo ausente devolve o padrão; JSON quebrado continua subindo", async () => {
   await comDiretorioTemporario(async (dir) => {
     assert.equal(await lerJsonOuPadrao(path.join(dir, "nada.json"), null), null);

@@ -93,6 +93,11 @@ protege é o bind em `127.0.0.1` e o túnel não conhecer esta porta.
 | POST | `/api/sessao/start` | Conecta na live e abre a sessão |
 | POST | `/api/sessao/stop` | Encerra e limpa dado de espectador |
 | GET | `/api/sessao/stream` | **SSE**: evento aplicado, latência, estado |
+| POST | `/api/teste/presentes` | Dispara presente à mão. **Exige sessão**: precisa do preset para casar o slot |
+| POST | `/api/teste/animacao` | Dispara uma animação direto no jogo. **Não exige sessão nem preset** |
+| POST | `/api/jogo/abrir-studio` | Sobe o `rojo serve` e abre o Roblox Studio na máquina do streamer |
+| GET | `/api/logs` | Log recente da ponte, para o painel ter o que veio antes dele |
+| GET | `/api/cenarios` | Cenários de fixture, para o modo sem live |
 
 ### Eventos do SSE
 ```
@@ -107,6 +112,13 @@ data: { "presenteNome": "Rose", "moedas": 1, "contagem": 7 }
 ```
 
 ---
+
+### Por que `abrir-studio` só existe aqui
+
+Ela executa processo local. Vive na superfície B, que não é publicada pelo
+túnel, e **não lê nada do corpo da requisição**: o caminho do projeto e o
+binário do Studio são fixos no módulo. Parâmetro vindo do navegador nessa rota
+seria execução arbitrária de comando na máquina do streamer.
 
 ## C. Superfície externa (ponte → Roblox web API)
 

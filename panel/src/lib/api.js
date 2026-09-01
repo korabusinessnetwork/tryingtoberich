@@ -114,6 +114,20 @@ export const api = {
    */
   testarPresentes: (presentes) => chamar("/api/teste/presentes", json("POST", { presentes })),
 
+  /**
+   * Dispara uma animação direto no jogo, sem presente e sem preset.
+   *
+   * Não precisa de sessão: a pergunta que ela responde é "a animação toca no
+   * Roblox?", e exigir preset montado para isso seria pedir configuração antes
+   * do teste mais básico. A ponte devolve `jogoOnline`, que é o que diz se o
+   * clique chegou a algum lugar.
+   */
+  testarAnimacao: (animacaoId, intensidade) =>
+    chamar("/api/teste/animacao", json("POST", { animacaoId, intensidade })),
+
+  /** Sobe o `rojo serve` e abre o Roblox Studio nesta máquina. */
+  abrirNoStudio: () => chamar("/api/jogo/abrir-studio", { method: "POST" }),
+
   /** O que aconteceu antes do painel abrir. O que vem depois chega pelo SSE. */
   logs: (limite = 100) => chamar(`/api/logs?limite=${limite}`).then((r) => r.linhas),
 

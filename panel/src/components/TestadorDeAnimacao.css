@@ -1,0 +1,96 @@
+/* Testador de animação. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.animacoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.animacoes-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+  flex-wrap: wrap;
+}
+
+.animacoes-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.animacoes-recado {
+  margin: 0;
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+.animacoes-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.animacoes-grupo-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--painel-texto-secundario);
+}
+
+.animacoes-grupo-sinal {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Grade que se acomoda sozinha: 20 animações não podem virar uma coluna
+   rolável. `auto-fill` mantém os botões lado a lado enquanto couber. */
+.animacoes-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.animacoes-botao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* 40px é o mínimo do 02_DESIGN_SYSTEM: o streamer clica com pressa. */
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  background: var(--painel-fundo);
+}
+
+/* O último disparado fica marcado porque animação curta acaba antes de o olho
+   voltar do Roblox para o painel: sem isto não dá para saber o que tocou. */
+.animacoes-botao-ultimo {
+  border-color: var(--estado-ok);
+  color: var(--painel-texto-primario);
+}
+
+.animacoes-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.animacoes-duracao {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--painel-texto-secundario);
+}

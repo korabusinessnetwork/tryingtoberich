@@ -29,19 +29,30 @@ test/     testes dos contratos (npm test)
 ## Rodar
 ```
 npm install      # instala a raiz e o workspace bridge/
-npm test         # 190 testes
+cp .env.example .env   # e preencha BRIDGE_TOKEN
+
+npm start        # sobe a ponte E o painel, na ordem certa. É o comando do dia a dia.
+npm run atalho   # cria o atalho na área de trabalho (Windows): duplo clique = no ar
+
+npm test         # a suíte inteira (218, todos verdes)
 npm run validar  # relatório do estado dos contratos e do acervo
 npm run luau     # gate de sintaxe do jogo, sem abrir o Studio
+                 # exige um parser de Lua: winget install DEVCOM.Lua
 npm run gerar    # gera o índice de animações e os tokens visuais
-npm run painel:gate  # gate estrutural do painel: compila os 11 componentes
-npm run painel       # abre o painel em http://127.0.0.1:5173
+npm run painel:gate  # gate estrutural do painel: compila os componentes
+npm run painel       # só o painel, em http://127.0.0.1:5173
+npm run ponte        # só a ponte
 
-cp .env.example .env   # e preencha BRIDGE_TOKEN
 npm run semear         # instala o preset de exemplo em data/presets/
 npm run ponte -- --cenario=04-combate-de-presentes --preset=escalada-padrao
 ```
 O último comando sobe a ponte inteira tocando um cenário de fixture em loop,
 **sem live e sem Roblox**. É assim que se desenvolve o painel e o jogo.
+
+`npm start` gera os artefatos, sobe a ponte, **espera** ela abrir a porta e só
+então chama o Vite — o painel encaminha `/api` para a ponte, e subir os dois em
+paralelo serve uma tela que dá 502 até a ponte acordar. O atalho da área de
+trabalho é o mesmo comando com `--abrir`, que também abre o navegador.
 
 ## Três coisas que não são negociáveis
 1. **Latência abaixo de 1000ms** do presente até a animação (`CLAUDE.md`).

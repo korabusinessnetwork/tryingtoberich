@@ -47,6 +47,41 @@ export async function lerJsonOuPadrao(caminho, padrao = null) {
 }
 
 /**
+ * Códigos que no Windows significam "tenta de novo daqui a pouco", não "falhou".
+ *
+ * O `rename` do POSIX sobre um destino existente é atômico e não briga com
+ * ninguém. No Windows ele falha com EPERM/EACCES/EBUSY se QUALQUER handle
+ * estiver aberto no destino naquele instante — e isso acontece o tempo todo:
+ * duas escritas concorrentes no mesmo arquivo, o indexador, o antivírus, e
+ * principalmente o sincronizador do OneDrive, que abre o arquivo assim que
+ * percebe a mudança. Este repositório vive dentro do OneDrive.
+ */
+const TRANSITORIOS = new Set(["EPERM", "EACCES", "EBUSY"]);
+
+/** Espera crescente, somando ~1,6s no pior caso. */
+const ESPERAS_MS = [1, 2, 5, 10, 25, 50, 100, 200, 400, 800];
+
+/**
+ * Renomeia, insistindo enquanto o erro for transitório.
+ *
+ * Insistir é seguro aqui porque o rename é a ÚLTIMA etapa: o conteúdo já está
+ * inteiro no temporário e já foi para o disco. Enquanto esta função tenta, o
+ * arquivo de destino continua sendo a versão anterior, íntegra — nunca meio
+ * arquivo. E nada disto está no caminho crítico do presente: escrita em disco é
+ * fire-and-forget por regra (CLAUDE.md, Princípio nº1).
+ */
+async function renomearComRetentativa(de, para) {
+  for (let tentativa = 0; ; tentativa += 1) {
+    try {
+      return await rename(de, para);
+    } catch (erro) {
+      if (!TRANSITORIOS.has(erro.code) || tentativa >= ESPERAS_MS.length) throw erro;
+      await new Promise((seguir) => setTimeout(seguir, ESPERAS_MS[tentativa]));
+    }
+  }
+}
+
+/**
  * Escrita atômica: grava num temporário do MESMO diretório (rename entre
  * sistemas de arquivos não é atômico), força para o disco e renomeia por cima.
  */
@@ -67,7 +102,7 @@ export async function escreverJsonAtomico(caminho, dado) {
   }
 
   try {
-    await rename(temporario, caminho);
+    await renomearComRetentativa(temporario, caminho);
   } catch (erro) {
     await rm(temporario, { force: true });
     throw erro;
@@ -81,7 +116,7 @@ export async function escreverBinarioAtomico(caminho, buffer) {
   const temporario = path.join(dir, `.${path.basename(caminho)}.${randomBytes(6).toString("hex")}.tmp`);
   await writeFile(temporario, buffer);
   try {
-    await rename(temporario, caminho);
+    await renomearComRetentativa(temporario, caminho);
   } catch (erro) {
     await rm(temporario, { force: true });
     throw erro;

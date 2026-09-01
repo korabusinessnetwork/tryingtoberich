@@ -38,6 +38,7 @@ export class Nucleo {
   #estadoDaLive = ESTADO.DESLIGADA;
   #ouvintes = new Set();
   #catalogoEmMemoria = null;
+  #animacoesEmMemoria = null;
 
   constructor({ config, gemini, roblox } = {}) {
     this.config = config;
@@ -74,7 +75,8 @@ export class Nucleo {
   }
 
   async carregarAnimacoesNaMemoria() {
-    this.#despachante.definirAnimacoes(indexarAnimacoes(await carregarAnimacoes()));
+    this.#animacoesEmMemoria = indexarAnimacoes(await carregarAnimacoes());
+    this.#despachante.definirAnimacoes(this.#animacoesEmMemoria);
   }
 
   /* ---------------------------------------------------------------- */
@@ -278,6 +280,49 @@ export class Nucleo {
     // já cuida disso. Aqui só devolvemos o que aconteceu com cada um.
     log.info("presente_de_teste", { quantidade: presentes.length });
     return resultados;
+  }
+
+  /**
+   * Dispara uma animação no jogo, sem presente e sem preset.
+   *
+   * NÃO exige sessão, ao contrário do teste de presente. A diferença é real: o
+   * teste de presente precisa do preset para saber qual slot casar, e o preset
+   * é da sessão. Uma animação já é o destino final — não há o que casar. Exigir
+   * sessão aqui obrigaria a montar preset antes de responder a pergunta mais
+   * básica do Bloco 2: "essa animação toca no Roblox?".
+   */
+  injetarAnimacaoDeTeste({ animacaoId, intensidade } = {}) {
+    const animacao = this.#animacoesEmMemoria?.get(String(animacaoId ?? "").trim());
+    if (!animacao) {
+      throw new ErroDeDominio(
+        "animacao_desconhecida",
+        `Não existe animação com id "${animacaoId}". O índice sai de \`npm run gerar\`.`,
+        { status: 400 },
+      );
+    }
+
+    // O contrato com o jogo proíbe delta 0 (evento-jogo.schema.json e
+    // tipos.lua): evento que não move o boneco é descartado na entrada. Então o
+    // teste manda o menor passo possível, no sentido da própria animação —
+    // uma descida com delta positivo tocaria a animação errada para o olho.
+    const delta = animacao.direcao === "descida" ? -1 : 1;
+    const nivel = Number.isInteger(intensidade) ? Math.min(5, Math.max(1, intensidade)) : 3;
+
+    // Lido ANTES de despachar: se o jogo estiver fora, o long-poll descarta em
+    // silêncio e o streamer ficaria clicando um botão que não faz nada.
+    const jogoOnline = this.#longpoll.jogoOnline();
+    const despachado = this.#despachante.testarAnimacao({ animacaoId: animacao.id, delta, intensidade: nivel });
+
+    log.info("animacao_de_teste", { animacaoId: animacao.id, jogoOnline });
+    return {
+      id: despachado.id,
+      animacaoId: animacao.id,
+      nome: animacao.nome,
+      direcao: animacao.direcao,
+      delta,
+      intensidade: nivel,
+      jogoOnline,
+    };
   }
 
   /** O catálogo fica em memória só para o testador dar nome e moedas ao evento. */

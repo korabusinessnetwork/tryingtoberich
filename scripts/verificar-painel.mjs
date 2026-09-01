@@ -24,6 +24,7 @@ const executar = promisify(execFile);
 const PAINEL = path.join(RAIZ, "panel");
 const COMPONENTES = path.join(PAINEL, "src", "components");
 const ENTRADA = path.join(PAINEL, "src", "gate-gerado.jsx");
+const VITE = path.join(RAIZ, "node_modules", "vite", "bin", "vite.js");
 
 async function principal() {
   const silencioso = process.argv.includes("--silencioso");
@@ -46,7 +47,10 @@ async function principal() {
   await writeFile(ENTRADA, corpo, "utf8");
 
   try {
-    await executar("npx", ["vite", "build", "--logLevel", "warn"], {
+    // O binário do Vite, não `npx`. No Windows `npx` é `npx.cmd`, e `execFile`
+    // sem shell não resolve a extensão: o gate morria com `spawn npx ENOENT`
+    // antes de compilar coisa alguma — guarda que não morde.
+    await executar(process.execPath, [VITE, "build", "--logLevel", "warn"], {
       cwd: PAINEL,
       env: { ...process.env, KORA_GATE: "1" },
     });

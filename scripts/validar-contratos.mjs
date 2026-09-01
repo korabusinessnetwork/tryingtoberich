@@ -12,6 +12,7 @@
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { RAIZ, lerJson } from "../bridge/src/repos/arquivo.mjs";
 import { criarValidador } from "../bridge/src/repos/schemas.mjs";
@@ -99,4 +100,4 @@ async function principal() {
   diz("\nTodos os contratos válidos.");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await principal();
+if (import.meta.url === pathToFileURL(process.argv[1]).href) await principal();

@@ -3,21 +3,31 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./lib/api.js";
 import { useFluxo } from "./lib/useFluxo.js";
 import { BarraDeSessao } from "./components/BarraDeSessao.jsx";
+import { BotaoAbrirJogo } from "./components/BotaoAbrirJogo.jsx";
 import { EditorDePreset } from "./components/EditorDePreset.jsx";
 import { GeradorDeMapa } from "./components/GeradorDeMapa.jsx";
 import { MonitorAoVivo } from "./components/MonitorAoVivo.jsx";
+import { NavegacaoDePaginas } from "./components/NavegacaoDePaginas.jsx";
 import { PainelDeLogs } from "./components/PainelDeLogs.jsx";
 import { PreviaDeMapa } from "./components/PreviaDeMapa.jsx";
 import { SeletorDeAnimacao } from "./components/SeletorDeAnimacao.jsx";
 import { SeletorDeLook } from "./components/SeletorDeLook.jsx";
 import { SeletorDePresente } from "./components/SeletorDePresente.jsx";
 import { SeletorModalidade } from "./components/SeletorModalidade.jsx";
+import { TestadorDeAnimacao } from "./components/TestadorDeAnimacao.jsx";
 import { TestadorDePresente } from "./components/TestadorDePresente.jsx";
 import "./App.css";
 
 /**
- * O painel. Uma tela só, sem navegação: o streamer olha por 2 segundos por vez
- * e não pode caçar aba (02_DESIGN_SYSTEM, seção A).
+ * O painel, em três páginas.
+ *
+ * O 02_DESIGN_SYSTEM exige densidade e leitura de canto de olho: o streamer
+ * olha por 2 segundos por vez. Isso não proíbe navegação — proíbe ESCONDER o
+ * que ele olha durante a live. Por isso "Ao vivo" é a página de abertura e
+ * carrega os 6 slots, o monitor e o testador; e "Configurar" leva o que o
+ * próprio layout já tratava como pré-live e travava com a sessão rodando
+ * (modalidade, look e mapa). Assim os slots ganham a largura inteira, que é o
+ * que o design system pede: os 6 lado a lado, sem scroll.
  *
  * Este arquivo carrega dado, guarda estado e distribui. Ele é o único que
  * chama `api`, porque componente não toca a rede (CLAUDE.md) — um teste em
@@ -37,9 +47,14 @@ export function App() {
   const [erroDeMapa, definirErroDeMapa] = useState(null);
   const [prontidao, definirProntidao] = useState(null);
   const [disparando, definirDisparando] = useState(false);
+  const [disparandoAnimacao, definirDisparandoAnimacao] = useState(false);
+  const [ultimaAnimacao, definirUltimaAnimacao] = useState(null);
+  const [abrindoJogo, definirAbrindoJogo] = useState(false);
+  const [studio, definirStudio] = useState(null);
+  const [erroDoStudio, definirErroDoStudio] = useState(null);
   const [aviso, definirAviso] = useState(null);
-  const [aba, definirAba] = useState("monitor");
-  // Quantos problemas já estavam no log da última vez que a aba foi aberta.
+  const [pagina, definirPagina] = useState("aovivo");
+  // Quantos problemas já estavam no log da última vez que a página foi aberta.
   // Sem isso o contador nunca zera e vira enfeite permanente.
   const [problemasVistos, definirProblemasVistos] = useState(0);
 
@@ -66,7 +81,12 @@ export function App() {
     } catch (falha) {
       definirErroDeCarga(falha);
     }
-  }, [fluxo]);
+    // Depende da FUNÇÃO, não do objeto `fluxo`. useFluxo devolve um objeto novo
+    // a cada render; usar ele aqui recriava `carregar`, o efeito abaixo disparava
+    // de novo, o setState re-renderizava, e o ciclo se repetia sem parar — nove
+    // requisições por volta, até o navegador ficar sem socket
+    // (ERR_INSUFFICIENT_RESOURCES). `juntarLogs` é useCallback([]), estável.
+  }, [fluxo.juntarLogs]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -83,7 +103,7 @@ export function App() {
       else definirAviso(texto);
       return null;
     }
-  }, [fluxo]);
+  }, [fluxo.registrarLocal]);  // a função, não o objeto: ver `carregar` acima
 
   const mudarSlot = useCallback((posicao, campos) => {
     definirPreset((atual) => {
@@ -144,6 +164,32 @@ export function App() {
     definirDisparando(false);
   }, [executar]);
 
+  const testarAnimacao = useCallback(async (animacaoId) => {
+    definirDisparandoAnimacao(true);
+    const resultado = await executar(() => api.testarAnimacao(animacaoId));
+    // Marca o botão só se o disparo saiu. Marcar antes da resposta faria o
+    // painel dizer que tocou quando a ponte recusou.
+    if (resultado) {
+      definirUltimaAnimacao(resultado.animacaoId);
+      // A ponte aceitou, mas o long-poll descartou: sem isto o clique some sem
+      // explicação e o streamer culpa a animação.
+      if (!resultado.jogoOnline) definirAviso("A animação saiu, mas o Roblox não está conectado — nada vai aparecer na tela.");
+    }
+    definirDisparandoAnimacao(false);
+  }, [executar]);
+
+  const abrirNoStudio = useCallback(async () => {
+    definirAbrindoJogo(true);
+    definirErroDoStudio(null);
+    const resultado = await executar(() => api.abrirNoStudio(), {
+      // Erro aqui é do lado da máquina (Studio ausente, plataforma errada) e
+      // pertence ao bloco do botão, não ao aviso solto no topo da tela.
+      aoFalhar: (falha) => definirErroDoStudio(falha?.message ?? "Não consegui abrir o Studio."),
+    });
+    if (resultado) definirStudio(resultado);
+    definirAbrindoJogo(false);
+  }, [executar]);
+
   const slotEditado = useMemo(
     () => (editando ? (preset?.slots ?? []).find((s) => s.posicao === editando.posicao) ?? null : null),
     [editando, preset],
@@ -163,6 +209,9 @@ export function App() {
   // A sessão rodando trava o que não pode mudar no meio da partida: modalidade,
   // look (ADR-011) e troca de mapa (F4).
   const aoVivo = fluxo.estado?.sessao === "rodando" || dados?.sessao?.estado?.sessao === "rodando";
+  // O SSE na frente, a carga inicial atrás: antes do primeiro evento do fluxo
+  // o painel ainda precisa saber se o Roblox está de pé.
+  const jogoOnline = (fluxo.estado ?? dados?.sessao?.estado)?.jogo === "online";
 
   if (erroDeCarga) {
     return (
@@ -199,8 +248,23 @@ export function App() {
 
       {aviso ? <p className="pastilha pastilha-erro app-aviso">{aviso}</p> : null}
 
-      <div className="app-colunas">
-        <section className="app-coluna app-coluna-larga">
+      <NavegacaoDePaginas
+        paginas={[
+          { id: "aovivo", rotulo: "Ao vivo" },
+          { id: "configurar", rotulo: "Configurar" },
+          { id: "jogo", rotulo: "Jogo" },
+          { id: "log", rotulo: "Log", contador: naoVistos },
+        ]}
+        atual={pagina}
+        aoTrocar={(destino) => {
+          definirPagina(destino);
+          // Abrir o log zera o contador: o que ele marca é problema NÃO VISTO.
+          if (destino === "log") definirProblemasVistos(problemas);
+        }}
+      />
+
+      {pagina === "aovivo" ? (
+        <div className="app-pagina">
           <EditorDePreset
             preset={preset}
             catalogo={dados.catalogo}
@@ -213,49 +277,12 @@ export function App() {
             aoEditarAnimacao={(posicao) => definirEditando({ posicao, tipo: "animacao" })}
           />
 
-          <nav className="app-abas" role="tablist" aria-label="Monitor e log">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={aba === "monitor"}
-              className={aba === "monitor" ? "app-aba app-aba-ativa" : "app-aba"}
-              onClick={() => definirAba("monitor")}
-            >
-              Monitor
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={aba === "logs"}
-              className={aba === "logs" ? "app-aba app-aba-ativa" : "app-aba"}
-              onClick={() => {
-                definirAba("logs");
-                definirProblemasVistos(problemas);
-              }}
-            >
-              Log
-              {/* O contador é o que impede o log de ficar invisível justamente
-                  quando importa: atrás de uma aba, ninguém olha por iniciativa. */}
-              {naoVistos > 0 ? <span className="app-aba-contador">{naoVistos}</span> : null}
-            </button>
-          </nav>
-
-          {aba === "monitor" ? (
-            <MonitorAoVivo
-              eventos={fluxo.eventos}
-              naoMapeados={fluxo.naoMapeados}
-              estado={fluxo.estado}
-              conectado={fluxo.conectado}
-            />
-          ) : (
-            <PainelDeLogs
-              logs={fluxo.logs}
-              aoLimpar={() => {
-                fluxo.definirLogs([]);
-                definirProblemasVistos(0);
-              }}
-            />
-          )}
+          <MonitorAoVivo
+            eventos={fluxo.eventos}
+            naoMapeados={fluxo.naoMapeados}
+            estado={fluxo.estado}
+            conectado={fluxo.conectado}
+          />
 
           <TestadorDePresente
             preset={preset}
@@ -264,37 +291,79 @@ export function App() {
             disparando={disparando}
             aoDisparar={testarPresentes}
           />
-        </section>
+        </div>
+      ) : null}
 
-        <aside className="app-coluna">
-          <SeletorModalidade
-            modalidades={dados.modalidades}
-            modalidade={preset?.modalidade ?? "escalada"}
-            aoTrocar={(modalidade) => definirPreset((atual) => (atual ? { ...atual, modalidade } : atual))}
-            travado={aoVivo}
+      {/* Duas colunas aqui, e não na página "Ao vivo": a prévia do mapa só faz
+          sentido colada no que a gerou. */}
+      {pagina === "configurar" ? (
+        <div className="app-colunas">
+          <section className="app-coluna">
+            <SeletorModalidade
+              modalidades={dados.modalidades}
+              modalidade={preset?.modalidade ?? "escalada"}
+              aoTrocar={(modalidade) => definirPreset((atual) => (atual ? { ...atual, modalidade } : atual))}
+              travado={aoVivo}
+            />
+
+            <SeletorDeLook
+              looks={dados.looks}
+              lookId={preset?.personagem?.lookId ?? null}
+              aoEscolher={(lookId) =>
+                definirPreset((atual) => (atual ? { ...atual, personagem: { lookId } } : atual))}
+              travado={aoVivo}
+            />
+
+            <GeradorDeMapa
+              mapas={dados.mapas}
+              mapaId={preset?.mapaId ?? null}
+              gerando={gerando}
+              erro={erroDeMapa}
+              aoGerar={gerarMapa}
+              aoEscolher={(mapaId) => definirPreset((atual) => (atual ? { ...atual, mapaId } : atual))}
+              travado={aoVivo}
+            />
+          </section>
+
+          <aside className="app-coluna">
+            <PreviaDeMapa mapa={mapaEscolhido} prontidao={prontidao} />
+          </aside>
+        </div>
+      ) : null}
+
+      {/* A página do Roblox: abrir o jogo e provar que as animações tocam. As
+          duas coisas juntas porque são a mesma sessão de trabalho — abre,
+          conecta, clica e vê. Nenhuma delas depende de sessão nem de preset. */}
+      {pagina === "jogo" ? (
+        <div className="app-pagina">
+          <BotaoAbrirJogo
+            abrindo={abrindoJogo}
+            resultado={studio}
+            erro={erroDoStudio}
+            aoAbrir={abrirNoStudio}
           />
 
-          <SeletorDeLook
-            looks={dados.looks}
-            lookId={preset?.personagem?.lookId ?? null}
-            aoEscolher={(lookId) =>
-              definirPreset((atual) => (atual ? { ...atual, personagem: { lookId } } : atual))}
-            travado={aoVivo}
+          <TestadorDeAnimacao
+            animacoes={dados.animacoes}
+            jogoOnline={jogoOnline}
+            disparando={disparandoAnimacao}
+            ultimaDisparada={ultimaAnimacao}
+            aoDisparar={testarAnimacao}
           />
+        </div>
+      ) : null}
 
-          <GeradorDeMapa
-            mapas={dados.mapas}
-            mapaId={preset?.mapaId ?? null}
-            gerando={gerando}
-            erro={erroDeMapa}
-            aoGerar={gerarMapa}
-            aoEscolher={(mapaId) => definirPreset((atual) => (atual ? { ...atual, mapaId } : atual))}
-            travado={aoVivo}
+      {pagina === "log" ? (
+        <div className="app-pagina">
+          <PainelDeLogs
+            logs={fluxo.logs}
+            aoLimpar={() => {
+              fluxo.definirLogs([]);
+              definirProblemasVistos(0);
+            }}
           />
-
-          <PreviaDeMapa mapa={mapaEscolhido} prontidao={prontidao} />
-        </aside>
-      </div>
+        </div>
+      ) : null}
 
       <SeletorDePresente
         aberto={editando?.tipo === "presente"}

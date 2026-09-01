@@ -21,6 +21,7 @@ import { promisify } from "node:util";
 import { RAIZ } from "../bridge/src/repos/arquivo.mjs";
 import { FATOR_SALTO_VERTICAL } from "../bridge/src/dominio/regras.mjs";
 import { criarValidador } from "../bridge/src/repos/schemas.mjs";
+import { acharParser, comoInstalarParser } from "../scripts/verificar-luau.mjs";
 
 const executar = promisify(execFile);
 const lerJogo = (...partes) => readFile(path.join(RAIZ, "game", "src", ...partes), "utf8");
@@ -46,10 +47,11 @@ const listarLua = async (dir) => {
 /* -------------------------------------------------------------- */
 
 test("todo .lua do jogo passa no parser", async () => {
-  try {
-    await executar("luac5.1", ["-v"]);
-  } catch {
-    assert.fail("luac5.1 não está instalado; instale com: apt-get install lua5.1");
+  // A busca é a MESMA do `npm run luau`, importada e não recopiada: duas listas
+  // de nomes de binário divergem, e a que envelhece é sempre a do teste.
+  const parser = await acharParser();
+  if (!parser) {
+    assert.fail(`Parser de Lua não encontrado; instale com: ${comoInstalarParser()}`);
   }
 
   const arquivos = await listarLua(path.join(RAIZ, "game", "src"));
@@ -58,7 +60,7 @@ test("todo .lua do jogo passa no parser", async () => {
   const quebrados = [];
   for (const arquivo of arquivos) {
     try {
-      await executar("luac5.1", ["-p", arquivo]);
+      await executar(parser, ["-p", arquivo]);
     } catch (erro) {
       quebrados.push(`${path.relative(RAIZ, arquivo)}: ${String(erro.stderr ?? erro.message).trim()}`);
     }
