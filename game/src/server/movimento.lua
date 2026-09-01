@@ -165,38 +165,48 @@ local function finalizar(personagem, motivo)
 	end
 	estado.ativo = false
 	estado.motivo = motivo
-	cancelarTween(estado)
+	-- Desconectar antes de cancelar: `Cancel` dispara o `Completed` e o handler
+	-- não pode reentrar aqui no meio da restauração.
 	desconectar(estado)
+	cancelarTween(estado)
 
 	local original = estado.original or {}
 	estado.original = nil
 
-	local raiz, humanoid = pecas(personagem)
-	if raiz then
-		if estado.destino then
-			raiz.CFrame = estado.destino
+	-- Tudo dentro de pcall porque o personagem pode ter sido destruído no meio.
+	-- Escrever em instância morta não pode impedir o `aoTerminar` de sair: quem
+	-- espera por ele ficaria preso para sempre.
+	local ok, erro = pcall(function()
+		local raiz, humanoid = pecas(personagem)
+		if raiz then
+			if estado.destino then
+				raiz.CFrame = estado.destino
+			end
+			-- Zerar de novo não é redundância: sem isto o momento residual do
+			-- Tween lança o boneco no primeiro frame depois de desancorar.
+			raiz.AssemblyLinearVelocity = ZERO
+			raiz.AssemblyAngularVelocity = ZERO
+			raiz.Anchored = original.ancorada == true
+			pcall(function()
+				raiz:SetNetworkOwnershipAuto()
+			end)
 		end
-		-- Zerar de novo não é redundância: sem isto o momento residual do Tween
-		-- lança o boneco no primeiro frame depois de desancorar (ADR-005).
-		raiz.AssemblyLinearVelocity = ZERO
-		raiz.AssemblyAngularVelocity = ZERO
-		raiz.Anchored = original.ancorada == true
-		pcall(function()
-			raiz:SetNetworkOwnershipAuto()
-		end)
-	end
 
-	if humanoid then
-		humanoid.WalkSpeed = original.walkSpeed or 16
-		humanoid.JumpPower = original.jumpPower or 50
-		humanoid.JumpHeight = original.jumpHeight or 7.2
-		humanoid.AutoRotate = original.autoRotate ~= false
-		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, original.pulo ~= false)
-		if humanoid.Health > 0 then
-			-- Tira do Physics: sem isto o Humanoid ignora o input do streamer
-			-- mesmo já desancorado.
-			humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+		if humanoid then
+			humanoid.WalkSpeed = original.walkSpeed or 16
+			humanoid.JumpPower = original.jumpPower or 50
+			humanoid.JumpHeight = original.jumpHeight or 7.2
+			humanoid.AutoRotate = original.autoRotate ~= false
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, original.pulo ~= false)
+			if humanoid.Health > 0 then
+				-- Tira do Physics: sem isto o Humanoid ignora o input do
+				-- streamer mesmo já desancorado.
+				humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+			end
 		end
+	end)
+	if not ok then
+		warn("[Kora] restauração incompleta (" .. tostring(motivo) .. "): " .. tostring(erro))
 	end
 
 	estado.destino = nil
@@ -285,6 +295,13 @@ function Movimento.aplicar(personagem, opcoes)
 	intensidade = math.max(1, math.min(math.floor(intensidade), Tipos.INTENSIDADE_MAX))
 
 	local estado = obterEstado(personagem)
+
+	-- A geração sobe antes de encerrar o ciclo anterior: é ela que desarma o
+	-- watchdog e o `Completed` velhos, e um deles pode disparar durante o
+	-- `Cancel` logo abaixo.
+	estado.geracao = estado.geracao + 1
+	local geracao = estado.geracao
+
 	if estado.ativo then
 		-- Presente durante animação normalmente vira combate (ADR-012) e não
 		-- chega aqui; o que chega é o efeito curto do combate fechado por tempo.
@@ -292,13 +309,11 @@ function Movimento.aplicar(personagem, opcoes)
 		-- referência, então ele vence: cortar o movimento velho é melhor que
 		-- descartar o delta de quem pagou. Não desancora no meio — a ancoragem
 		-- passa direto de um ciclo para o outro, sem blip de física.
-		cancelarTween(estado)
 		desconectar(estado)
+		cancelarTween(estado)
 		dispararTermino(estado)
 	end
 
-	estado.geracao = estado.geracao + 1
-	local geracao = estado.geracao
 	estado.aoTerminar = type(opcoes.aoTerminar) == "function" and opcoes.aoTerminar or nil
 
 	-- Passo 1: cancelar o movimento atual. Com o streamer no ar, é aqui que o
