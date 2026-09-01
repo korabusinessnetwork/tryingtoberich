@@ -1,0 +1,171 @@
+/* Modal de escolha de presente. Cor sempre por variável — nunca hex literal —
+   por causa do white-label da Fase 3. Ver docs/02_DESIGN_SYSTEM, seção A, e
+   CLAUDE.md. */
+
+.seletor-presente-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espaco);
+  z-index: 100;
+}
+
+.seletor-presente {
+  width: min(480px, 100%);
+  max-height: min(640px, 90vh);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+  padding: var(--espaco);
+  overflow: hidden;
+}
+
+.seletor-presente-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.seletor-presente-cabecalho h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.seletor-presente-fechar {
+  min-width: var(--alvo-minimo);
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  background: transparent;
+}
+
+/* Semente de desenvolvimento: os valores em moedas não são confirmados até a
+   primeira coleta real. Âmbar de atenção, nunca vermelho — não é um erro,
+   é contexto que o streamer precisa antes de montar o preset. */
+.seletor-presente-semente {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--raio);
+  border: 1px solid var(--estado-atencao);
+  color: var(--estado-atencao);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.seletor-presente-busca {
+  width: 100%;
+}
+
+.seletor-presente-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  min-height: 120px;
+}
+
+.seletor-presente-estado {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--painel-texto-secundario);
+  font-size: 13px;
+}
+
+.seletor-presente-estado.erro {
+  color: var(--estado-erro);
+}
+
+.seletor-presente-item {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco);
+  width: 100%;
+  min-height: var(--alvo-minimo);
+  padding: 6px 10px;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.seletor-presente-item.atual {
+  border-color: var(--estado-ok);
+}
+
+.seletor-presente-icone {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio);
+  object-fit: cover;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  flex-shrink: 0;
+}
+
+/* Lugar reservado quando as duas fontes de ícone (iconeUrl e iconeLocal)
+   falham ou vêm nulas — mesmo tamanho do <img>, layout nunca quebra. */
+.seletor-presente-icone-vazio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--painel-texto-secundario);
+}
+
+.seletor-presente-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seletor-presente-nome {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seletor-presente-detalhe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+/* Cor da faixa é só apoio visual: o texto "Faixa N" ao lado é o que carrega
+   o significado, porque cor sozinha falha para daltônico. */
+.seletor-presente-faixa {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.seletor-presente-motivo {
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+  max-width: 130px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.seletor-presente-selo-atual {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--estado-ok);
+  flex-shrink: 0;
+}

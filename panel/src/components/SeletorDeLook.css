@@ -1,0 +1,108 @@
+/* Grade de looks salvos. Nenhuma cor literal, exceto a cor do EFEITO
+   PERMANENTE em si (aplicada via `style` no JSX) — essa não é cor de tema,
+   é dado do streamer, o hex exato que aparece na live (ADR-010). */
+
+.seletor-look {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+}
+
+.seletor-look-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.seletor-look-cabecalho h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.seletor-look-aviso-travado {
+  margin: 0;
+  font-size: 12px;
+}
+
+.seletor-look-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espaco);
+}
+
+.seletor-look-cartao {
+  width: 100%;
+  min-height: var(--alvo-minimo);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--painel-superficie);
+  border: var(--borda);
+}
+
+.seletor-look-cartao-selecionado {
+  border-color: var(--painel-texto-primario);
+}
+
+.seletor-look-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.seletor-look-nome {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.seletor-look-marca {
+  color: var(--estado-ok);
+  font-weight: 700;
+}
+
+.seletor-look-pecas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Placeholder da peça: sem URL de ícone no dado (ver comentário no .jsx),
+   então é um quadrado com o assetId, não uma imagem. */
+.seletor-look-peca {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: var(--raio);
+  font-size: 10px;
+  color: var(--painel-texto-secundario);
+  font-variant-numeric: tabular-nums;
+}
+
+.seletor-look-efeito {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.seletor-look-efeito-cor {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: var(--borda);
+  flex-shrink: 0;
+}

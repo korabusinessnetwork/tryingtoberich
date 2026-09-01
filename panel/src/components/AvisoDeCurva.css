@@ -1,0 +1,39 @@
+/* R3 — avisa, não bloqueia. Nada de vermelho nem de ícone de proibido: só
+   --estado-atencao, um bloco que lê como "olha isso", não como erro.
+   Ver docs/03_REGRAS_DE_NEGOCIO (R3) e docs/02_DESIGN_SYSTEM (seção A). */
+
+.aviso-de-curva {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--raio);
+  border: 1px solid var(--estado-atencao);
+  color: var(--estado-atencao);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.aviso-de-curva::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Some visualmente, mas continua no documento para o leitor de tela. */
+.aviso-de-curva-rotulo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
