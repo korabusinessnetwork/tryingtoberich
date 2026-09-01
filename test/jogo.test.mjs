@@ -237,6 +237,62 @@ test("os arquivos gerados avisam que são gerados", async () => {
 });
 
 /* -------------------------------------------------------------- */
+/* Consistência entre os módulos do servidor                       */
+/* -------------------------------------------------------------- */
+
+test("o orquestrador só chama função que existe nos outros módulos", async () => {
+  // O jogo foi escrito por agentes em paralelo, cada um dono de um arquivo, e
+  // sessao.lua é o único que conhece todos. Uma assinatura que não bate só
+  // apareceria quando o Studio carregasse o lugar e a sessão tentasse subir.
+  const modulos = {
+    ConstrutorMapa: "construtorMapa",
+    Movimento: "movimento",
+    Personagem: "personagem",
+    Plataformas: "plataformas",
+    Ponte: "ponte",
+  };
+
+  const sessao = await lerJogo("server", "sessao.lua");
+  const faltando = [];
+
+  for (const [nome, arquivo] of Object.entries(modulos)) {
+    const fonte = await lerJogo("server", `${arquivo}.lua`);
+    const chamadas = new Set([...sessao.matchAll(new RegExp(`${nome}\\.(\\w+)\\(`, "g"))].map((m) => m[1]));
+
+    assert.ok(chamadas.size > 0, `sessao.lua não usa ${nome}: o orquestrador deveria amarrar todos`);
+    for (const funcao of chamadas) {
+      if (!new RegExp(`function ${nome}\\.${funcao}\\b`).test(fonte)) faltando.push(`${nome}.${funcao}`);
+    }
+  }
+
+  assert.deepEqual(faltando, []);
+});
+
+test("o cliente só escuta evento que o servidor emite, e vice-versa", async () => {
+  // O outro lado do mesmo risco: HUD escutando um RemoteEvent que ninguém
+  // dispara é feature morta sem erro nenhum. Foi exatamente o que aconteceu
+  // com COMBATE_ANULADO antes da síntese.
+  const emitidos = new Set();
+  const escutados = new Set();
+
+  const varrer = async (subdir, arquivos, destino, padrao) => {
+    for (const arquivo of arquivos) {
+      const fonte = await lerJogo(subdir, arquivo);
+      for (const achado of fonte.matchAll(padrao)) destino.add(achado[1]);
+    }
+  };
+
+  const servidor = (await readdir(path.join(RAIZ, "game", "src", "server"))).filter((f) => f.endsWith(".lua"));
+  const cliente = (await readdir(path.join(RAIZ, "game", "src", "client"))).filter((f) => f.endsWith(".lua"));
+
+  await varrer("server", servidor, emitidos, /Eventos\.obter\(Eventos\.(\w+)\)\s*:\s*Fire/g);
+  await varrer("client", cliente, escutados, /Eventos\.obter\(Eventos\.(\w+)\)\s*\.\s*OnClientEvent/g);
+
+  const orfaos = [...escutados].filter((e) => !emitidos.has(e));
+  assert.deepEqual(orfaos, [], "o cliente escuta evento que nenhum módulo do servidor dispara");
+});
+
+/* -------------------------------------------------------------- */
 /* Segurança                                                       */
 /* -------------------------------------------------------------- */
 

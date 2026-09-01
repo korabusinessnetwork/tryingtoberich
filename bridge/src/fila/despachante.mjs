@@ -146,7 +146,10 @@ export class Despachante {
 
     const resultado = resolverCombate(disparos);
     if (resultado.anulado) {
-      this.aoAnular({ ...resultado.disputa, emitidoEm: agora });
+      // Id do mesmo cursor dos disparos: o jogo precisa saber que o empate
+      // aconteceu (o HUD mostra), e o long-poll entrega tudo por cursor único.
+      this.#cursor += 1;
+      this.aoAnular({ id: this.#cursor, ...resultado.disputa, emitidoEm: agora });
       return [];
     }
 

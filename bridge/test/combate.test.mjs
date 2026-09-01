@@ -125,3 +125,40 @@ test("nenhum presente é descartado por concorrência: todos entram no líquido"
   assert.deepEqual(descartados, [], "a fila de 3 do R5 descartava presente; o combate não descarta nenhum");
   assert.equal(segundo.delta, 1 + 2 + 3 + 4 + 5, "os cinco entraram no líquido");
 });
+
+test("o empate chega ao JOGO, não só ao painel", async () => {
+  // Regressão de um descasamento real entre agentes: o HUD escutava
+  // COMBATE_ANULADO e a ponte só publicava no SSE do painel. A feature inteira
+  // estava morta, sem erro em lugar nenhum — e empate sem nada na tela lê como
+  // travamento no exato momento em que mais gente mandou presente.
+  const { Nucleo } = await import("../src/nucleo.mjs");
+  const { criarValidador } = await import("../src/repos/schemas.mjs");
+  const { validar } = await criarValidador();
+
+  const nucleo = new Nucleo({
+    config: { token: "z".repeat(32), portaJogo: 0, portaPainel: 0, host: "127.0.0.1",
+      usuarioTiktok: "", chaveGemini: "", longpollTimeoutMs: 300, combateMaxMs: 2000 },
+  });
+  await nucleo.carregarAnimacoesNaMemoria();
+
+  const entregues = [];
+  const resposta = {
+    status: () => ({ json: (corpo) => entregues.push(corpo), end: () => {} }),
+    on: () => {},
+  };
+
+  // O jogo precisa estar em long-poll: com ele offline, evento é descartado (F7).
+  nucleo.longpoll.registrar(resposta, { desde: 0 });
+
+  nucleo.longpoll.publicar([{
+    id: 7, somaSubida: 40, somaDescida: -40, participantes: 2,
+    emitidoEm: Date.now(), tipoDeEntrada: "anulado",
+  }]);
+
+  assert.equal(entregues.length, 1, "o empate saiu pelo long-poll");
+  assert.deepEqual(entregues[0].eventos, [], "não move o boneco: delta 0 não existe no contrato");
+  assert.equal(entregues[0].anulados[0].participantes, 2);
+  assert.deepEqual(validar("evento-jogo", entregues[0]), [], "e o envelope respeita o schema");
+
+  nucleo.longpoll.fecharTodos();
+});

@@ -56,6 +56,7 @@ local avisouHttpDesligado = false
 
 local aoEvento = nil
 local aoConexao = nil
+local aoCombateAnulado = nil
 
 local cursorAtual = 0
 local backoffAtual = BACKOFF_INICIAL
@@ -230,6 +231,22 @@ local function cicloEventos()
 						end
 					end
 				end
+
+				-- Combate que se anulou (ADR-012). Não move o boneco — delta 0
+				-- não existe no contrato — mas o HUD mostra, senão o empate lê
+				-- como travamento. Vem em lista separada por isso mesmo.
+				if type(corpo.anulados) == "table" then
+					for _, anulado in ipairs(corpo.anulados) do
+						if Tipos.ehInteiro(anulado.participantes) and anulado.participantes >= 2 then
+							entregou = true
+							chamarComSeguranca(aoCombateAnulado, {
+								somaSubida = anulado.somaSubida,
+								somaDescida = anulado.somaDescida,
+								participantes = anulado.participantes,
+							})
+						end
+					end
+				end
 			end
 		elseif statusCode == 204 then
 			-- Corpo vazio de propósito: nada para processar, só a prova de
@@ -281,6 +298,7 @@ function Ponte.iniciar(opcoes)
 	configuracao = configCarregada
 	aoEvento = opcoes.aoEvento
 	aoConexao = opcoes.aoConexao
+	aoCombateAnulado = opcoes.aoCombateAnulado
 
 	cursorAtual = 0
 	backoffAtual = BACKOFF_INICIAL

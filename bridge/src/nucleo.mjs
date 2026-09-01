@@ -47,7 +47,7 @@ export class Nucleo {
     this.#despachante = new Despachante({
       combateMaxMs: config.combateMaxMs,
       aoDespachar: (d) => this.#aoDespachar(d),
-      aoAnular: (d) => this.#publicar("combateAnulado", d),
+      aoAnular: (d) => this.#aoAnular(d),
       aoNaoMapeado: (d) => this.#aoNaoMapeado(d),
       aoDescartar: (d) => log.info("presente_descartado", { slot: d.slot, motivo: d.motivo }),
     });
@@ -102,6 +102,16 @@ export class Nucleo {
       disputa: despachado.disputa,
       latenciaMs: registrado?.latenciaMs ?? null,
     });
+  }
+
+  /**
+   * Empate exato do ADR-012. Não move o boneco, mas o jogo precisa saber: sem
+   * nada no HUD, o silêncio no momento de mais gente mandando presente lê como
+   * travamento. Vai para o jogo E para o painel.
+   */
+  #aoAnular(dados) {
+    this.#longpoll.publicar([{ ...dados, tipoDeEntrada: "anulado" }]);
+    this.#publicar("combateAnulado", dados);
   }
 
   #aoNaoMapeado(dados) {

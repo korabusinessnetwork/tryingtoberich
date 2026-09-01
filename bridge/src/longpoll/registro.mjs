@@ -110,13 +110,22 @@ export class RegistroDeLongPoll {
     this.#recentes = [];
   }
 
-  #responder(resposta, eventos) {
+  #responder(resposta, entradas) {
+    // Duas listas no mesmo envelope, com um cursor só. `eventos` move o boneco;
+    // `anulados` não move nada mas o HUD precisa mostrar, senão o empate do
+    // ADR-012 lê como travamento. Ver evento-jogo.schema.json.
+    const anulados = entradas.filter((e) => e.tipoDeEntrada === "anulado");
+    const eventos = entradas.filter((e) => e.tipoDeEntrada !== "anulado");
+
     const corpo = {
-      cursor: eventos.at(-1).id,
+      cursor: Math.max(...entradas.map((e) => e.id)),
       // O contrato com o jogo é {animacaoId, delta, intensidade}. Slot, presenteId
       // e latência são coisa da ponte e do painel, e não atravessam o túnel.
       eventos: eventos.map(({ id, animacaoId, delta, intensidade, efeitoCurto, nomeDoador, presenteNome, emitidoEm }) => ({
         id, animacaoId, delta, intensidade, efeitoCurto, nomeDoador, presenteNome, emitidoEm,
+      })),
+      anulados: anulados.map(({ id, somaSubida, somaDescida, participantes, emitidoEm }) => ({
+        id, somaSubida, somaDescida, participantes, emitidoEm,
       })),
     };
     try {

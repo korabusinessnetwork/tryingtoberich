@@ -14,11 +14,27 @@
     },
     "eventos": {
       "type": "array",
-      "minItems": 1,
       "items": { "$ref": "#/$defs/evento" }
+    },
+    "anulados": {
+      "description": "Combates que se cancelaram exatamente (ADR-012). Não movem o boneco — delta 0 não existe aqui — mas o HUD precisa saber que aconteceram: sem nada na tela, o empate lê como travamento no exato momento em que mais gente mandou presente.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/anulado" }
     }
   },
   "$defs": {
+    "anulado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "somaSubida", "somaDescida", "participantes", "emitidoEm"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "somaSubida": { "type": "integer" },
+        "somaDescida": { "type": "integer" },
+        "participantes": { "type": "integer", "minimum": 2 },
+        "emitidoEm": { "type": "integer", "minimum": 0 }
+      }
+    },
     "evento": {
       "type": "object",
       "additionalProperties": false,
