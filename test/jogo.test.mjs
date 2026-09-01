@@ -143,6 +143,79 @@ test("o índice Luau tem as mesmas 20 animações que o JSON", async () => {
   }
 });
 
+test("as 20 animações existem como módulo e concordam com o índice", async () => {
+  const json = JSON.parse(await readFile(path.join(RAIZ, "data", "animacoes.json"), "utf8"));
+  const dir = path.join(RAIZ, "game", "src", "animacoes");
+  const modulos = (await readdir(dir)).filter((f) => f.endsWith(".lua"));
+
+  assert.equal(modulos.length, 20, "a biblioteca tem 20 animações");
+
+  const campo = (fonte, nome, padrao) => (new RegExp(`${nome}\\s*=\\s*${padrao}`).exec(fonte) ?? [])[1];
+
+  /**
+   * O campo pode ser literal (`duracaoBase = 0.4`) ou uma constante do próprio
+   * módulo (`duracaoBase = DURACAO_BASE`). A segunda forma é melhor código —
+   * mantém metadado e efeito em sincronia dentro do arquivo — então o teste
+   * resolve a constante em vez de exigir literal.
+   */
+  const numero = (fonte, nome) => {
+    const bruto = campo(fonte, nome, "([A-Za-z0-9_.]+)");
+    if (bruto === undefined) return NaN;
+    if (/^[0-9.]+$/.test(bruto)) return Number(bruto);
+    const constante = campo(fonte, `local ${bruto}`, "([0-9.]+)");
+    return constante === undefined ? NaN : Number(constante);
+  };
+
+  for (const esperado of json.animacoes) {
+    const arquivo = path.join(dir, `${esperado.id}.lua`);
+    assert.ok(modulos.includes(`${esperado.id}.lua`), `falta o módulo de ${esperado.id}`);
+
+    const fonte = await readFile(arquivo, "utf8");
+    assert.deepEqual(
+      {
+        nome: campo(fonte, "nome", '"([^"]+)"'),
+        direcao: campo(fonte, "direcao", '"(\\w+)"'),
+        pesoVisual: numero(fonte, "pesoVisual"),
+        duracaoBase: numero(fonte, "duracaoBase"),
+        aceitaDeltaVariavel: campo(fonte, "aceitaDeltaVariavel", "(true|false)") === "true",
+      },
+      {
+        nome: esperado.nome,
+        direcao: esperado.direcao,
+        pesoVisual: esperado.pesoVisual,
+        duracaoBase: esperado.duracaoBase,
+        aceitaDeltaVariavel: esperado.aceitaDeltaVariavel,
+      },
+      `${esperado.id}: a duração do índice é o que arma o watchdog do R11; divergir devolve o controle na hora errada`,
+    );
+  }
+});
+
+test("nenhuma animação depende de asset com upload nem toma o controle do boneco", async () => {
+  const dir = path.join(RAIZ, "game", "src", "animacoes");
+  const arquivos = (await readdir(dir)).filter((f) => f.endsWith(".lua"));
+
+  const semComentario = (fonte) =>
+    fonte.split("\n").filter((linha) => !/^\s*--/.test(linha)).join("\n");
+
+  const infratores = [];
+  for (const arquivo of arquivos) {
+    const fonte = semComentario(await readFile(path.join(dir, arquivo), "utf8"));
+
+    // ADR-004: asset visual passa por moderação e não é automatizável. Id
+    // inventado vira erro em runtime, no meio da live.
+    if (/rbxassetid:\/\/\d/.test(fonte)) infratores.push(`${arquivo}: rbxassetid inventado`);
+
+    // ADR-005: quem move e ancora o boneco é movimento.lua, sozinho. Animação
+    // que mexe nisso disputa a posição com o Tween.
+    for (const proibido of ["AssemblyLinearVelocity", "\\.Anchored%s*=%s*true.*HumanoidRootPart", "Humanoid\\.WalkSpeed", "Humanoid\\.JumpPower"]) {
+      if (new RegExp(proibido).test(fonte)) infratores.push(`${arquivo}: mexe em ${proibido}`);
+    }
+  }
+
+  assert.deepEqual(infratores, []);
+});
+
 test("os tokens visuais são os mesmos no Luau e no CSS", async () => {
   const tokens = JSON.parse(await readFile(path.join(RAIZ, "data", "tokens.json"), "utf8"));
   const lua = await lerJogo("shared", "tokens.lua");
