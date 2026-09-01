@@ -5,13 +5,15 @@
   "type": "module",
   "description": "Contratos do Bloco 0: JSON Schemas, acervo, semente de catálogo e fixtures. Os três processos (bridge/, panel/, game/) têm package próprio.",
   "scripts": {
-    "test": "node --test \"test/**/*.test.mjs\" \"bridge/test/**/*.test.mjs\"",
+    "test": "node --test \"test/**/*.test.mjs\" \"bridge/test/**/*.test.mjs\" \"panel/test/**/*.test.mjs\"",
     "validar": "node scripts/validar-contratos.mjs",
     "gerar": "node scripts/gerar-animacoes.mjs && node scripts/gerar-tokens.mjs",
     "pretest": "node scripts/gerar-animacoes.mjs --silencioso && node scripts/gerar-tokens.mjs --silencioso",
     "ponte": "node --env-file=.env bridge/src/index.mjs",
     "semear": "node scripts/semear-dev.mjs",
-    "luau": "node scripts/verificar-luau.mjs"
+    "luau": "node scripts/verificar-luau.mjs",
+    "painel": "npm run dev --workspace @kora/painel",
+    "build:painel": "npm run build --workspace @kora/painel"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
@@ -21,6 +23,7 @@
     "node": ">=22"
   },
   "workspaces": [
-    "bridge"
+    "bridge",
+    "panel"
   ]
 }

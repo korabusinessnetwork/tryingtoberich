@@ -1,0 +1,25 @@
+/* Layout do painel. Uma tela, sem scroll no que importa: os 6 slots ficam
+   lado a lado e sempre visíveis, porque são a tela principal do produto. */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.app-titulo {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.app-vazio {
+  align-items: flex-start;
+  gap: var(--espaco);
+}

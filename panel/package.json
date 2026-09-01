@@ -1,0 +1,22 @@
+{
+  "name": "@kora/painel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Painel local do streamer. Roda em localhost, fala só com a ponte. Dono exclusivo de panel/.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.2.2"
+  },
+  "engines": { "node": ">=22" }
+}

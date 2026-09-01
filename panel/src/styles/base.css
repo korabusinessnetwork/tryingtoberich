@@ -1,0 +1,72 @@
+/* Base do painel. As cores vêm de tokens.css, que é GERADO de data/tokens.json
+   e espelhado no HUD do jogo — nenhum hex literal aqui. Ver 02_DESIGN_SYSTEM.
+
+   Princípio da seção A: densidade e leitura de canto de olho. O streamer está
+   jogando e falando, e olha o painel por 2 segundos por vez. */
+
+@import "./tokens.css";
+
+:root {
+  --raio: 6px;
+  --espaco: 12px;
+  /* O streamer clica com pressa: o doc manda no mínimo 40px de alvo. */
+  --alvo-minimo: 40px;
+  --borda: 1px solid var(--painel-borda);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--painel-fundo);
+  color: var(--painel-texto-primario);
+  font-size: 14px;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  border-radius: var(--raio);
+  border: var(--borda);
+  background: var(--painel-superficie);
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+}
+
+button { cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Transição só onde comunica mudança de estado. Nada decorativo: o doc é
+   explícito, e animação num painel de segunda tela rouba atenção da live. */
+button, .cartao { transition: border-color 120ms, background 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+.secundario { color: var(--painel-texto-secundario); }
+
+/* Estado sempre com TEXTO junto, nunca cor sozinha: o doc exige, e daltônico
+   é 8% dos homens. */
+.pastilha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: var(--borda);
+  font-size: 12px;
+  font-weight: 600;
+}
+.pastilha::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pastilha-ok { color: var(--estado-ok); }
+.pastilha-atencao { color: var(--estado-atencao); }
+.pastilha-erro { color: var(--estado-erro); }
