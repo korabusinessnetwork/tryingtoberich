@@ -8,6 +8,7 @@ import {
   formatarDelta,
   NOME_DA_FAIXA,
 } from "../lib/regras.js";
+import { AvisoDeCurva } from "./AvisoDeCurva.jsx";
 import "./CartaoDeSlot.css";
 
 /**
@@ -299,11 +300,9 @@ export function CartaoDeSlot({
       </div>
 
       {avisos.length > 0 && (
-        <div className="cartao-slot-avisos" role="status">
+        <div className="cartao-slot-avisos">
           {avisos.map((texto) => (
-            <p key={texto} className="cartao-slot-aviso">
-              <span className="cartao-slot-aviso-rotulo">Aviso</span> {texto}
-            </p>
+            <AvisoDeCurva key={texto} aviso={texto} />
           ))}
         </div>
       )}

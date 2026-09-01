@@ -327,19 +327,6 @@
   padding-top: 2px;
 }
 
-.cartao-slot-aviso {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--estado-atencao);
-}
-
-.cartao-slot-aviso-rotulo {
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 .cartao-slot-aviso-regra {
   margin-top: -2px;
 }

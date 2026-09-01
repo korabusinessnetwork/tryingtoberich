@@ -23,3 +23,29 @@
   align-items: flex-start;
   gap: var(--espaco);
 }
+
+/* Duas colunas: a larga tem o editor de preset e o monitor — as duas coisas
+   que o streamer olha durante a live. A estreita tem o que se configura antes
+   dela e não muda no meio. */
+.app-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--espaco);
+  align-items: start;
+}
+
+.app-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  min-width: 0;
+}
+
+.app-aviso { align-self: flex-start; }
+
+/* Abaixo de 1100px os 6 slots não cabem lado a lado sem encolher demais, e o
+   design system é explícito: eles ficam sempre visíveis, sem scroll. Empilhar
+   a coluna estreita é o que devolve largura para eles. */
+@media (max-width: 1100px) {
+  .app-colunas { grid-template-columns: minmax(0, 1fr); }
+}
