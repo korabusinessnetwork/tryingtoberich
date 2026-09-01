@@ -58,22 +58,40 @@ construídos em paralelo depois do bloco 0.
       exato são estados novos que o espectador precisa entender na tela.
       Decisão de design do Bloco 2.
 
-## Bloco 2 — Jogo (`game/`)
-- [ ] Laço de long-poll em Luau com `pcall` e backoff
-- [ ] Motor de movimento híbrido: física padrão, Tween na tomada de controle,
-      com watchdog de restauração (ADR-005, R11)
-- [ ] Rastreio de `plataformaReferencia` por colisão real (R9)
-- [ ] Detector de queda e respawn no checkpoint (R10, ADR-008)
-- [ ] Construtor de mapa a partir do spec
-- [ ] **Teste de jogabilidade do mapa:** percorrer as plataformas e confirmar
-      que todo salto cabe no alcance do pulo configurado (ADR-009)
-- [ ] Índice de animações e as 20 implementações
-- [ ] Aplicação do look por `HumanoidDescription`, com fallback (ADR-010)
-- [ ] **Vestiário no jogo:** GUI de busca, equipar, prévia real, salvar look
-      nomeado. Bloqueado enquanto a sessão estiver rodando (ADR-011)
-- [ ] Efeito permanente do personagem, suspenso durante animação de presente
-- [ ] HUD vertical: número da plataforma grande, últimos presentes, doador
-- [ ] Câmera que acompanha e afasta em animação de peso 4 ou 5
+## Bloco 2 — Jogo (`game/`) — **concluído**
+Construído por 9 agentes em paralelo, em três levas, com dono exclusivo por
+arquivo. Relatório da síntese em `validacao-bloco-2.md`, neste diretório.
+
+- [x] Laço de long-poll em Luau com `pcall` e backoff, mais um piso de 0,5s
+      entre voltas sem evento, que segura o teto de 500 req/min do HttpService
+- [x] Motor de movimento híbrido: física padrão, Tween na tomada de controle,
+      watchdog independente de restauração (ADR-005, R11)
+- [x] Rastreio de `plataformaReferencia` por colisão real (R9)
+- [x] Detector de queda e respawn no checkpoint (R10, ADR-008)
+- [x] Construtor de mapa a partir do spec, determinístico pelo mapaId
+- [x] **Teste de jogabilidade do mapa:** percorre as plataformas construídas e
+      confere que todo salto cabe no pulo, medindo o VÃO entre as bordas e não
+      a distância entre centros (ADR-009)
+- [x] Índice de animações e as 20 implementações
+- [x] Aplicação do look por `HumanoidDescription`, com a cadeia de fallback de
+      três degraus (ADR-010)
+- [x] **Vestiário no jogo:** busca, equipar, prévia real, salvar look nomeado,
+      trancado enquanto a sessão roda (ADR-011). Os dois lados.
+- [x] Efeito permanente do personagem, suspenso durante animação de presente
+- [x] HUD vertical, com os dois estados do combate na tela (ADR-012)
+- [x] Câmera que acompanha e afasta em animação de peso 4 ou 5
+- [x] `sessao.lua` amarrando tudo, e `inicio.server.lua` como entrada
+- [x] Gate de sintaxe fora do Studio (`npm run luau`) e 141 testes
+
+### Aberto pelo Bloco 2
+- [ ] **Rodar dentro do Roblox Studio.** O gate prova que o Luau compila; não
+      prova que a torre sobe, que o Tween pousa em cima da plataforma nem que o
+      HUD lê no celular. É a validação que falta.
+- [ ] **Conferir o teto de 20s do long-poll.** O ADR-002 chama o valor de chute
+      inicial: se o Roblox derrubar a conexão antes, ajustar e registrar em
+      `memory/learnings.md`.
+- [ ] **Som:** `des_ancora` pede som de metal e o `SoundId` está vazio de
+      propósito — som no Roblox também é asset com moderação (ADR-004).
 
 ## Bloco 3 — Painel (`panel/`)
 - [ ] Seletor de modalidade e botão start/stop

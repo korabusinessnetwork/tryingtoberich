@@ -43,6 +43,31 @@ grandes porque a live é vista no celular. Aplicar isso ao HUD do jogo.
   sete campos do contrato, e o teste falha se aparecer um oitavo. Descartar
   `user.id` deixou de depender de alguém lembrar.
 
+## 2026-09-01 — Bloco 2: o que 9 agentes em paralelo ensinaram
+- **Dono exclusivo por arquivo evita conflito de merge, não evita contrato
+  divergente.** Nenhuma das nove entregas colidiu na escrita. Mas o HUD passou
+  a escutar um RemoteEvent que a ponte nunca disparava, e a feature ficou morta
+  sem erro em lugar nenhum. Paralelismo compra velocidade e cobra síntese.
+- **Escrever no subconjunto Lua 5.1 comprou um gate de sintaxe.** Luau é
+  superconjunto, então `luac5.1 -p` valida 39 arquivos sem abrir o Studio. Custa
+  abrir mão de anotação de tipo; pagou-se sozinho já na primeira leva, e pegou
+  um arquivo truncado no meio da escrita de um agente.
+- **Regra que nunca foi implementada não é regra.** A parte horizontal do
+  ADR-009 estava escrita desde a fundação e ninguém tinha codado. Quando
+  codou, o exemplo do próprio doc a violava. Doc sem teste envelhece igual a
+  código sem teste.
+- **Guarda que não morde é pior que não ter guarda.** Dois testes meus
+  passaram vazios por regex preso à forma da chamada. Desde então, todo teste
+  de varredura ganha um segundo teste ao lado provando que ele acusa.
+- **Instruir o agente a reportar em vez de contornar em silêncio funcionou.**
+  As três lacunas do compartilhado (efeito permanente, tokens do painel, flash
+  de tela) vieram documentadas no relatório, com o contorno marcado no código.
+  Nenhuma teria aparecido se a instrução fosse só "resolva".
+- **Ler o módulo do colega antes de escrever evitou dois bugs.** O construtor
+  de mapa usou Part tipo Block porque leu que `plataformas.lua` interpreta
+  `Size.Y` como espessura; as animações usaram Attachment e WeldConstraint
+  porque leram que `movimento.lua` ancora a raiz durante o Tween.
+
 ## Conferido no Bloco 1, falta confirmar ao vivo
 As fixtures de `data/fixtures/tiktok-cru/` foram reescritas contra a forma real
 do `tiktok-live-connector` 2.4.4 (`WebcastGiftMessage` de `tiktok-live-proto/v3`):
