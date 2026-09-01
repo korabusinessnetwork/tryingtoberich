@@ -1,0 +1,267 @@
+/* PreviaDeMapa — prévia de DADO do spec (F4.7, 06_COMPONENTES). Nenhum hex
+   literal aqui: a única exceção do projeto é a paleta do mapa, aplicada por
+   `style` inline no JSX porque ela vem do dado, não é decisão de estilo
+   (02_DESIGN_SYSTEM). Tudo o resto usa os tokens do painel. */
+
+.previa-de-mapa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.previa-de-mapa-vazia {
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Prontidão — o estado mais importante do componente. Válido não é o   */
+/* mesmo que pronto para ir ao ar (ADR-004), e isso não pode passar     */
+/* despercebido, por isso vem primeiro e com moldura própria.           */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-prontidao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--raio);
+  border: var(--borda);
+}
+
+.previa-de-mapa-prontidao-ok {
+  border-color: var(--estado-ok);
+  background: color-mix(in srgb, var(--estado-ok) 10%, transparent);
+}
+
+.previa-de-mapa-prontidao-bloqueada {
+  border: 2px solid var(--estado-atencao);
+  background: color-mix(in srgb, var(--estado-atencao) 14%, transparent);
+}
+
+.previa-de-mapa-prontidao-desconhecida {
+  border-style: dashed;
+}
+
+.previa-de-mapa-prontidao-texto {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.previa-de-mapa-motivos {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabeçalho                                                           */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.previa-de-mapa-titulo {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.previa-de-mapa-prompt {
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------------ */
+/* Paleta — cor literal É o dado aqui, exceção documentada.            */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-paleta {
+  display: flex;
+  gap: var(--espaco);
+}
+
+.previa-de-mapa-cor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.previa-de-mapa-cor-amostra {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--raio);
+  border: var(--borda);
+}
+
+.previa-de-mapa-cor-rotulo {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.previa-de-mapa-cor-hex {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cenário                                                             */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-cenario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stats — leitura de canto de olho: rótulo pequeno, valor grande.     */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--espaco);
+  margin: 0;
+}
+
+.previa-de-mapa-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.previa-de-mapa-stat dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--painel-texto-secundario);
+}
+
+.previa-de-mapa-stat dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.previa-de-mapa-stat-margem {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------------ */
+/* Barra de proporção do ADR-009                                       */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.previa-de-mapa-gauge-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espaco);
+  font-size: 12px;
+}
+
+.previa-de-mapa-gauge-trilho {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  overflow: hidden;
+}
+
+.previa-de-mapa-gauge-preenchimento {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 150ms;
+}
+
+.previa-de-mapa-gauge-preenchimento-ok { background: var(--estado-ok); }
+.previa-de-mapa-gauge-preenchimento-erro { background: var(--estado-erro); }
+
+.previa-de-mapa-gauge-legenda {
+  margin: 0;
+  font-size: 11px;
+}
+
+.previa-de-mapa-gauge-legenda-erro {
+  color: var(--estado-erro);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Props e marcos                                                      */
+/* ------------------------------------------------------------------ */
+
+.previa-de-mapa-subtitulo {
+  margin: 0 0 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.previa-de-mapa-props-lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.previa-de-mapa-prop {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espaco);
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.previa-de-mapa-prop:not(:last-child) {
+  border-bottom: var(--borda);
+}
+
+.previa-de-mapa-prop-tipo {
+  font-weight: 600;
+}
+
+.previa-de-mapa-marcos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.previa-de-mapa-marco {
+  display: flex;
+  gap: var(--espaco);
+  margin: 0;
+  font-size: 12px;
+}
+
+.previa-de-mapa-marco-rotulo {
+  min-width: 90px;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
