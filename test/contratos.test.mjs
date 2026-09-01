@@ -340,16 +340,21 @@ test("animação acima de 3,5s é rejeitada: empilha e estica o bloqueio de cont
 
 test("nenhum arquivo de bridge, panel ou game importa fs fora de bridge/src/repos", async () => {
   const EXTENSOES = new Set([".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".lua"]);
-  const PERMITIDO = path.join(RAIZ, "bridge", "src", "repos");
   const IMPORTA_FS = /(?:require\(\s*|from\s+)['"](?:node:)?fs(?:\/promises)?['"]/;
+
+  // A regra é sobre o código que roda ao vivo: trocar JSON por banco na Fase 3
+  // tem que ser reescrever um diretório só. Diretório de teste fica de fora
+  // porque teste de corrupção de arquivo precisa corromper arquivo, e isso não
+  // participa da migração.
+  const IGNORADOS = new Set(["node_modules", "dist", "test"]);
+  const PERMITIDO = path.join(RAIZ, "bridge", "src", "repos");
 
   const infratores = [];
   const varrer = async (dir) => {
     for (const entrada of await readdir(dir, { withFileTypes: true })) {
       const completo = path.join(dir, entrada.name);
       if (entrada.isDirectory()) {
-        if (entrada.name === "node_modules" || entrada.name === "dist") continue;
-        await varrer(completo);
+        if (!IGNORADOS.has(entrada.name)) await varrer(completo);
       } else if (EXTENSOES.has(path.extname(entrada.name)) && !completo.startsWith(PERMITIDO)) {
         if (IMPORTA_FS.test(await readFile(completo, "utf8"))) infratores.push(path.relative(RAIZ, completo));
       }
@@ -358,4 +363,22 @@ test("nenhum arquivo de bridge, panel ou game importa fs fora de bridge/src/repo
 
   for (const raiz of ["bridge", "panel", "game"]) await varrer(path.join(RAIZ, raiz));
   assert.deepEqual(infratores, [], "trocar JSON por banco na Fase 3 tem que ser reescrever um diretório só");
+});
+
+test("o guarda do ADR-003 realmente varre o código da ponte", async () => {
+  // Um guarda que não olha nada passa sempre. Este teste existe para o anterior
+  // não virar verde vazio se a varredura quebrar.
+  const arquivos = [];
+  const varrer = async (dir) => {
+    for (const entrada of await readdir(dir, { withFileTypes: true })) {
+      const completo = path.join(dir, entrada.name);
+      if (entrada.isDirectory()) await varrer(completo);
+      else if (completo.endsWith(".mjs")) arquivos.push(completo);
+    }
+  };
+  await varrer(path.join(RAIZ, "bridge", "src"));
+
+  assert.ok(arquivos.length >= 20, `esperava dezenas de arquivos em bridge/src, achei ${arquivos.length}`);
+  const emRepos = arquivos.filter((a) => a.includes(`${path.sep}repos${path.sep}`));
+  assert.ok(emRepos.length >= 5, "e a camada de repositório existindo de verdade");
 });

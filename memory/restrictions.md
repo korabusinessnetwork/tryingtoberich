@@ -9,8 +9,12 @@
   plano pago. O dono decide.
 
 ## Restrições técnicas (impostas pelas plataformas, não negociáveis)
-- **Roblox HttpService só faz requisição de saída.** Não recebe webhook, não
-  aceita conexão de entrada, não alcança `localhost` nem IP privado.
+- **Roblox HttpService só faz requisição de saída.** Não recebe webhook e não
+  aceita conexão de entrada. Isso vale sempre e é a razão de existir o long-poll.
+- **"Não alcança `localhost`" NÃO está verificado para o Roblox Studio.** Vale
+  para servidor publicado, que roda em datacenter. O Studio roda na mesma
+  máquina que a ponte. Se alcançar, o túnel do ADR-002 vira opcional e o
+  caminho crítico encurta bastante. Ver a questão em aberto no ADR-002.
 - **Limite do HttpService:** cerca de 500 requisições por minuto por servidor.
 - **HttpService precisa ser ligado** em Game Settings → Security.
 - **Upload de roupa clássica no Roblox custa 80 Robux por submissão** (desde

@@ -9,9 +9,20 @@ Regra dura: **o túnel publica apenas o prefixo `/jogo`.** Se a configuração d
 túnel apontar para a raiz, as rotas do painel vazam para a internet sem
 autenticação. Isso é o pior cenário possível neste projeto.
 
+**Por isso as duas superfícies rodam em servidores e portas separados**
+(`BRIDGE_PORT` para o jogo, `PAINEL_PORT` para o painel). O túnel aponta para a
+porta do jogo, e `/api/*` simplesmente não está lá: mesmo apontando para a raiz
+dessa porta, ele encontra `rota_desconhecida`. É defesa por construção.
+
+Filtrar por ip de origem **não** resolveria: o `cloudflared` roda na mesma
+máquina, então tudo que vem do túnel chega como `127.0.0.1` e passaria por
+qualquer checagem de "só aceito localhost".
+
 ## Camada 1 — Rede
-- Túnel Cloudflare nomeado, apontando exclusivamente para `/jogo`.
-- Rotas `/api/*` fazem bind em `127.0.0.1`, nunca em `0.0.0.0`.
+- Túnel Cloudflare nomeado, apontando para a **porta do jogo**, nunca para a do painel.
+- Os dois servidores fazem bind em `127.0.0.1`, nunca em `0.0.0.0`.
+- `BRIDGE_PORT` e `PAINEL_PORT` precisam ser diferentes; a ponte recusa subir se
+  forem iguais.
 - Header `X-Bridge-Token` obrigatório em `/jogo/*`. Sem token ou token errado: 401.
 - Token gerado com no mínimo 32 bytes aleatórios, guardado em `.env`.
 - Rate limit simples em `/jogo/*`: o Roblox legítimo faz cerca de 3 requisições
@@ -54,10 +65,13 @@ No Roblox: experiência privada, sem monetização interna, sem troca de valor r
 dentro do jogo. Manter assim.
 
 ## Checklist de definição de pronto
-- [ ] Túnel publica só `/jogo`, verificado com requisição externa a `/api/presets`
-      que deve retornar erro de rota, não dado
-- [ ] `X-Bridge-Token` exigido e testado com token errado
-- [ ] `/api/*` só responde em `127.0.0.1`
+- [x] Túnel publica só `/jogo`, verificado com requisição a `/api/presets` na
+      porta do jogo, que retorna `rota_desconhecida` e não dado
+      *(garantido por construção: portas separadas, com teste)*
+- [x] `X-Bridge-Token` exigido e testado com token errado, em comparação de
+      tempo constante
+- [x] Os dois servidores só respondem em `127.0.0.1`, e a ponte recusa subir com
+      `BRIDGE_HOST` diferente disso
 - [ ] `.env` fora do git, `.env.example` dentro
 - [ ] Chave do Gemini ausente de todo bundle do painel (verificar o build)
 - [ ] Nenhum nickname em arquivo de `data/`

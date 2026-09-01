@@ -32,7 +32,9 @@ export const REGRAS = Object.freeze({
 export function carregarConfig(env = process.env) {
   const config = {
     token: env.BRIDGE_TOKEN ?? "",
-    porta: inteiro(env.BRIDGE_PORT, 8787),
+    // Porta do jogo: é a que o túnel publica. Porta do painel: nunca sai daqui.
+    portaJogo: inteiro(env.BRIDGE_PORT, 8787),
+    portaPainel: inteiro(env.PAINEL_PORT, 8788),
     host: env.BRIDGE_HOST ?? "127.0.0.1",
     usuarioTiktok: env.TIKTOK_USERNAME ?? "",
     chaveGemini: env.GEMINI_API_KEY ?? "",
@@ -46,8 +48,14 @@ export function carregarConfig(env = process.env) {
   }
   if (config.host !== "127.0.0.1" && config.host !== "localhost") {
     problemas.push(
-      `BRIDGE_HOST está "${config.host}". As rotas /api/* não podem responder fora da máquina: ` +
-        "o túnel publica só /jogo. Ver docs/11_SEGURANCA, camada 1.",
+      `BRIDGE_HOST está "${config.host}". Os dois servidores fazem bind aqui, e o painel ` +
+        "não pode responder fora da máquina. Ver docs/11_SEGURANCA, camada 1.",
+    );
+  }
+  if (config.portaJogo === config.portaPainel) {
+    problemas.push(
+      "BRIDGE_PORT e PAINEL_PORT são iguais. Elas existem separadas para o túnel não " +
+        "conseguir alcançar o painel nem se for configurado errado.",
     );
   }
 

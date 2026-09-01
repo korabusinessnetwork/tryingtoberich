@@ -28,10 +28,17 @@ test/     testes dos contratos (npm test)
 
 ## Rodar
 ```
-npm install     # só ajv, para validar os schemas
-npm test        # 36 testes de contrato
-npm run validar # relatório do estado dos contratos e do acervo
+npm install      # instala a raiz e o workspace bridge/
+npm test         # 123 testes
+npm run validar  # relatório do estado dos contratos e do acervo
+npm run gerar    # gera data/animacoes.json da biblioteca documentada
+
+cp .env.example .env   # e preencha BRIDGE_TOKEN
+npm run semear         # instala o preset de exemplo em data/presets/
+npm run ponte -- --cenario=04-combate-de-presentes --preset=escalada-padrao
 ```
+O último comando sobe a ponte inteira tocando um cenário de fixture em loop,
+**sem live e sem Roblox**. É assim que se desenvolve o painel e o jogo.
 
 ## Três coisas que não são negociáveis
 1. **Latência abaixo de 1000ms** do presente até a animação (`CLAUDE.md`).
@@ -39,15 +46,20 @@ npm run validar # relatório do estado dos contratos e do acervo
 3. **O valor do presente sugere, o streamer decide** (ADR-007).
 
 ## Estado
-Fundação documentada e **Bloco 0 concluído**: os contratos existem, estão
-validados e são testáveis sem live e sem Roblox. Zero código de produto.
+**Blocos 0 e 1 concluídos.** Os contratos existem e a ponte funciona ponta a
+ponta: conecta na live, casa presente com slot, resolve o combate (ADR-012),
+responde o long-poll do Roblox e serve o painel por SSE. Tudo testável sem live
+e sem Roblox.
 
-Os blocos 1 (`bridge/`), 2 (`game/`) e 3 (`panel/`) dependiam só destes
-contratos e agora podem ser construídos em paralelo, com dono exclusivo por
-diretório. Ver `docs/09_BACKLOG/`.
+Faltam o **Bloco 2** (`game/`, Roblox/Luau) e o **Bloco 3** (`panel/`,
+React+Vite). Os dois consomem só os contratos e a API da ponte, então podem ser
+construídos em paralelo, com dono exclusivo por diretório. Ver `docs/09_BACKLOG/`.
 
-Duas coisas ficam bloqueadas até alguém agir fora do código:
+Três coisas dependem de alguém agir fora do código:
 1. **Nenhum mapa pode ir ao ar** enquanto o acervo não for enviado e aprovado no
    Roblox. `npm run validar` mostra o que falta.
-2. **As fixtures de payload cru da TikTok não estão verificadas** contra a
-   versão instalada do conector. Ver `memory/learnings.md`.
+2. **Testar se o HttpService do Studio alcança `127.0.0.1`.** Se alcançar, o
+   túnel some — e com ele a única exposição do sistema à internet e um terço do
+   orçamento de latência. Ver a questão em aberto no ADR-002.
+3. **Confirmar numa live real** que o payload da TikTok vem preenchido como o
+   tipo da biblioteca promete. Ver `memory/learnings.md`.

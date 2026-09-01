@@ -1,19 +1,22 @@
 {
-  "_comentario": "Presente não combável, rajada já encerrada. Forma esperada do evento 'gift' do tiktok-live-connector. NÃO VERIFICADA contra a versão instalada: ver fixtures/README.md.",
-  "giftId": 5655,
-  "giftName": "Galaxy",
-  "giftType": 1,
-  "diamondCount": 1000,
+  "_comentario": "Presente NÃO combável: dispara na hora, sem esperar rajada. Forma conferida contra tiktok-live-connector 2.4.4 (WebcastGiftMessage de tiktok-live-proto/v3).",
+  "giftId": "5655",
   "repeatCount": 1,
-  "repeatEnd": true,
+  "repeatEnd": 1,
+  "comboCount": 0,
   "groupId": "7040000000000000001",
-  "timestamp": 1756742591123,
-  "giftPictureUrl": "https://exemplo.invalid/icones/galaxy.png",
-  "userId": "0000000000000000001",
-  "uniqueId": "espectador_de_teste",
-  "nickname": "Espectador de Teste",
-  "profilePictureUrl": "https://exemplo.invalid/perfis/0001.jpg",
-  "followRole": 1,
-  "isModerator": false,
-  "isSubscriber": false
+  "gift": {
+    "id": "5655",
+    "name": "Galaxy",
+    "diamondCount": 1000,
+    "combo": false,
+    "type": 1,
+    "image": { "urlList": ["https://exemplo.invalid/icones/galaxy.png"] }
+  },
+  "user": {
+    "id": "0000000000000000001",
+    "nickname": "Espectador de Teste",
+    "avatarThumb": { "urlList": ["https://exemplo.invalid/perfis/0001.jpg"] }
+  },
+  "common": { "msgId": "1000000000000000001", "roomId": "7040000000000000000", "createTime": "1756742591123" }
 }

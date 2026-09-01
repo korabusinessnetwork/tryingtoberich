@@ -9,7 +9,8 @@
     "validar": "node scripts/validar-contratos.mjs",
     "gerar": "node scripts/gerar-animacoes.mjs",
     "pretest": "node scripts/gerar-animacoes.mjs --silencioso",
-    "ponte": "node --env-file=.env bridge/src/index.mjs"
+    "ponte": "node --env-file=.env bridge/src/index.mjs",
+    "semear": "node scripts/semear-dev.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

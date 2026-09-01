@@ -6,6 +6,9 @@ Três superfícies distintas. A pública é mínima de propósito.
 
 ## A. Superfície pública (ponte ↔ Roblox), via túnel Cloudflare
 
+Servidor próprio, em `BRIDGE_PORT`. É a única porta que o túnel publica, e o
+painel não existe nela. Ver `11_SEGURANCA`.
+
 Autenticação: header `X-Bridge-Token` em toda requisição. Sem token, 401.
 O token vive no `.env` da ponte e é colado uma vez no Roblox Studio.
 
@@ -72,7 +75,8 @@ A ponte apenas repassa isso ao painel. Ela nunca calcula nem acumula posição.
 
 ## B. Superfície local (ponte ↔ painel), só em `localhost`
 
-Sem autenticação. Nunca exposta pelo túnel. O túnel publica apenas `/jogo/*`.
+Servidor próprio, em `PAINEL_PORT`. Sem autenticação de propósito: o que a
+protege é o bind em `127.0.0.1` e o túnel não conhecer esta porta.
 
 | Método | Rota | Faz |
 |---|---|---|

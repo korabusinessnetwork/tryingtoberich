@@ -1,19 +1,22 @@
 {
-  "_comentario": "A mesma rajada do arquivo anterior, agora fechada. Mesmo groupId, repeatCount final. É ESTE que vira evento normalizado.",
-  "giftId": 5827,
-  "giftName": "Rose",
-  "giftType": 1,
-  "diamondCount": 1,
+  "_comentario": "A mesma rajada do arquivo anterior, agora fechada: mesmo groupId, repeatEnd 1 e repeatCount final. É ESTE que vira evento normalizado, com delta multiplicado por 9 (R4).",
+  "giftId": "5827",
   "repeatCount": 9,
-  "repeatEnd": true,
+  "repeatEnd": 1,
+  "comboCount": 9,
   "groupId": "7040000000000000002",
-  "timestamp": 1756742603400,
-  "giftPictureUrl": "https://exemplo.invalid/icones/rose.png",
-  "userId": "0000000000000000002",
-  "uniqueId": "outro_espectador",
-  "nickname": "Outro Espectador",
-  "profilePictureUrl": "https://exemplo.invalid/perfis/0002.jpg",
-  "followRole": 0,
-  "isModerator": false,
-  "isSubscriber": false
+  "gift": {
+    "id": "5827",
+    "name": "Rose",
+    "diamondCount": 1,
+    "combo": true,
+    "type": 1,
+    "image": { "urlList": ["https://exemplo.invalid/icones/rose.png"] }
+  },
+  "user": {
+    "id": "0000000000000000002",
+    "nickname": "Outro Espectador",
+    "avatarThumb": { "urlList": ["https://exemplo.invalid/perfis/0002.jpg"] }
+  },
+  "common": { "msgId": "1000000000000000003", "roomId": "7040000000000000000", "createTime": "1756742603400" }
 }

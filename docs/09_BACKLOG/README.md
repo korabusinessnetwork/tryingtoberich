@@ -22,23 +22,41 @@ construídos em paralelo depois do bloco 0.
 - [ ] **Montar o acervo de verdade** (manual, véspera): subir e aprovar as
       imagens no Roblox, preencher `assetId` e mudar `status` para `aprovado`.
       Enquanto isso não acontecer, nenhum mapa pode ir ao ar.
-- [ ] **Conferir a forma do payload cru da TikTok** contra a versão instalada do
-      conector na primeira conexão real, e corrigir `data/fixtures/tiktok-cru/`.
-      Ver `memory/learnings.md`.
-- [ ] **Decidir a intensidade na coalescência (R5.1).** Ver a nota em
-      `03_REGRAS_DE_NEGOCIO` e a fixture `03-rajada-mesmo-slot`.
+- [x] ~~Conferir a forma do payload cru da TikTok~~ — feito no Bloco 1 contra a
+      v2.4.4 instalada. Falta só confirmar numa live real que os campos vêm
+      preenchidos como o tipo promete.
+- [x] ~~Decidir a intensidade na coalescência~~ — resolvido pelo ADR-012:
+      sobe um nível só quando a disputa é contestada.
 
-## Bloco 1 — Ponte (`bridge/`)
-- [ ] Repositórios JSON com escrita atômica (temp + rename)
-- [ ] Servidor Express: `/api/*` em `127.0.0.1`, `/jogo/*` com token
-- [ ] Long-poll: registro, resposta, timeout de 20s, limpeza de órfão
-- [ ] Conector TikTok atrás da interface de evento normalizado
-- [ ] Coleta e merge do catálogo de presentes
-- [ ] Casamento evento→slot, combo (R4), coalescência e fila (R5)
-- [ ] SSE para o painel
-- [ ] Cliente Gemini com validação, checagem de jogabilidade e retentativa única
-- [ ] Cliente Roblox isolado: busca de item gratuito e cache de thumbnail (ADR-011)
-- [ ] Reconexão com backoff (F6) e detecção de jogo offline (F7)
+## Bloco 1 — Ponte (`bridge/`) — **concluído**
+- [x] Repositórios JSON com escrita atômica (temp + rename), único lugar com `fs`
+- [x] Dois servidores Express em portas separadas: o do jogo (`/jogo/*`, com
+      token e rate limit) é o único que o túnel publica; o do painel (`/api/*`)
+      não existe naquela porta
+- [x] Long-poll: registro, resposta no instante do evento, timeout de 20s,
+      limpeza de órfão
+- [x] Conector TikTok atrás da interface de evento normalizado, com a forma do
+      payload conferida contra a v2.4.4, mais um conector de fixture para rodar
+      sem live
+- [x] Coleta e merge do catálogo de presentes
+- [x] Casamento evento→slot, combo (R4) e combate (ADR-012)
+- [x] SSE para o painel
+- [x] Cliente Gemini com validação, checagem de jogabilidade e retentativa única
+- [x] Cliente Roblox isolado: busca de item gratuito e cache de thumbnail (ADR-011)
+- [x] Reconexão com backoff (F6) e detecção de jogo offline (F7)
+- [x] 123 testes, incluindo um ponta a ponta que toca um cenário de fixture e
+      confere o que sai pelo long-poll
+
+### Aberto pelo Bloco 1
+- [ ] **Testar se o HttpService do Studio alcança `127.0.0.1`.** Cinco minutos.
+      Se alcançar, o túnel do ADR-002 vira opcional e some com ele a única
+      exposição do sistema à internet e um terço do orçamento de latência.
+      Ver a questão em aberto no ADR-002.
+- [ ] **Medir a latência de verdade** numa live real e registrar em
+      `memory/learnings.md`. A ponte já mede a própria fatia e manda no SSE.
+- [ ] **Como o HUD mostra o combate** (ADR-012): disputa contestada e empate
+      exato são estados novos que o espectador precisa entender na tela.
+      Decisão de design do Bloco 2.
 
 ## Bloco 2 — Jogo (`game/`)
 - [ ] Laço de long-poll em Luau com `pcall` e backoff

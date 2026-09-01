@@ -18,6 +18,10 @@
 | ADR-012 | Combate de presentes: subidas e descidas se anulam, anda o líquido | Aceito | 2026-09-01 |
 
 ## Decisões pendentes
+- **O túnel é mesmo necessário?** O jogo roda no Roblox Studio, na mesma máquina
+  que a ponte. A restrição de `localhost` que justifica o ADR-002 nunca foi
+  testada no Studio. Cinco minutos de teste decidem se o túnel some, junto com a
+  única exposição do sistema à internet e um terço do orçamento de latência.
 - **Como o HUD mostra o combate.** O ADR-012 cria dois estados novos que o
   espectador precisa entender na tela: disputa contestada (a animação que toca
   não é a do presente dele) e empate exato (ninguém anda). Se isso não aparecer,

@@ -1,0 +1,9 @@
+{
+  "_comentario": "Resposta de fetchAvailableGifts, usada para a coleta do catálogo. A forma não é contratada pela biblioteca, então o normalizador aceita array direto ou objeto com gifts/giftList/data.",
+  "gifts": [
+    { "id": "5827", "name": "Rose",   "diamondCount": 1,    "combo": true,  "image": { "urlList": ["https://exemplo.invalid/icones/rose.png"] } },
+    { "id": "5655", "name": "Galaxy", "diamondCount": 1000, "combo": false, "image": { "urlList": ["https://exemplo.invalid/icones/galaxy.png"] } },
+    { "id": "7934", "name": "Lion",   "diamondCount": 29999,"combo": false, "image": { "urlList": ["https://exemplo.invalid/icones/lion.png"] } },
+    { "name": "Sem id, tem que ser ignorado", "diamondCount": 10 }
+  ]
+}

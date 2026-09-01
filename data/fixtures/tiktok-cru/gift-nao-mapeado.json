@@ -1,19 +1,22 @@
 {
-  "_comentario": "Presente que não está em nenhum dos 6 slots do preset. Descartado e contabilizado (F2.4, ADR-007).",
-  "giftId": 6064,
-  "giftName": "Doughnut Gigante",
-  "giftType": 1,
-  "diamondCount": 3000,
+  "_comentario": "Presente que não está em nenhum dos 6 slots do preset. Descartado e contabilizado (F2.4, ADR-007). As 3000 moedas não compram nada: o valor sugere, nunca decide (R3).",
+  "giftId": "6064",
   "repeatCount": 1,
-  "repeatEnd": true,
+  "repeatEnd": 1,
+  "comboCount": 0,
   "groupId": "7040000000000000003",
-  "timestamp": 1756742611000,
-  "giftPictureUrl": "https://exemplo.invalid/icones/doughnut-gigante.png",
-  "userId": "0000000000000000003",
-  "uniqueId": "terceiro_espectador",
-  "nickname": "Terceiro Espectador",
-  "profilePictureUrl": "https://exemplo.invalid/perfis/0003.jpg",
-  "followRole": 2,
-  "isModerator": false,
-  "isSubscriber": true
+  "gift": {
+    "id": "6064",
+    "name": "Doughnut Gigante",
+    "diamondCount": 3000,
+    "combo": false,
+    "type": 1,
+    "image": { "urlList": ["https://exemplo.invalid/icones/doughnut-gigante.png"] }
+  },
+  "user": {
+    "id": "0000000000000000003",
+    "nickname": "Terceiro Espectador",
+    "avatarThumb": { "urlList": ["https://exemplo.invalid/perfis/0003.jpg"] }
+  },
+  "common": { "msgId": "1000000000000000004", "roomId": "7040000000000000000", "createTime": "1756742611000" }
 }
