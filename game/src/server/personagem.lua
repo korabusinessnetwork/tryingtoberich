@@ -38,7 +38,6 @@ local CAMPO_COR = {
 -- no meio de uma live por causa disso, então pede-se uma duração bem maior
 -- que qualquer sessão real; a limpeza determinística de verdade é explícita,
 -- via Personagem.limpar, no respawn ou no fim de sessão.
-local DURACAO_SEGURANCA_EFEITO = 6 * 60 * 60
 
 -- Chave fraca: personagem destruído no respawn não segura o estado dele.
 local estados = setmetatable({}, { __mode = "k" })
@@ -229,7 +228,7 @@ local function criarEfeito(estado, raiz, personagem, tipo, cor, intensidade)
 	if tipo == "aura" then
 		local anexo = Efeitos.anexo(raiz, "KoraEfeitoPermanente")
 		table.insert(estado.anexos, anexo)
-		return Efeitos.particula(anexo, { Color = ColorSequence.new(cor) }, intensidade, DURACAO_SEGURANCA_EFEITO)
+		return Efeitos.particula(anexo, { Color = ColorSequence.new(cor) }, intensidade, nil)
 	elseif tipo == "rastro" then
 		local topo = Efeitos.anexo(raiz, "KoraEfeitoPermanenteTopo", Vector3.new(0, 1, 0))
 		local base = Efeitos.anexo(raiz, "KoraEfeitoPermanenteBase", Vector3.new(0, -1, 0))
@@ -238,7 +237,7 @@ local function criarEfeito(estado, raiz, personagem, tipo, cor, intensidade)
 		return Efeitos.trilha(topo, base, {
 			Color = ColorSequence.new(cor),
 			WidthScale = Efeitos.sequenciaDeNumero(fator, fator),
-		}, DURACAO_SEGURANCA_EFEITO)
+		}, nil)
 	end
 
 	-- "brilho": sem duração, de propósito — é a única das três primitivas que

@@ -7,8 +7,10 @@
 -- da animação.
 --
 -- Três regras que este módulo faz valer sozinho:
---  1. Toda instância criada é destruída, com Debris como rede de segurança.
---     Live de 2 horas com vazamento de ParticleEmitter trava o cliente.
+--  1. Toda instância com prazo é destruída, com Debris como rede de segurança.
+--     Live de 2 horas com vazamento de ParticleEmitter trava o cliente. Passar
+--     `duracao` nil transfere essa responsabilidade para quem chamou, e é o
+--     caminho do efeito permanente do personagem — o único que dura a sessão.
 --  2. Nada é criado dentro de RenderStepped. As funções daqui são chamadas uma
 --     vez, no início do efeito.
 --  3. `executarSeguro` embrulha em pcall: animação com erro no meio não pode
@@ -28,12 +30,29 @@ local PARTICULAS_MAX = 250
 
 Efeitos.escala = Tipos.escalaDeIntensidade
 
---[[ Sobra de segurança sobre a duração: o efeito some pouco depois do movimento. ]]
+--[[
+	Sobra de segurança sobre a duração: o efeito some pouco depois do movimento.
+
+	`segundos` nil significa **sem limpeza automática**: quem chamou vira dono
+	da instância e destrói na mão. É o que o efeito permanente do personagem
+	precisa (ADR-010) — ele dura a sessão inteira, e agendar Debris para ele
+	exigiria inventar um prazo grande o bastante, que é número mágico com data
+	de validade.
+]]
 function Efeitos.limparEm(instancia, segundos)
-	if instancia then
-		Debris:AddItem(instancia, segundos or 5)
+	if instancia and segundos ~= nil then
+		Debris:AddItem(instancia, segundos)
 	end
 	return instancia
+end
+
+-- Folga de um segundo sobre a duração da animação, para o efeito não sumir no
+-- mesmo frame em que o movimento acaba. `nil` atravessa como `nil`.
+local function prazoDe(duracao)
+	if duracao == nil then
+		return nil
+	end
+	return duracao + 1
 end
 
 --[[ HumanoidRootPart, ou nil se o personagem já foi embora no meio do efeito. ]]
@@ -105,7 +124,7 @@ function Efeitos.particula(pai, props, intensidade, duracao)
 	end
 	emissor.Parent = pai
 
-	return Efeitos.limparEm(emissor, (duracao or 1) + 1)
+	return Efeitos.limparEm(emissor, prazoDe(duracao))
 end
 
 function Efeitos.trilha(anexoA, anexoB, props, duracao)
@@ -119,7 +138,7 @@ function Efeitos.trilha(anexoA, anexoB, props, duracao)
 	trilha.LightEmission = 0.5
 	aplicar(trilha, props)
 	trilha.Parent = anexoA.Parent
-	return Efeitos.limparEm(trilha, (duracao or 1) + 1)
+	return Efeitos.limparEm(trilha, prazoDe(duracao))
 end
 
 function Efeitos.feixe(anexoA, anexoB, props, duracao)
@@ -135,7 +154,7 @@ function Efeitos.feixe(anexoA, anexoB, props, duracao)
 	feixe.FaceCamera = true
 	aplicar(feixe, props)
 	feixe.Parent = anexoA.Parent
-	return Efeitos.limparEm(feixe, (duracao or 1) + 1)
+	return Efeitos.limparEm(feixe, prazoDe(duracao))
 end
 
 function Efeitos.luz(pai, props, duracao)
@@ -147,7 +166,7 @@ function Efeitos.luz(pai, props, duracao)
 	luz.Range = 18
 	aplicar(luz, props)
 	luz.Parent = pai
-	return Efeitos.limparEm(luz, (duracao or 1) + 0.5)
+	return Efeitos.limparEm(luz, prazoDe(duracao))
 end
 
 --[[ Highlight no personagem inteiro. Bom para flash e para o efeito permanente. ]]
