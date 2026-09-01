@@ -46,21 +46,35 @@ A TikTok envia presentes repetíveis em rajada (`repeatCount`). Regra:
 - Nunca tocar N animações para N repetições. Isso trava a tela e quebra a
   latência das próximas.
 
-## R5 — Rajada e coalescência
-Se chegarem eventos enquanto uma animação está tocando:
-1. Eventos do **mesmo slot** dentro da janela de coalescência (padrão 400ms)
-   somam os deltas e contam como um disparo só.
-2. Eventos de **slots diferentes** entram numa fila com no máximo 3 posições.
-3. Fila cheia: o evento de **maior delta absoluto** substitui o menor da fila.
-   Nada de descartar o mais novo só por ser o mais novo.
-4. A fila nunca segura evento por mais de 2 segundos. Passou disso, aplica o
-   delta sem animação completa (só o efeito curto de impacto).
+## R5 — Combate de presentes
+> Reescrito pelo ADR-012. A versão anterior enfileirava eventos de slots
+> diferentes em três posições e **descartava** o de menor delta quando a fila
+> enchia. Descartar presente pago é o pior resultado possível num produto cuja
+> proposta é o espectador ver a própria ação virar movimento.
 
-> **Em aberto (2026-09-01):** a regra 1 manda somar delta e disparar uma vez, e
-> não diz nada sobre intensidade. A fixture `03-rajada-mesmo-slot` segue a
-> leitura literal e mantém a intensidade do slot. Se coalescência também devesse
-> subir um nível como o combo do R4, esta regra precisa dizer isso e o `esperado`
-> da fixture muda junto. Decisão do dono.
+1. **Presente com o boneco livre dispara na hora.** Sem janela de espera na
+   entrada: isso somaria centenas de ms a todo presente e gastaria metade do
+   orçamento de latência do Princípio nº1.
+2. **Presente que chega durante uma animação entra no combate.** As subidas
+   somam entre si, as descidas somam entre si, e os dois lados se anulam.
+3. Presentes do **mesmo slot** viram um participante só, com os deltas somados.
+4. Vence o lado de **maior soma absoluta**, e o boneco anda o **líquido** da
+   disputa, nunca o bruto. A animação que toca é a do maior presente do lado
+   vencedor: o boneco não pode ser puxado para dois lados (ADR-005).
+5. Disputa **contestada**, com presente dos dois lados, sobe **um nível** de
+   intensidade, com o mesmo teto de 5 do combo do R4. Combate de um lado só
+   mantém a intensidade do slot.
+6. **Líquido zero anula o combate.** Nada vai para o jogo — delta 0 não existe
+   no contrato — e o painel mostra o empate.
+7. O combate fecha quando a animação corrente termina, ou quando ele já está
+   aberto há **2 segundos**, o que vier primeiro. Fechando por tempo esgotado, o
+   líquido é aplicado com **efeito curto**, sem animação completa.
+8. **Nenhum presente é descartado por concorrência.** Todo delta que entrou no
+   combate conta no líquido.
+
+Consequência que precisa ser narrada ao vivo: o espectador nem sempre vê a
+própria animação. Se ele manda subida e a descida vence, toca a animação do
+outro lado. Isso é a mecânica, não uma falha.
 
 ## R6 — Limites do tabuleiro
 - Plataforma mínima é 0. Delta negativo que passaria de 0 para o boneco em 0.

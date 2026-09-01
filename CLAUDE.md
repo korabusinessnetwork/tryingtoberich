@@ -15,8 +15,9 @@ Regras práticas derivadas:
 - Nada de polling com intervalo fixo. A ponte usa long-poll (ver ADR-002).
 - Nenhuma operação de disco, chamada de IA ou escrita de log pode ficar no
   caminho crítico do evento de presente. Tudo isso é fire-and-forget.
-- Se a fila de eventos crescer, a resposta é **coalescer**, nunca enfileirar
-  indefinidamente (ver `docs/03_REGRAS_DE_NEGOCIO`, seção Rajada).
+- Presente com o boneco livre dispara **na hora**. Nada de janela de espera na
+  entrada. Concorrência se resolve no **combate** (ADR-012), que só existe
+  enquanto uma animação está tocando.
 - Animação começa no instante do evento. O cálculo de destino pode terminar
   depois do início do efeito visual.
 - Toda feature nova responde: "isso entra no caminho crítico?" Se sim, medir.

@@ -1,0 +1,23 @@
+{
+  "cenario": "07-combate-por-tempo-esgotado",
+  "regra": "ADR-012",
+  "descricao": "Combate aberto durante uma animação longa. Nada espera mais que o teto de 2s: passado o teto, o líquido é aplicado com efeito curto, sem animação completa, mesmo com o des_buraco_negro (2,4s) ainda tocando. Efeito curto não toma o controle do boneco, então pode acontecer por cima.",
+  "presetId": "escalada-padrao",
+  "combateMaxMs": 2000,
+  "entrada": [
+    { "emMs": 0,   "evento": { "presenteId": "sem-lion",     "presenteNome": "Lion",     "moedas": 29999, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "A", "recebidoEm": 1756742630000 } },
+    { "emMs": 100, "evento": { "presenteId": "sem-galaxy",   "presenteNome": "Galaxy",   "moedas": 1000,  "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "B", "recebidoEm": 1756742630100 } },
+    { "emMs": 150, "evento": { "presenteId": "sem-doughnut", "presenteNome": "Doughnut", "moedas": 30,    "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "C", "recebidoEm": 1756742630150 } }
+  ],
+  "esperado": {
+    "disparos": [
+      { "emMs": 0,    "slot": 6, "animacaoId": "des_buraco_negro", "delta": -60, "intensidade": 5, "efeitoCurto": false },
+      { "emMs": 2100, "slot": 5, "animacaoId": "sub_cometa",       "delta": 52,  "intensidade": 3, "efeitoCurto": true }
+    ],
+    "disputa": { "participantes": 2, "somaSubida": 52, "somaDescida": 0, "liquido": 52, "contestado": false },
+    "naoMapeados": [],
+    "descartados": [],
+    "anulados": []
+  },
+  "nota": "2100 = 100 (abertura do combate) + 2000 (teto). A intensidade fica em 3, a do Galaxy: sem descida no combate não houve disputa, e sem disputa não há o nível a mais."
+}

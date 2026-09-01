@@ -61,7 +61,7 @@ test("acervo e semente de catálogo validam", () => {
 test("todo evento das fixtures de cenário valida como evento normalizado", async () => {
   const dir = path.join(RAIZ, "data", "fixtures", "cenarios");
   const arquivos = (await readdir(dir)).filter((f) => f.endsWith(".json"));
-  assert.equal(arquivos.length, 6, "esperava os 6 cenários de R4, R5 e F2");
+  assert.equal(arquivos.length, 7, "esperava os 7 cenários de R4, ADR-012 e F2");
 
   for (const arquivo of arquivos) {
     const cenario = await lerJson("data", "fixtures", "cenarios", arquivo);

@@ -16,3 +16,4 @@ no código. Use `adr-000-template.md` para criar a próxima.
 | [009](./adr-009-mapa-escalavel-sem-presente.md) | Mapa 100% escalável sem presente | Aceito |
 | [010](./adr-010-personagem-personalizado.md) | Personagem por composição gratuita | Aceito |
 | [011](./adr-011-vestiario-hibrido.md) | Vestiário híbrido: monta no jogo, escolhe no painel | Aceito |
+| [012](./adr-012-combate-de-presentes.md) | Combate de presentes: a plateia briga entre si | Aceito |

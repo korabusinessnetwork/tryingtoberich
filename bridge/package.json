@@ -1,0 +1,21 @@
+{
+  "name": "@kora/ponte",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ponte entre a TikTok LIVE, o painel e o jogo no Roblox. Dono exclusivo de bridge/.",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node --env-file=../.env src/index.mjs",
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "express": "^5.2.1",
+    "tiktok-live-connector": "^2.4.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

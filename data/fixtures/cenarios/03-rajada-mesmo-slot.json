@@ -1,20 +1,76 @@
 {
   "cenario": "03-rajada-mesmo-slot",
-  "regra": "R5.1",
-  "descricao": "Três eventos do MESMO slot dentro da janela de coalescência de 400ms. Os deltas somam e contam como um disparo só.",
+  "regra": "ADR-012",
+  "descricao": "Três eventos do MESMO slot em rajada. O primeiro chega com o boneco livre e dispara NA HORA. Os dois seguintes chegam durante os 0,6s do sub_impulso e entram no combate, onde presentes do mesmo slot viram um participante só com os deltas somados.",
   "presetId": "escalada-padrao",
-  "coalescenciaMs": 400,
   "entrada": [
-    { "emMs": 0,   "evento": { "presenteId": "sem-finger-heart", "presenteNome": "Finger Heart", "moedas": 5, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "A", "recebidoEm": 1756742610000 } },
-    { "emMs": 120, "evento": { "presenteId": "sem-finger-heart", "presenteNome": "Finger Heart", "moedas": 5, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "B", "recebidoEm": 1756742610120 } },
-    { "emMs": 300, "evento": { "presenteId": "sem-finger-heart", "presenteNome": "Finger Heart", "moedas": 5, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "C", "recebidoEm": 1756742610300 } }
+    {
+      "emMs": 0,
+      "evento": {
+        "presenteId": "sem-finger-heart",
+        "presenteNome": "Finger Heart",
+        "moedas": 5,
+        "repeticoes": 1,
+        "rajadaEncerrada": true,
+        "nomeDoador": "A",
+        "recebidoEm": 1756742610000
+      }
+    },
+    {
+      "emMs": 120,
+      "evento": {
+        "presenteId": "sem-finger-heart",
+        "presenteNome": "Finger Heart",
+        "moedas": 5,
+        "repeticoes": 1,
+        "rajadaEncerrada": true,
+        "nomeDoador": "B",
+        "recebidoEm": 1756742610120
+      }
+    },
+    {
+      "emMs": 300,
+      "evento": {
+        "presenteId": "sem-finger-heart",
+        "presenteNome": "Finger Heart",
+        "moedas": 5,
+        "repeticoes": 1,
+        "rajadaEncerrada": true,
+        "nomeDoador": "C",
+        "recebidoEm": 1756742610300
+      }
+    }
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 400, "slot": 2, "animacaoId": "sub_impulso", "delta": 15, "intensidade": 1 }
+      {
+        "emMs": 0,
+        "slot": 2,
+        "animacaoId": "sub_impulso",
+        "delta": 5,
+        "intensidade": 1,
+        "efeitoCurto": false
+      },
+      {
+        "emMs": 600,
+        "slot": 2,
+        "animacaoId": "sub_impulso",
+        "delta": 10,
+        "intensidade": 1,
+        "efeitoCurto": false
+      }
     ],
     "naoMapeados": [],
-    "descartados": []
+    "descartados": [],
+    "anulados": [],
+    "disputa": {
+      "participantes": 1,
+      "somaSubida": 10,
+      "somaDescida": 0,
+      "liquido": 10,
+      "contestado": false
+    }
   },
-  "nota": "PENDENTE DE DECISÃO DO DONO: R5.1 manda somar delta e disparar uma vez, e não diz nada sobre intensidade. Aqui a intensidade fica em 1, a do slot. Se coalescência também devesse subir um nível como o combo do R4, a regra precisa dizer isso e este esperado muda para 2."
+  "nota": "600ms é o fim do sub_impulso (duracaoBase 0,6s), que começou em 0. Os deltas somam 15 no total, distribuídos em dois disparos — somar tudo num disparo só exigiria segurar o primeiro evento e gastar orçamento de latência para resolver um caso raro.\n\nA intensidade do segundo disparo fica em 1, a do slot: o ADR-012 só sobe um nível quando a disputa é contestada, e aqui só houve subida.",
+  "combateMaxMs": 2000
 }

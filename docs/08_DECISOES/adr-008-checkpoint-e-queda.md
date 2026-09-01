@@ -49,3 +49,10 @@ propósito, o que rouba do espectador exatamente o que ele pagou.
 Sequência do respawn: detectar queda → zerar velocidade → posicionar no
 checkpoint → zerar velocidade de novo → devolver controle. Mesmo cuidado com
 momento residual do ADR-005.
+
+## Emenda — 2026-09-01, ADR-012
+Com o combate de presentes, a regra 2 passa a valer sobre o **resultado do
+combate**, não sobre cada presente. Se o líquido da disputa é subida, nenhuma
+descida que participou dela move o checkpoint: só o que o boneco de fato andou
+conta. Sem isso, uma descida derrotada roubaria altura que o boneco nunca
+perdeu.

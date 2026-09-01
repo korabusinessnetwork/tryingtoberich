@@ -5,8 +5,11 @@
   "type": "module",
   "description": "Contratos do Bloco 0: JSON Schemas, acervo, semente de catálogo e fixtures. Os três processos (bridge/, panel/, game/) têm package próprio.",
   "scripts": {
-    "test": "node --test \"test/**/*.test.mjs\"",
-    "validar": "node scripts/validar-contratos.mjs"
+    "test": "node --test \"test/**/*.test.mjs\" \"bridge/test/**/*.test.mjs\"",
+    "validar": "node scripts/validar-contratos.mjs",
+    "gerar": "node scripts/gerar-animacoes.mjs",
+    "pretest": "node scripts/gerar-animacoes.mjs --silencioso",
+    "ponte": "node --env-file=.env bridge/src/index.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
@@ -14,5 +17,8 @@
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "workspaces": [
+    "bridge"
+  ]
 }

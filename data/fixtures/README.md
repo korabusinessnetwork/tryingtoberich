@@ -37,10 +37,15 @@ produzir. Eles são a especificação executável de R4, R5 e F2:
 |---|---|
 | `01-presente-unico` | caminho feliz de F2: casa com o slot, dispara uma vez |
 | `02-combo` | R4: delta × repetições, **uma** animação, intensidade +1 |
-| `03-rajada-mesmo-slot` | R5.1: deltas somam dentro de 400ms, um disparo só |
-| `04-rajada-slots-diferentes` | R5.2 e R5.3: fila de 3, maior delta absoluto entra |
+| `03-rajada-mesmo-slot` | ADR-012: mesmo slot vira um participante com deltas somados |
+| `04-combate-de-presentes` | ADR-012: subidas somam, descidas somam, o boneco anda o líquido |
 | `05-presente-nao-mapeado` | F2.4: descarta, conta, e **não** para o fluxo |
 | `06-combo-no-teto-de-intensidade` | R4: intensidade sobe um nível com teto em 5 |
+| `07-combate-por-tempo-esgotado` | ADR-012: teto de 2s, líquido aplicado com efeito curto |
+
+Todo cenário começa com o primeiro presente disparando **na hora**: o combate só
+existe enquanto uma animação está tocando. Uma janela de espera na entrada
+gastaria metade do orçamento de latência do Princípio nº1.
 
 O preset de referência de todos eles é
 `data/exemplos/preset-escalada-padrao.json`.

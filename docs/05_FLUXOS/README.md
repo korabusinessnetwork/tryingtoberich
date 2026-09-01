@@ -30,11 +30,16 @@
 8. **Em paralelo e fora do caminho crítico:** ponte grava o evento no log da
    sessão e empurra para o painel via SSE.
 
-## F3 — Rajada
+## F3 — Combate de presentes
 1. Chegam 5 presentes em 300ms.
-2. Mesmo slot: deltas somam, uma animação só, intensidade +1 (R4, R5.1).
-3. Slots diferentes: fila de até 3, maior delta absoluto tem prioridade (R5.3).
-4. Nada espera mais de 2s. Passou disso, aplica delta com efeito curto (R5.4).
+2. O primeiro pega o boneco livre e dispara na hora.
+3. Os outros quatro chegam durante a animação e entram no combate: subidas
+   somam entre si, descidas somam entre si, os lados se anulam (ADR-012).
+4. A animação termina, o combate fecha e o boneco anda o **líquido**. Toca a
+   animação do maior presente do lado vencedor, com intensidade +1 se a disputa
+   foi contestada.
+5. Nada espera mais de 2s. Passou disso, aplica o líquido com efeito curto.
+6. Líquido zero: ninguém anda, e o painel mostra o empate.
 
 ## F4 — Gerar mapa com IA
 1. Streamer descreve o ambiente em texto livre no painel
