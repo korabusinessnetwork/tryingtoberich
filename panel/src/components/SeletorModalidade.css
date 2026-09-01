@@ -1,0 +1,55 @@
+/* SeletorModalidade. Nenhuma cor literal: tudo vem de
+   panel/src/styles/tokens.css e base.css. */
+
+.seletor-modalidade {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seletor-modalidade-unica {
+  padding: 0 4px;
+}
+
+.seletor-modalidade-valor {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.seletor-modalidade-nota {
+  font-size: 11px;
+}
+
+.seletor-modalidade-rotulo {
+  font-size: 12px;
+}
+
+.seletor-modalidade-opcoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.seletor-modalidade-opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.seletor-modalidade-opcao--ativa {
+  border-color: var(--estado-ok);
+  color: var(--estado-ok);
+}
+
+.seletor-modalidade-em-breve {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--painel-texto-secundario);
+  border: 1px solid var(--painel-borda);
+  border-radius: var(--raio);
+  padding: 1px 4px;
+}

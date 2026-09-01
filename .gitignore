@@ -17,3 +17,6 @@ data/catalogo-presentes.json
 
 # Espelho gerado a partir do índice Luau, nunca editado à mão (04_MODELAGEM).
 data/animacoes.json
+
+# Entrada temporária do gate do painel (scripts/verificar-painel.mjs).
+panel/src/gate-gerado.jsx

@@ -1,0 +1,81 @@
+/* EditorDePreset — a tela principal do painel.
+
+   A grade é o requisito, não uma preferência: "os 6 slots ficam lado a lado,
+   sempre visíveis, sem scroll" (02_DESIGN_SYSTEM, seção A). Por isso são 6
+   colunas fixas com `minmax(0, 1fr)` — os cartões comprimem, mas a linha nunca
+   quebra e nada some abaixo da dobra. Nenhuma cor literal aqui. */
+
+.editor-preset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  min-width: 0;
+}
+
+.editor-preset-topo {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco);
+  min-width: 0;
+}
+
+.editor-preset-identidade {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.editor-preset-nome {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-preset-resumo {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* Salvar fica na ponta oposta ao nome e sempre no mesmo lugar: o streamer
+   acerta o botão sem procurar, que é o ponto do alvo de 40px. */
+.editor-preset-salvar {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 140px;
+  font-weight: 600;
+}
+
+/* Pastilha do base.css, adaptada para texto de uma frase: o ponto de estado
+   fica alinhado à primeira linha em vez de esticar junto com o texto. */
+.editor-preset-alerta {
+  align-items: flex-start;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--raio);
+  line-height: 1.35;
+}
+
+.editor-preset-alerta::before {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
+.editor-preset-slots {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--espaco);
+}
+
+.editor-preset-sem-dado {
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}

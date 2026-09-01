@@ -1,0 +1,367 @@
+/* CartaoDeSlot — o cartão mais importante do painel.
+
+   Nenhuma cor literal: tudo sai de token (styles/tokens.css, gerado) ou de
+   variável de base (styles/base.css). A faixa do presente chega pelo JSX como
+   `--faixa-do-slot`, que é `var(--faixa-N)` devolvido por `corDaFaixa` — o
+   componente passa o nome do token, o CSS é quem pinta. É isso que permite o
+   white-label da Fase 3 sem reescrever componente (02_DESIGN_SYSTEM).
+
+   Regra de leitura do arquivo: tamanho e posição carregam a hierarquia, cor
+   carrega só significado. O delta é o maior elemento porque é a informação que
+   o streamer confere de canto de olho; presente e animação vêm em corpo de
+   texto; a intensidade é contagem de blocos, que se lê sem ler número. */
+
+.cartao-slot {
+  --faixa-do-slot: var(--painel-borda);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 10px 10px;
+  overflow: hidden;
+
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+/* A fita da faixa é o cue mais rápido de "quanto vale este presente": ela
+   aparece na visão periférica antes de qualquer texto ser lido. Cor sozinha
+   nunca decide nada — o algarismo romano ao lado do nome diz o mesmo. */
+.cartao-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--faixa-do-slot);
+}
+
+/* ---- topo: posição, marca de aviso, limpar --------------------------- */
+
+.cartao-slot-topo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.cartao-slot-posicao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: var(--borda);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--painel-texto-secundario);
+}
+
+/* Existe aviso neste cartão. O texto do aviso fica no rodapé; esta marca é só
+   para o olhar de 2 segundos saber que há algo a ler quando sobrar tempo. */
+.cartao-slot-alerta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--estado-atencao);
+  color: var(--painel-fundo);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cartao-slot-rotulo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--painel-texto-secundario);
+}
+
+/* Ação destrutiva: alvo cheio de 40px, mas peso visual baixo, para não ser
+   acertada com pressa. Vermelho só no hover, quando já é intenção. */
+.cartao-slot-limpar {
+  margin-left: auto;
+  padding: 0 8px;
+  min-width: var(--alvo-minimo);
+  border-color: transparent;
+  background: transparent;
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}
+
+.cartao-slot-limpar:hover,
+.cartao-slot-limpar:focus-visible {
+  color: var(--estado-erro);
+  border-color: var(--estado-erro);
+}
+
+/* ---- presente: a linha é o botão que abre o catálogo ------------------ */
+
+.cartao-slot-presente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.cartao-slot-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+}
+
+.cartao-slot-icone-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Catálogo semente vem sem ícone, e o ícone oficial pode falhar em live: a
+   inicial na cor da faixa ainda distingue os 6 slots à distância. */
+.cartao-slot-icone-letra {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--faixa-do-slot);
+}
+
+.cartao-slot-presente-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cartao-slot-nome {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cartao-slot-moedas {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.cartao-slot-faixa {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border: 1px solid var(--faixa-do-slot);
+  border-radius: var(--raio);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--faixa-do-slot);
+}
+
+.cartao-slot-indisponivel .cartao-slot-icone-img {
+  opacity: 0.45;
+}
+
+.cartao-slot-indicador {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+/* ---- delta: o maior elemento do cartão ------------------------------- */
+
+/* Seis cartões lado a lado deixam a largura escassa e a altura sobrando. Por
+   isso o número toma a linha inteira e os steppers descem para a linha de
+   baixo, em vez de dividirem a largura com ele: o delta cresce e o alvo de
+   clique fica bem acima dos 40px do mínimo. */
+.cartao-slot-delta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cartao-slot-campo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 6px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.cartao-slot-passos {
+  display: flex;
+  gap: 4px;
+}
+
+.cartao-slot-passo {
+  flex: 1 1 0;
+  min-width: var(--alvo-minimo);
+  padding: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Direção por FORMA, não por cor: o cartão já gasta âmbar em aviso e vermelho
+   em indisponível, e seta sobrevive a daltonismo. O sinal de `formatarDelta`
+   diz a mesma coisa uma segunda vez, de propósito. */
+.cartao-slot-seta {
+  flex: 0 0 auto;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--painel-texto-secundario);
+}
+
+.cartao-slot-valor {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: var(--alvo-minimo);
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-slot-valor:focus-visible {
+  outline: 2px solid var(--painel-texto-primario);
+  outline-offset: 2px;
+}
+
+.cartao-slot-legenda {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* ---- animação: a linha é o botão que abre a biblioteca --------------- */
+
+.cartao-slot-animacao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.cartao-slot-animacao-nome,
+.cartao-slot-animacao-meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cartao-slot-animacao-nome {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.cartao-slot-animacao-meta {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* ---- intensidade: contagem de blocos, não número ---------------------- */
+
+.cartao-slot-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cartao-slot-niveis {
+  display: flex;
+  gap: 4px;
+}
+
+/* Aceso em texto secundário, não primário: o contraste contra o fundo já
+   entrega a contagem de relance, e o branco fica reservado para o delta, que
+   é quem tem de ganhar a disputa de atenção. */
+.cartao-slot-nivel {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--alvo-minimo);
+  padding: 0;
+  background: var(--painel-fundo);
+}
+
+.cartao-slot-nivel-aceso {
+  background: var(--painel-texto-secundario);
+  border-color: var(--painel-texto-secundario);
+}
+
+/* ---- avisos: sempre no rodapé, alinhados entre os 6 cartões ----------- */
+
+.cartao-slot-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.cartao-slot-aviso {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--estado-atencao);
+}
+
+.cartao-slot-aviso-rotulo {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cartao-slot-aviso-regra {
+  margin-top: -2px;
+}
+
+/* ---- slot vazio: estado válido (R1.3), não buraco --------------------- */
+
+.cartao-slot-vazio {
+  justify-content: space-between;
+  border-style: dashed;
+}
+
+.cartao-slot-vazio::before {
+  background: transparent;
+}
+
+.cartao-slot-explicacao {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.cartao-slot-preencher {
+  width: 100%;
+  font-weight: 600;
+}

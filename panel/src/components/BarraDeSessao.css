@@ -1,0 +1,123 @@
+/* BarraDeSessao — topo do painel, sempre visível. Densidade e leitura de
+   canto de olho (02_DESIGN_SYSTEM, seção A). Nenhuma cor literal: tudo vem
+   de panel/src/styles/tokens.css e base.css. */
+
+.barra-sessao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.barra-sessao-estados {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* F6 e F7: "reconectando" e "jogo offline" (em sessão) são os estados que
+   mais importam aparecer. Sem animação — só mais peso visual estático. */
+.pastilha-destaque {
+  padding: 4px 12px 4px 10px;
+  font-size: 13px;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.barra-sessao-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barra-sessao-aviso {
+  margin: 0;
+  color: var(--estado-erro);
+  font-weight: 600;
+  font-size: 12px;
+  max-width: 70ch;
+}
+
+.barra-sessao-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--espaco);
+}
+
+.barra-sessao-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* Modo de teste (fixture, sem live): borda tracejada e rótulo em âmbar para
+   nunca ser confundido com o fluxo real. Ver docs/05_FLUXOS F1. */
+.barra-sessao-teste {
+  padding: 6px 8px;
+  border: 1px dashed var(--painel-borda);
+  border-radius: var(--raio);
+}
+
+.barra-sessao-teste-rotulo {
+  color: var(--estado-atencao);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.barra-sessao-acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.barra-sessao-nota {
+  font-size: 12px;
+  max-width: 34ch;
+}
+
+.barra-sessao-botao {
+  font-weight: 700;
+}
+
+.barra-sessao-botao--iniciar {
+  border-color: var(--estado-ok);
+  color: var(--estado-ok);
+}
+
+.barra-sessao-botao--teste {
+  border-color: var(--estado-atencao);
+  color: var(--estado-atencao);
+}
+
+.barra-sessao-botao--parar {
+  border-color: var(--estado-erro);
+  color: var(--estado-erro);
+}
+
+/* Segundo clique do Stop: preenchido, não só contornado — o streamer precisa
+   ver que agora é diferente do primeiro clique antes de confirmar. */
+.barra-sessao-botao--confirmar {
+  background: var(--estado-erro);
+  border-color: var(--estado-erro);
+  color: var(--painel-fundo);
+}
+
+.barra-sessao-botao--cancelar {
+  color: var(--painel-texto-secundario);
+  padding: 0 10px;
+}
+
+@media (max-width: 720px) {
+  .barra-sessao-acao {
+    margin-left: 0;
+  }
+}
