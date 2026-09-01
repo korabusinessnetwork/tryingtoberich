@@ -11,23 +11,6 @@ local TweenService = game:GetService("TweenService")
 local COR_ESFERA = Color3.fromRGB(18, 8, 26)
 local COR_BORDA = Color3.fromRGB(90, 40, 130)
 
---[[
-	Primitiva que falta em efeitos.lua: prender um Part solto no personagem
-	sem tocar em Humanoid. Massless = true de propósito — não pode somar peso
-	ao boneco nem disputar física com o Tween do movimento.lua. A raiz fica
-	ancorada durante o efeito inteiro (ver movimento.lua), então o
-	WeldConstraint segue o Tween dela sem jitter.
-]]
-local function prenderNoPersonagem(parte, raiz)
-	parte.Anchored = false
-	parte.Massless = true
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = raiz
-	weld.Part1 = parte
-	weld.Parent = parte
-	return weld
-end
-
 return {
 	id = "des_buraco_negro",
 	nome = "Buraco Negro",
@@ -57,7 +40,7 @@ return {
 			esfera.Size = Vector3.new(0.2, 0.2, 0.2)
 			esfera.CFrame = raiz.CFrame + Vector3.new(0, 3, 0)
 			esfera.Parent = workspace
-			prenderNoPersonagem(esfera, raiz)
+			Efeitos.prenderNoPersonagem(esfera, raiz)
 
 			TweenService:Create(esfera, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Size = Vector3.new(tamanhoAlvo, tamanhoAlvo, tamanhoAlvo),

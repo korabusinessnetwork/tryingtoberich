@@ -186,6 +186,31 @@ function Efeitos.brilho(personagem, props, duracao)
 	return brilho
 end
 
+--[[
+	Prende uma Part solta ao personagem, para ela acompanhar o boneco sem
+	disputar a posição com o Tween do movimento.
+
+	`Massless` não é detalhe: durante o presente a raiz está ancorada e sendo
+	tweenada, e peça com massa somaria peso ao personagem quando ele
+	desancorasse no fim do ciclo. Ver ADR-005.
+
+	WeldConstraint em vez de Attachment porque Attachment não carrega geometria:
+	serve para partícula e trilha, não para caco sólido.
+]]
+function Efeitos.prenderNoPersonagem(parte, raiz)
+	if not parte or not raiz then
+		return nil
+	end
+	parte.Anchored = false
+	parte.Massless = true
+
+	local solda = Instance.new("WeldConstraint")
+	solda.Part0 = raiz
+	solda.Part1 = parte
+	solda.Parent = parte
+	return solda
+end
+
 --[[ Anel de choque no chão. Usado por várias animações de impulso e impacto. ]]
 function Efeitos.anel(posicao, cor, intensidade, duracao)
 	local fator = Efeitos.escala(intensidade)

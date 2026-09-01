@@ -10,21 +10,6 @@ local Efeitos = require(Compartilhado.efeitos)
 local COR_FENDA = Color3.fromRGB(225, 245, 255)
 local COR_FRAGMENTO = Color3.fromRGB(30, 20, 45)
 
---[[
-	Primitiva que falta em efeitos.lua: prender um Part solto no personagem
-	sem tocar em Humanoid. Massless = true de propósito — mesma solução usada
-	em des_buraco_negro; repetida aqui porque cada módulo é independente.
-]]
-local function prenderNoPersonagem(parte, raiz)
-	parte.Anchored = false
-	parte.Massless = true
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = raiz
-	weld.Part1 = parte
-	weld.Parent = parte
-	return weld
-end
-
 local OFFSETS_FRAGMENTO = {
 	Vector3.new(1.6, 1.5, 0.8),
 	Vector3.new(-1.7, 2.6, -0.6),
@@ -96,7 +81,7 @@ return {
 					math.random() * math.pi
 				)
 				fragmento.Parent = workspace
-				prenderNoPersonagem(fragmento, raiz)
+				Efeitos.prenderNoPersonagem(fragmento, raiz)
 				Efeitos.limparEm(fragmento, 3.4)
 			end
 
