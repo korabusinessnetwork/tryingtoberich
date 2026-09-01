@@ -37,6 +37,15 @@ test("a faixa do painel é a mesma da ponte, moeda a moeda", () => {
   }
 });
 
+test("a faixa do painel bate com a da ponte numa varredura ampla, moeda a moeda", () => {
+  // A lista de pontos acima cobre as fronteiras; esta cobre tudo em volta
+  // delas. É a "boa varredura de valores" que a divergência silenciosa entre
+  // painel e ponte precisa para não passar despercebida.
+  for (let moedas = 0; moedas <= 6000; moedas += 1) {
+    assert.equal(faixaDeMoedas(moedas), faixaDaPonte(moedas), `${moedas} moedas`);
+  }
+});
+
 test("as bordas das faixas são as do R3", () => {
   assert.deepEqual(
     [1, 9, 10, 99, 100, 999, 1000, 4999, 5000].map(faixaDeMoedas),
@@ -61,6 +70,10 @@ test("o delta positivo mostra o sinal, que é o que diferencia subida de descida
   assert.equal(formatarDelta(12), "+12");
   assert.equal(formatarDelta(-8), "-8");
   assert.equal(formatarDelta(200), "+200");
+});
+
+test("delta zero é o relance — sem sinal, para não parecer subida", () => {
+  assert.equal(formatarDelta(0), "0");
 });
 
 /* -------------------------------------------------------------- */
@@ -102,6 +115,24 @@ test("delta zero e entrada inválida não geram aviso", () => {
   assert.equal(avisoDeCurva({}), null);
 });
 
+test("as fronteiras exatas do aviso de rajada (faixa I/II, força 50)", () => {
+  assert.match(avisoDeCurva({ moedas: 99, delta: 50 }), /rajada/, "força 50 já avisa");
+  assert.equal(avisoDeCurva({ moedas: 99, delta: 49 }), null, "força 49 ainda não avisa");
+  // A força é o módulo do delta: descida grande num presente barato é a mesma
+  // piada de live que subida grande, e merece o mesmo aviso.
+  assert.match(avisoDeCurva({ moedas: 5, delta: -50 }), /rajada/, "delta negativo também conta pela força");
+});
+
+test("as fronteiras exatas do aviso de decepção (faixa IV/V, força 3)", () => {
+  assert.match(avisoDeCurva({ moedas: 1000, delta: 3 }), /decepcionar/, "força 3 já avisa");
+  assert.equal(avisoDeCurva({ moedas: 1000, delta: 4 }), null, "força 4 ainda não avisa");
+});
+
+test("a faixa III (100 a 999) nunca avisa, nem com delta grande — é a zona morta das duas regras", () => {
+  assert.equal(avisoDeCurva({ moedas: 500, delta: 200 }), null);
+  assert.equal(avisoDeCurva({ moedas: 100, delta: -200 }), null);
+});
+
 /* -------------------------------------------------------------- */
 /* R2 — a direção é o sinal do delta                               */
 /* -------------------------------------------------------------- */
@@ -114,6 +145,23 @@ test("animação de subida com delta negativo avisa, e vice-versa", () => {
   assert.match(avisoDeDirecao({ animacao: descida, delta: 10 }), /sobe enquanto o efeito desce/);
   assert.equal(avisoDeDirecao({ animacao: subida, delta: 10 }), null);
   assert.equal(avisoDeDirecao({ animacao: descida, delta: -10 }), null);
+});
+
+test("a inversão avisa mas nunca bloqueia (R2, ADR-007): entrada incompleta não quebra, e o retorno nunca é boolean", () => {
+  const subida = { direcao: "subida" };
+
+  // Sem animação escolhida, sem delta ainda digitado, ou delta 0: nada para
+  // comparar, então nada para avisar — não é o mesmo caso de "avisou e o
+  // streamer ignorou", é "ainda não há o que checar".
+  assert.equal(avisoDeDirecao({ animacao: null, delta: 10 }), null);
+  assert.equal(avisoDeDirecao({ animacao: subida, delta: undefined }), null);
+  assert.equal(avisoDeDirecao({ animacao: subida, delta: NaN }), null);
+  assert.equal(avisoDeDirecao({ animacao: subida, delta: 0 }), null);
+
+  // E quando avisa, o vínculo continua salvável: o retorno é texto, não um
+  // booleano que a próxima pessoa a mexer transformaria em bloqueio.
+  const aviso = avisoDeDirecao({ animacao: subida, delta: -5 });
+  assert.equal(typeof aviso, "string");
 });
 
 /* -------------------------------------------------------------- */
@@ -135,6 +183,38 @@ test("as posições preenchidas ficam no lugar certo, e o resto vem vazio", () =
   assert.equal(slots[2].presenteId, "sem-galaxy", "posição 3 é o índice 2");
   assert.ok(slots[0].vazio && slots[5].vazio);
   assert.deepEqual(slots.map((s) => s.posicao), [1, 2, 3, 4, 5, 6]);
+});
+
+test("preset com os 6 slots preenchidos não sobra nem falta posição", () => {
+  const preset = {
+    slots: Array.from({ length: 6 }, (_, i) => ({ posicao: i + 1, presenteId: `presente-${i + 1}`, delta: 10 })),
+  };
+  const slots = slotsDoPreset(preset);
+
+  assert.equal(slots.length, 6);
+  assert.ok(slots.every((s) => !s.vazio));
+  assert.deepEqual(slots.map((s) => s.presenteId), [
+    "presente-1", "presente-2", "presente-3", "presente-4", "presente-5", "presente-6",
+  ]);
+});
+
+test("a ordem das posições no JSON não importa — o slot 1 é sempre o primeiro do retorno (R1.3)", () => {
+  // O preset salvo em disco não promete slots em ordem de posição; quem edita
+  // o JSON à mão, ou uma migração futura, pode gravar fora de ordem.
+  const preset = {
+    slots: [
+      { posicao: 5, presenteId: "quinto" },
+      { posicao: 1, presenteId: "primeiro" },
+      { posicao: 3, presenteId: "terceiro" },
+    ],
+  };
+  const slots = slotsDoPreset(preset);
+
+  assert.deepEqual(slots.map((s) => s.posicao), [1, 2, 3, 4, 5, 6], "sempre em ordem de posição, não de chegada");
+  assert.equal(slots[0].presenteId, "primeiro");
+  assert.equal(slots[2].presenteId, "terceiro");
+  assert.equal(slots[4].presenteId, "quinto");
+  assert.ok(slots[1].vazio && slots[3].vazio && slots[5].vazio);
 });
 
 test("presente repetido em dois slots é detectado antes de a ponte recusar (R1.4)", () => {
