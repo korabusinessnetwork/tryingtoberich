@@ -10,8 +10,11 @@
  * dia em que ela receber um parâmetro do navegador vira execução arbitrária.
  */
 
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import { promisify } from "node:util";
 import net from "node:net";
 import path from "node:path";
 
@@ -20,7 +23,6 @@ import { RAIZ } from "../repos/arquivo.mjs";
 
 /** Porta padrão do `rojo serve`. É por ela que o plugin no Studio conecta. */
 const PORTA_ROJO = 34872;
-const PROJETO = path.join(RAIZ, "game", "default.project.json");
 
 /** O executável do Studio, dentro da instalação do Roblox. */
 export function acharStudio(localAppData = process.env.LOCALAPPDATA) {
@@ -70,7 +72,68 @@ function portaOcupada(porta) {
   });
 }
 
-export async function abrirNoStudio() {
+const executar = promisify(execFile);
+const PROJETO_BASE = path.join(RAIZ, "game", "default.project.json");
+
+/**
+ * Torna os `$path` do projeto Rojo absolutos.
+ *
+ * Sem isto o projeto gerado teria que morar em `game/` para os caminhos
+ * relativos resolverem — e aí um arquivo COM O TOKEN DENTRO nasceria dentro do
+ * repositório, a um `git add -A` distante de ser publicado. Com caminho
+ * absoluto, o projeto e o place vivem na pasta temporária do sistema.
+ */
+export function absolutizarCaminhos(no, base) {
+  if (!no || typeof no !== "object") return;
+
+  if (typeof no.$path === "string") no.$path = path.resolve(base, no.$path);
+  for (const filho of Object.values(no)) absolutizarCaminhos(filho, base);
+}
+
+/**
+ * Monta um place `.rbxlx` já pronto para dar Play.
+ *
+ * É o que transforma "abre o Studio" em "abre o jogo". Os dois passos manuais
+ * do `game/README` entram aqui:
+ *
+ *  - `ServerStorage.KoraConfig` com a URL e o token, que o `configuracao.lua`
+ *    lê. Antes, o streamer criava a Folder e os dois StringValue na mão, uma
+ *    vez por lugar, e errar um nome dava "falta configurar a ponte".
+ *  - `HttpService.HttpEnabled`, sem o qual o long-poll não sai do lugar.
+ *
+ * O arquivo carrega o token, então nasce na pasta temporária do sistema e nunca
+ * no repositório. Ver 11_SEGURANCA.
+ */
+async function montarPlace({ urlDaPonte, token }) {
+  const projeto = JSON.parse(await readFile(PROJETO_BASE, "utf8"));
+  absolutizarCaminhos(projeto.tree, path.dirname(PROJETO_BASE));
+
+  projeto.tree.ServerStorage = {
+    $className: "ServerStorage",
+    KoraConfig: {
+      $className: "Folder",
+      UrlDaPonte: { $className: "StringValue", $properties: { Value: urlDaPonte } },
+      Token: { $className: "StringValue", $properties: { Value: token } },
+    },
+  };
+  projeto.tree.HttpService = { $className: "HttpService", $properties: { HttpEnabled: true } };
+
+  const pasta = await fsMkdtemp();
+  const arquivoDoProjeto = path.join(pasta, "kora.project.json");
+  const place = path.join(pasta, "KoraStreamGames.rbxlx");
+
+  await writeFile(arquivoDoProjeto, JSON.stringify(projeto, null, 2), "utf8");
+  await executar(acharRojo(), ["build", arquivoDoProjeto, "--output", place], { cwd: pasta });
+
+  return { place, projeto: arquivoDoProjeto };
+}
+
+async function fsMkdtemp() {
+  const { mkdtemp } = await import("node:fs/promises");
+  return mkdtemp(path.join(os.tmpdir(), "kora-place-"));
+}
+
+export async function abrirNoStudio({ urlDaPonte, token } = {}) {
   if (process.platform !== "win32") {
     throw new ErroDeDominio("studio_indisponivel", "Abrir o Studio pelo painel só está implementado no Windows.", { status: 501 });
   }
@@ -84,27 +147,51 @@ export async function abrirNoStudio() {
     );
   }
 
-  let rojo = "ausente";
-  if (await portaOcupada(PORTA_ROJO)) {
-    // Já tem servidor de pé. Subir outro só daria erro de porta ocupada.
-    rojo = "ja_rodando";
-  } else {
-    const executavel = acharRojo();
-    if (executavel) {
-      // Filho normal, não destacado: quando a ponte cai, o rojo cai junto. Um
-      // servidor órfão segurando a 34872 faria o próximo clique dizer
-      // "ja_rodando" apontando para um projeto que já não é este.
-      const processo = spawn(executavel, ["serve", PROJETO], { cwd: RAIZ, stdio: "ignore" });
-      processo.on("error", () => {});
-      rojo = "iniciado";
-    }
+  // Sem Rojo não há como montar o place, e abrir o Studio vazio não ajuda:
+  // seria uma janela em branco e a impressão de que o botão não funcionou.
+  if (!acharRojo()) {
+    throw new ErroDeDominio(
+      "rojo_nao_encontrado",
+      "O Rojo não está instalado. No Windows: winget install Rojo.Rojo — e abra um terminal novo depois.",
+      { status: 412 },
+    );
   }
 
-  // Destacado, ao contrário do rojo: derrubar a ponte não pode fechar o Studio
-  // com trabalho aberto dentro.
-  const processo = spawn(studio, [], { detached: true, stdio: "ignore" });
+  let montado = null;
+  try {
+    montado = await montarPlace({ urlDaPonte, token });
+  } catch (erro) {
+    throw new ErroDeDominio(
+      "place_nao_montado",
+      `O Rojo não conseguiu montar o lugar: ${String(erro.stderr || erro.message).trim()}`,
+      { status: 500 },
+    );
+  }
+
+  // O Studio abre o .rbxlx direto. Destacado de propósito: derrubar a ponte não
+  // pode fechar o Studio com trabalho aberto dentro.
+  const processo = spawn(studio, [montado.place], { detached: true, stdio: "ignore" });
   processo.on("error", () => {});
   processo.unref();
 
-  return { studio: path.basename(studio), rojo, portaRojo: PORTA_ROJO };
+  /*
+   * O `rojo serve` recebe o MESMO projeto do place, não o `default.project.json`.
+   *
+   * Isto foi um bug de verdade: servir o projeto base significava que o place
+   * aberto tinha `ServerStorage.KoraConfig` e o que o Rojo sincronizava não
+   * tinha. Dar Connect depois de abrir reconciliava por cima, e o jogo subia
+   * dizendo "ponte não configurada" — com o arquivo do place correto no disco.
+   * O resultado dependia de o streamer ter clicado em Connect ou não, que é o
+   * pior tipo de bug: intermitente e culpa do usuário na aparência.
+   */
+  let rojo = "ja_rodando";
+  if (!(await portaOcupada(PORTA_ROJO))) {
+    // Filho normal, não destacado: quando a ponte cai, o rojo cai junto. Um
+    // servidor órfão segurando a 34872 apontaria para outro projeto.
+    const servidor = spawn(acharRojo(), ["serve", montado.projeto], { cwd: path.dirname(montado.projeto), stdio: "ignore" });
+    servidor.on("error", () => {});
+    rojo = "iniciado";
+  }
+
+  return { studio: path.basename(studio), place: montado.place, rojo, portaRojo: PORTA_ROJO };
 }

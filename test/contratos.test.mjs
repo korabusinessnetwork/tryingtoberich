@@ -187,8 +187,18 @@ test("asset inventado pelo modelo é barrado (ADR-004)", () => {
 });
 
 test("acervo pendente de moderação impede o mapa de ir ao ar", () => {
-  const resultado = mapaPodeIrAoAr(mapa, acervo);
-  assert.equal(resultado.pode, false, "hoje o acervo inteiro está pendente-upload");
+  // O pendente é FORÇADO aqui em vez de herdado do arquivo real: o teste afirma
+  // a regra, e ela não pode quebrar quando o streamer aprovar um item.
+  const pendente = clonar(acervo);
+  for (const colecao of ["skybox", "texturas"]) {
+    for (const item of pendente[colecao]) {
+      item.status = "pendente-upload";
+      item.assetId = null;
+    }
+  }
+
+  const resultado = mapaPodeIrAoAr(mapa, pendente);
+  assert.equal(resultado.pode, false);
   assert.ok(resultado.motivos.some((m) => /pendente-upload/.test(m)));
 });
 
@@ -207,6 +217,7 @@ test("com o acervo aprovado, o mesmo mapa passa a poder ir ao ar", () => {
 test("acervo com item aprovado e assetId nulo é rejeitado pelo schema", () => {
   const quebrado = clonar(acervo);
   quebrado.skybox[0].status = "aprovado";
+  quebrado.skybox[0].assetId = null; // explícito: é ESTA combinação que o schema proíbe
   assert.notDeepEqual(validar("acervo", quebrado), [], "aprovado sem assetId é mapa sem céu na live");
 });
 

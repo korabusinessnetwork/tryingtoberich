@@ -5,6 +5,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 
 | Componente | Papel | Estado que recebe |
 |---|---|---|
+| `ContaDaLive` | O @ do TikTok: define em qual live a sessão vai rodar | configuração |
 | `NavegacaoDePaginas` | Troca entre as 3 páginas do painel, com contador de problemas | página atual |
 | `BarraDeSessao` | Start/stop, estado da live e do jogo, cronômetro | estado do SSE |
 | `SeletorModalidade` | Escolhe a modalidade (Fase 1: só Escalada) | lista de modalidades |
@@ -19,8 +20,13 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `MonitorAoVivo` | Últimos eventos, latência medida, não mapeados | fluxo do SSE |
 | `TestadorDePresente` | Dispara presente à mão, um ou vários juntos | preset, catálogo |
 | `TestadorDeAnimacao` | Um botão por animação, dispara direto no jogo sem preset | animações, estado do jogo |
-| `BotaoAbrirJogo` | Sobe o `rojo serve` e abre o Roblox Studio nesta máquina | — |
+| `BotaoAbrirJogo` | Monta o jogo com a ponte já configurada e abre no Studio | — |
 | `PainelDeLogs` | O que a ponte e o painel registraram, para quando algo falha | fluxo do SSE |
+| `AvisoDeVitoria` | R6 — chegou ao topo, e o botão de reiniciar a corrida | estado do SSE |
+| `ResumoDaLive` | O resumo agregado de uma live (F5.5). Serve o Stop e o histórico | sessão encerrada |
+| `HistoricoDeSessoes` | As lives passadas, uma linha por sessão | lista de `/api/sessoes` |
+| `GerenciadorDePresets` | Criar, duplicar e apagar preset | presets |
+| `PainelDeAcervo` | Status de moderação e assetId de cada peça do acervo (ADR-004) | acervo |
 
 ## Regras
 - `CartaoDeSlot` é o componente mais importante do produto. Ele precisa mostrar
@@ -29,12 +35,31 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
   busca dado. Nada de tela em branco.
 - Nenhum componente conhece caminho de arquivo nem formato de resposta cru.
 - Nenhum componente monta prompt de IA. Isso vive na ponte (ver `10_PROMPTS`).
-- O painel tem 4 páginas: **Ao vivo** (6 slots, monitor, testador), **Configurar**
-  (modalidade, look, mapa e prévia), **Jogo** (abrir no Studio e testar as 20
-  animações) e **Log**. "Ao vivo" é a de abertura, e é
+- A **conta da live** (`ContaDaLive`) mora em "Configurar" e é o primeiro bloco
+  da página: é o único campo sem o qual a sessão não inicia. Antes de existir,
+  o @ vivia só no `.env`, e o valor de fábrica `seu_usuario_sem_arroba` passava
+  pela guarda de "não vazio" — a ponte tentava conectar numa conta inexistente e
+  o erro que aparecia era do TikTok, não do produto. O `.env` continua valendo
+  como semente para quem já o tinha preenchido.
+- O painel tem 5 páginas: **Ao vivo** (6 slots, monitor, testador), **Configurar**
+  (conta, presets, modalidade, look, mapa, prévia e acervo), **Jogo** (abrir no
+  Studio e testar as 20 animações), **Histórico** (lives passadas) e **Log**.
+  "Ao vivo" é a de abertura, e é
   inegociável que ela carregue os 6 slots: o 02_DESIGN_SYSTEM exige os seis lado
   a lado e sempre visíveis. O que foi para "Configurar" é o que já era pré-live
   e trava com a sessão rodando, então sair da tela principal não custa nada.
+  "Histórico" é a única página que olha para trás, e por isso fica longe de
+  "Ao vivo": nada nela serve durante a transmissão.
+- **`AvisoDeVitoria` é a única coisa que pode empurrar os 6 slots para baixo**,
+  e só enquanto durar a decisão que o jogo está esperando (R6). É também o
+  único aviso do painel sem tempo de tela: ele fica até o streamer reiniciar,
+  porque é exatamente essa a regra — chegar no topo não recomeça sozinho.
+- `ResumoDaLive` é montado por duas páginas com o mesmo objeto: pelo "Ao vivo"
+  logo depois do Stop (F5.5), e pelo "Histórico" sobre uma live passada. O
+  resumo é o mesmo venha ele da resposta do Stop ou do arquivo em disco, e
+  duplicar o componente seria deixar as duas leituras divergirem.
+- `PainelDeAcervo` fica colado na `PreviaDeMapa`: quando ela diz "ainda não
+  pode ir ao ar", é ali embaixo que está o motivo e o conserto (ADR-004).
 - `TestadorDeAnimacao` e `TestadorDePresente` respondem perguntas DIFERENTES e
   por isso não se fundem: o de presente testa o CAMINHO (casa com slot, entra em
   combate, sai pelo long-poll) e exige sessão; o de animação testa o DESTINO e

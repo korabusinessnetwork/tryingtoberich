@@ -19,6 +19,7 @@ Eventos.PASTA = "KoraEventos"
 Eventos.PRESENTE = "Presente"
 Eventos.ESTADO = "Estado"
 Eventos.COMBATE_ANULADO = "CombateAnulado"
+Eventos.VITORIA = "Vitoria"
 Eventos.TREMOR = "Tremor"
 Eventos.CAMERA = "Camera"
 Eventos.FLASH = "Flash"
@@ -49,6 +50,14 @@ Eventos.VESTIARIO_SALVAR = "VestiarioSalvar"
 	COMBATE_ANULADO (servidor → cliente)
 	  { somaSubida, somaDescida, participantes }
 	  Líquido zero: ninguém anda. Sem isto na tela, empate parece travamento.
+
+	VITORIA (servidor → cliente)
+	  { plataforma, totalPlataformas, reiniciou }
+	  R6: chegou ao topo. `reiniciou` verdadeiro é o outro lado do mesmo
+	  evento — a corrida voltou ao pé da torre por ordem do painel — e existe
+	  para o HUD tirar o aviso da tela pelo mesmo caminho que o pôs, em vez de
+	  adivinhar por tempo. O jogo NÃO reinicia sozinho: quem decide é o
+	  streamer, e a ordem chega pelo long-poll (ADR-013).
 
 	TREMOR (servidor → cliente)
 	  { intensidade, duracao }
@@ -105,7 +114,7 @@ end
 --[[ Cria todos de uma vez. O servidor chama antes de qualquer cliente entrar. ]]
 function Eventos.criarTodos()
 	local nomes = {
-		Eventos.PRESENTE, Eventos.ESTADO, Eventos.COMBATE_ANULADO,
+		Eventos.PRESENTE, Eventos.ESTADO, Eventos.COMBATE_ANULADO, Eventos.VITORIA,
 		Eventos.TREMOR, Eventos.CAMERA, Eventos.FLASH,
 		Eventos.VESTIARIO_BUSCAR, Eventos.VESTIARIO_EQUIPAR, Eventos.VESTIARIO_SALVAR,
 	}

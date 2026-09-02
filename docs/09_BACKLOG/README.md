@@ -122,6 +122,55 @@ Construído por 6 agentes em paralelo, em duas levas. Relatório da síntese em
 - [ ] **Teste de componente renderizado.** Exigiria vitest e testing-library, e
       instalar dependência é decisão de arquitetura que não foi tomada.
 
+## Bloco 3b — Pontas soltas do painel — **concluído**
+O painel do Bloco 3 ficou completo como tela e incompleto como produto: a ponte
+entregava dado que ele ignorava, e três regras de negócio não tinham nenhum
+controle correspondente. Isto fecha os dois lados.
+
+- [x] **Resumo pós-live (F5.5).** O `stop` já devolvia o resumo agregado e o
+      painel jogava a resposta fora. Vira o `ResumoDaLive`, que serve também ao
+      histórico
+- [x] **Histórico de sessões.** A ponte gravava um arquivo por live desde o
+      Bloco 1 e ninguém nunca leu. Página nova, `GET /api/sessoes`
+- [x] **Prontidão de mapa salvo (ADR-004).** Só a geração respondia, e só para
+      o mapa recém-nascido: escolher um mapa da lista deixava a prévia dizendo
+      "ainda não avaliada", que desenha igual a "pode ir ao ar"
+- [x] **Tela do acervo (ADR-004).** A tarefa manual que bloqueia toda a live
+      era editar `data/acervo.json` na mão, com o schema recusando o arquivo
+      inteiro quando um assetId caía no item errado
+- [x] **Criar, duplicar e apagar preset.** Em máquina limpa `data/presets/`
+      está vazio e não havia saída pela tela — era `npm run semear` ou escrever
+      o JSON à mão
+- [x] **Trocar preset ao vivo (R7).** A regra permite desde sempre; o painel
+      era o único lugar que proibia
+- [x] **Vitória e reinício (R6).** Não existia em processo nenhum. Jogo detecta
+      por colisão, HUD mostra o selo "TOPO", painel decide, e a ordem volta
+      pelo long-poll (ADR-013)
+- [x] **Coletar catálogo pelo painel.** `api.atualizarCatalogo()` existia e
+      nenhum componente chamava: o aviso da semente apontava o problema e não
+      oferecia a saída
+- [x] **Intensidade no testador de animação.** A ponte já aceitava o parâmetro;
+      o painel só sabia testar no nível 3
+- [x] **Vincular presente não mapeado a um slot.** O contador dizia o que
+      estava sendo deixado na mesa e não deixava agir
+- [x] **Bug de contrato:** `POST /jogo/estado` era descartado por INTEIRO desde
+      o Bloco 2 — `montarEstado` publica `totalPlataformas` e `sessaoAtiva`, e
+      o schema é `additionalProperties: false` sem os dois. A rota respondia
+      204 como se estivesse tudo bem e o painel ficava com a plataforma em "—"
+      para sempre. Hoje um teste compara a fonte do jogo com o schema
+
+### Aberto pelo Bloco 3b
+- [ ] **Nada disto rodou no Studio nem no navegador.** A vitória e o reinício
+      são os que mais pedem: o teste prova que a ordem sai da ponte e que o
+      Luau compila, não que o boneco volta ao pé da torre.
+- [ ] **Trocar preset ao vivo grava só o ÚLTIMO preset no resumo.** O arquivo
+      de sessão guarda um `presetId` e o schema não tem lugar para uma lista. A
+      troca fica na linha `preset_trocado_ao_vivo` do log. Se isso incomodar em
+      live de verdade, é mudança de contrato.
+- [ ] **O painel não sobe imagem para o Roblox**, e não vai subir: upload de
+      asset gerado por IA está adiado no ADR-004. A tela do acervo anota o
+      resultado da moderação, não a substitui.
+
 ## Bloco 4 — Validação
 - [ ] Medir latência ponta a ponta e registrar em `memory/learnings.md`
 - [ ] Live de teste de 30 minutos sem intervenção

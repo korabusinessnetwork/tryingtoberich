@@ -271,7 +271,7 @@ function TendenciaDeLatencia({ amostras }) {
   );
 }
 
-export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado }) {
+export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincular }) {
   const lista = eventos ?? [];
   const perdidos = naoMapeados ?? [];
   const chaveMaisRecente = lista[0]?.chave ?? null;
@@ -377,6 +377,22 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado }) {
                     <span className="monitor-perdido-faixa">{NOME_DA_FAIXA[faixa]}</span>
                     <span className="monitor-perdido-nome">{item.presenteNome}</span>
                     <span className="monitor-perdido-contagem">×{emPtBr(numero(item.contagem))}</span>
+                    {/* O contador era só um lamento: mostrava o que está sendo
+                        deixado na mesa e não deixava fazer nada a respeito. Com
+                        o presenteId em mãos, vincular a um slot vazio é um
+                        clique, e o PRÓXIMO presente igual já conta. Some quando
+                        o evento não trouxe id (fixture antiga, presente sem id
+                        na TikTok): botão que não pode funcionar não aparece. */}
+                    {aoVincular && item.presenteId && (
+                      <button
+                        type="button"
+                        className="monitor-perdido-vincular"
+                        onClick={() => aoVincular(item)}
+                        title={`Põe "${item.presenteNome}" no primeiro slot livre`}
+                      >
+                        vincular
+                      </button>
+                    )}
                   </li>
                 );
               })}

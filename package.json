@@ -15,6 +15,7 @@
     "ponte": "node --env-file=.env bridge/src/index.mjs",
     "semear": "node scripts/semear-dev.mjs",
     "luau": "node scripts/verificar-luau.mjs",
+    "gemini": "node scripts/verificar-gemini.mjs",
     "painel": "npm run dev --workspace @kora/painel",
     "build:painel": "npm run build --workspace @kora/painel",
     "painel:gate": "node scripts/verificar-painel.mjs"

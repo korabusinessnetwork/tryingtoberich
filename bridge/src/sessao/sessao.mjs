@@ -68,6 +68,18 @@ export class Sessao {
     return evento;
   }
 
+  /**
+   * R7 — o preset mudou no meio da live.
+   *
+   * O arquivo guarda UM `presetId`, então ele passa a ser o que estava em
+   * vigor no fim. É o menos errado dos dois: o resumo é lido depois da live,
+   * e "com que preset ela terminou" é a pergunta que se faz olhando o
+   * resultado. A troca em si fica na linha `preset_trocado_ao_vivo` do log.
+   */
+  trocarPreset(presetId) {
+    this.#sessao.presetId = presetId;
+  }
+
   /** F2.4 — o que o streamer está deixando na mesa. Só contagem, sem doador. */
   registrarNaoMapeado({ presenteNome, moedas, contagem }) {
     const existente = this.#sessao.naoMapeados.find((n) => n.presenteNome === presenteNome);

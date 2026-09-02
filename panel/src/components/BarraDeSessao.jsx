@@ -62,6 +62,7 @@ export function BarraDeSessao({
   presetId,
   cenarios,
   iniciando,
+  trocandoPreset,
   aoIniciar,
   aoParar,
   aoTrocarPreset,
@@ -74,6 +75,11 @@ export function BarraDeSessao({
   // (`sessao`) para não piscar "parada" por engano na abertura do painel.
   const sessaoRodando = estado ? estado.sessao === "rodando" : Boolean(sessao && !sessao.encerradaEm);
   const bloqueadoParaEditar = sessaoRodando || Boolean(iniciando);
+  // R7 é explícito: "trocar de preset no meio da sessão é permitido e vale a
+  // partir do próximo evento". O seletor de preset era o único controle desta
+  // barra travado sem regra que mandasse travar — o que ele NÃO pode é aceitar
+  // troca durante o start, que é quando a ponte ainda está conectando na live.
+  const bloqueadoParaTrocarPreset = Boolean(iniciando) || Boolean(trocandoPreset);
 
   const [cenarioEscolhido, definirCenarioEscolhido] = useState("");
   const [confirmandoParar, definirConfirmandoParar] = useState(false);
@@ -163,11 +169,18 @@ export function BarraDeSessao({
 
       <div className="barra-sessao-controles">
         <label className="barra-sessao-campo">
-          <span className="secundario">Preset</span>
+          <span className="secundario">
+            Preset
+            {sessaoRodando && (
+              <span className="barra-sessao-nota-inline">
+                {trocandoPreset ? " · trocando…" : " · vale do próximo presente em diante"}
+              </span>
+            )}
+          </span>
           <select
             value={presetId ?? ""}
             onChange={(evento) => aoTrocarPreset(evento.target.value)}
-            disabled={bloqueadoParaEditar || listaDePresets.length === 0}
+            disabled={bloqueadoParaTrocarPreset || listaDePresets.length === 0}
           >
             {listaDePresets.length === 0 && <option value="">Nenhum preset salvo</option>}
             {listaDePresets.length > 0 && !presetId && <option value="">Escolha um preset</option>}

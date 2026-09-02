@@ -45,6 +45,10 @@ async function principal() {
     return;
   }
 
+  // ANTES de abrir as portas: o Roblox pede o mapa na entrada, e uma ponte que
+  // aceita conexão sem preset ativo serve 404 para quem chegar primeiro.
+  await nucleo.restaurar();
+
   const servidorDoJogo = await escutar(criarAppDoJogo(nucleo, { token: config.token }), config.portaJogo, config.host);
   const servidorDoPainel = await escutar(criarAppDoPainel(nucleo), config.portaPainel, config.host);
 

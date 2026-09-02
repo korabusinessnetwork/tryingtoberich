@@ -169,3 +169,18 @@
   color: var(--estado-ok);
   flex-shrink: 0;
 }
+
+/* O aviso da semente virou bloco com ação: texto à esquerda, saída à direita.
+   Aviso sem saída é só má notícia. */
+.seletor-presente-semente-texto {
+  margin: 0;
+}
+
+.seletor-presente-atualizar {
+  flex-shrink: 0;
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--painel-fundo);
+}

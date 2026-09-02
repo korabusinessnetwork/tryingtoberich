@@ -417,3 +417,131 @@ test("o que o jogo valida como evento é o que a ponte promete mandar", async ()
   };
   assert.deepEqual(validar("evento-jogo", doContrato), [], "e o schema tem que aceitar exatamente esses campos");
 });
+
+test("o estado que o jogo PUBLICA é o estado que o schema aceita", async () => {
+  // O irmão do teste acima, no sentido contrário — e este nasceu de um bug
+  // real: `montarEstado` mandava `totalPlataformas` e `sessaoAtiva`, o
+  // estado-jogo.schema.json é `additionalProperties: false` e não tinha os
+  // dois. Resultado: TODO POST /jogo/estado era recusado na validação, a rota
+  // respondia 204 como se estivesse tudo bem, e o painel ficava com a
+  // plataforma em "—" para sempre. Silencioso dos dois lados.
+  //
+  // Por isso a checagem parte da FONTE do jogo, e não de um objeto escrito à
+  // mão aqui: um campo novo em `montarEstado` que ninguém puser no schema
+  // quebra este teste no mesmo commit.
+  const fonte = await lerJogo("server", "sessao.lua");
+  const bloco = fonte.slice(fonte.indexOf("local function montarEstado()"));
+  const corpo = bloco.slice(0, bloco.search(/^end$/m));
+
+  // Duas tabulações: são os campos da tabela devolvida, e não as locais da
+  // função nem o `return`.
+  const publicados = [...corpo.matchAll(/^\t\t([a-zA-Z][a-zA-Z0-9]*)\s*=/gm)].map((m) => m[1]);
+  assert.ok(publicados.includes("plataformaReferencia"), "não consegui ler montarEstado()");
+
+  const schema = JSON.parse(await readFile(path.join(RAIZ, "data", "schemas", "estado-jogo.schema.json"), "utf8"));
+  const aceitos = new Set(Object.keys(schema.properties));
+
+  const recusados = publicados.filter((campo) => !aceitos.has(campo));
+  assert.deepEqual(
+    recusados,
+    [],
+    "campo que o jogo publica e o schema não conhece derruba o payload INTEIRO, sem erro visível",
+  );
+
+  // E o payload completo passa de verdade, não só campo a campo.
+  const { validar } = await criarValidador();
+  assert.deepEqual(
+    validar("estado-jogo", {
+      plataformaReferencia: 12, plataformaMaxima: 40, quedasNaturais: 3,
+      emAnimacao: false, totalPlataformas: 40, sessaoAtiva: true, vitoria: false,
+    }),
+    [],
+  );
+});
+
+test("a checagem de estado publicado morde de verdade", () => {
+  // Guarda que nunca acusa passa sempre, e este projeto já foi mordido três
+  // vezes por isso (o gate do painel, o teste de RemoteEvent, e o próprio bug
+  // que o teste acima existe para pegar). Aqui a MESMA leitura roda contra uma
+  // fonte de mentira com um campo que o schema não conhece.
+  const fonteFalsa = [
+    "local function montarEstado()",
+    "\tlocal total = 0",
+    "\treturn {",
+    "\t\tplataformaReferencia = 1,",
+    "\t\tinventado = true,",
+    "\t}",
+    "end",
+  ].join("\n");
+
+  const bloco = fonteFalsa.slice(fonteFalsa.indexOf("local function montarEstado()"));
+  const corpo = bloco.slice(0, bloco.search(/^end$/m));
+  const publicados = [...corpo.matchAll(/^\t\t([a-zA-Z][a-zA-Z0-9]*)\s*=/gm)].map((m) => m[1]);
+
+  assert.deepEqual(publicados, ["plataformaReferencia", "inventado"]);
+  assert.deepEqual(
+    publicados.filter((campo) => !new Set(["plataformaReferencia"]).has(campo)),
+    ["inventado"],
+  );
+});
+
+test("R6 — a vitória sai de ENCOSTAR no topo, e o jogo não reinicia sozinho", async () => {
+  const fonte = await lerJogo("server", "sessao.lua");
+
+  // A referência é a última plataforma que o boneco ENCOSTOU (R9.2). Ler
+  // altura aqui entregaria a vitória a quem passou voando por cima no pulo.
+  assert.match(fonte, /vitoria = total > 0 and Plataformas\.referencia\(\) >= total/);
+
+  // R6 é explícito: chegar ao topo não reinicia sozinho, o streamer decide no
+  // painel. Um `reiniciarCorrida` disparado pela própria detecção de vitória
+  // seria a regra invertida — e é um erro fácil de cometer depois.
+  const detecta = fonte.indexOf("vitoria = total > 0");
+  const trecho = fonte.slice(detecta, detecta + 400);
+  assert.doesNotMatch(trecho, /reiniciarCorrida/, "a vitória não pode chamar o reinício: quem decide é o painel");
+
+  // Quem chama o reinício é o comando que veio da ponte, e mais ninguém.
+  assert.match(fonte, /aoComando = function\(tipo\)/);
+  assert.match(fonte, /Plataformas\.reiniciarCorrida/);
+});
+
+/* -------------------------------------------------------------- */
+/* Aplicação do acervo: textura e céu (ADR-004)                    */
+/* -------------------------------------------------------------- */
+
+test("a textura é uma INSTÂNCIA Texture, não uma propriedade de Part", async () => {
+  // `Part` não tem propriedade `Texture` no Roblox. Escrever `parte.Texture =`
+  // não dá erro de sintaxe e não aplica nada: a plataforma fica lisa e não há
+  // o que depurar. O comentário deste módulo chegou a descrever essa API que
+  // não existe, e é por isso que a checagem virou teste.
+  const fonte = await lerJogo("server", "construtorMapa.lua");
+
+  assert.match(fonte, /Instance\.new\("Texture"\)/);
+  assert.doesNotMatch(fonte, /parte\.Texture\s*=/, "Part não tem .Texture; use uma Texture filha");
+  assert.match(fonte, /StudsPerTileU/, "sem StudsPerTile a imagem estica em vez de ladrilhar");
+});
+
+test("o céu preenche as SEIS faces: um Sky com faces vazias não aparece", async () => {
+  const fonte = await lerJogo("server", "construtorMapa.lua");
+
+  for (const face of ["SkyboxUp", "SkyboxDn", "SkyboxLf", "SkyboxRt", "SkyboxFt", "SkyboxBk"]) {
+    assert.ok(fonte.includes(`ceu.${face} = url`), `falta a face ${face}`);
+  }
+});
+
+test("limpar() também tira o céu, que vive fora da pasta da torre", async () => {
+  // O Sky fica em Lighting, então Destroy() na pasta da torre não o alcança.
+  // Sem isto, o céu do mapa anterior fica sobre a torre nova.
+  const fonte = await lerJogo("server", "construtorMapa.lua");
+  const limpar = fonte.slice(fonte.indexOf("function ConstrutorMapa.limpar"));
+
+  assert.match(limpar.slice(0, 600), /Lighting:FindFirstChild\(ConstrutorMapa\.CEU\)/);
+});
+
+test("o assetId vira string com %d, nunca com tostring", async () => {
+  // tostring num id grande sai em notação científica e
+  // "rbxassetid://1.8294e+10" não carrega nada, sem erro nenhum.
+  const fonte = await lerJogo("server", "construtorMapa.lua");
+  const url = fonte.slice(fonte.indexOf("local function urlDeAsset"));
+
+  assert.match(url.slice(0, 400), /string\.format\("%d"/);
+});

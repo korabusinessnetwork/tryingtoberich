@@ -23,6 +23,31 @@ export async function carregarSessao(sessaoId) {
   return lerJsonOuPadrao(arquivo(sessaoId));
 }
 
+/**
+ * O histórico que o painel lista, da mais recente para a mais antiga.
+ *
+ * Devolve o arquivo SEM o array `eventos`. Não é economia de banda: sessão
+ * encerrada já teve o detalhe descartado (F5), mas a que a ponte persistiu em
+ * segundo plano e nunca foi encerrada — queda do Node no meio da live — ainda
+ * tem o detalhe por evento em disco. Ele não serve para nada numa lista de
+ * histórico, e o que não sai daqui não aparece em tela nenhuma.
+ *
+ * `sessaoId` é a data ISO com os dois-pontos trocados, então ordenar por nome
+ * é ordenar por tempo, sem parsear nada.
+ */
+export async function listarResumos() {
+  const nomes = (await listarSessoes()).sort().reverse();
+  const arquivos = await Promise.all(nomes.map((nome) => lerJsonOuPadrao(caminhoDeDados("sessoes", nome))));
+
+  return arquivos.filter(Boolean).map(({ eventos, ...resto }) => ({
+    ...resto,
+    // Interrompida: existe em disco, nunca foi encerrada. O painel precisa
+    // distinguir isso de uma live que terminou no Stop.
+    interrompida: !resto.encerradaEm,
+    eventosRegistrados: (eventos ?? []).length,
+  }));
+}
+
 export async function salvarSessao(sessao) {
   const { validar } = await criarValidador();
   const problemas = validar("sessao", sessao);

@@ -121,3 +121,10 @@
     margin-left: 0;
   }
 }
+
+/* R7 — a troca de preset ao vivo diz o que ela faz na hora em que ela vira
+   possível. Sem isto, o seletor destravar no meio da live pareceria bug. */
+.barra-sessao-nota-inline {
+  font-size: 11px;
+  color: var(--estado-atencao);
+}

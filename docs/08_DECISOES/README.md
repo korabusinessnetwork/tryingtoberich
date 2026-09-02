@@ -17,3 +17,4 @@ no código. Use `adr-000-template.md` para criar a próxima.
 | [010](./adr-010-personagem-personalizado.md) | Personagem por composição gratuita | Aceito |
 | [011](./adr-011-vestiario-hibrido.md) | Vestiário híbrido: monta no jogo, escolhe no painel | Aceito |
 | [012](./adr-012-combate-de-presentes.md) | Combate de presentes: a plateia briga entre si | Aceito |
+| [013](./adr-013-comando-pelo-long-poll.md) | Ordem do painel para o jogo pelo mesmo long-poll | Aceito |

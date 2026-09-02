@@ -13,6 +13,7 @@
 
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
 
 local Compartilhado = ReplicatedStorage:WaitForChild("KoraCompartilhado")
 local Tipos = require(Compartilhado.tipos)
@@ -50,24 +51,30 @@ local FOLGA_DE_SPAWN = 3.5
 local COR_FALLBACK = Color3.fromRGB(150, 150, 150)
 
 --[[
-	PONTO DE INTEGRAÇÃO DO ACERVO (ADR-004) — hoje pulado de propósito:
+	INTEGRAÇÃO DO ACERVO (ADR-004).
 
-	`skyboxAssetId` e `plataformas.materialAssetId` são ids do ACERVO
-	(data/acervo.json), não assetId do Roblox. Em 2026-09 o acervo inteiro
-	está "pendente-upload" (nenhum item tem assetId nem passou por moderação),
-	então não existe textura nem imagem de skybox para aplicar — só o id.
+	`skyboxAssetId` e `plataformas.materialAssetId` no spec são ids do ACERVO
+	(`textura_rocha_vulcanica`), não assetId do Roblox. Quem traduz é a PONTE, em
+	Nucleo.mapaAtivo, e o resultado chega em `mapa.acervoResolvido`:
 
-	Quando um item for aprovado (status "aprovado", assetId preenchido):
-	  - materialAssetId -> parte.Texture = "rbxassetid://" .. assetIdAprovado
-	    (ou SurfaceAppearance, se o acervo migrar para PBR)
-	  - skyboxAssetId   -> um Sky em Lighting montado com o assetId aprovado
+	  { skybox = <número> ou nil, textura = <número> ou nil }
 
-	Até lá, `materialNativo` abaixo escolhe um Enum.Material nativo a partir
-	de palavras-chave do PRÓPRIO id do acervo (ex.: "textura_rocha_vulcanica"
-	-> Slate), só para não deixar todo mapa com o Plastic cinza padrão. Isso é
-	só aproximação visual; não é o Bloco 2 lendo o acervo, que continua sem
-	acontecer. `skyboxAssetId` não tem fallback nenhum: nenhuma propriedade de
-	Lighting é tocada por este módulo.
+	nil quer dizer "ainda não aprovado pela moderação do Roblox". Nesse caso vale
+	o que sempre valeu: `materialNativo` escolhe um Enum.Material pelas palavras
+	do próprio id do acervo, e nenhum céu é montado. Aprovar um item no acervo é
+	a única coisa que liga a textura e o céu de verdade — sem mudar o mapa.
+
+	Duas armadilhas do Roblox que moram aqui:
+
+	1. `Part` NÃO tem propriedade `Texture`. Imagem em Part é uma INSTÂNCIA
+	   `Texture` filha, com Face e StudsPerTile. `Decal` também existe, mas
+	   estica em vez de ladrilhar, e a torre tem centenas de discos de tamanhos
+	   diferentes: esticar deformaria a imagem em cada um.
+
+	2. Um `Sky` do Roblox pede SEIS imagens, uma por face do cubo. O acervo
+	   guarda UM assetId por skybox (acervo.schema.json), então a mesma imagem
+	   vai nas seis. Fica repetitivo: é limitação conhecida do modelo de dados,
+	   não defeito de implementação.
 ]]
 local MATERIAL_POR_PALAVRA_CHAVE = {
 	{ palavra = "rocha", material = Enum.Material.Slate },
@@ -77,6 +84,25 @@ local MATERIAL_POR_PALAVRA_CHAVE = {
 	{ palavra = "pedra", material = Enum.Material.Rock },
 	{ palavra = "areia", material = Enum.Material.Sand },
 }
+
+-- Quantos studs cada repetição da textura cobre. Valor fixo: com StudsPerTile
+-- a imagem ladrilha no MESMO tamanho aparente em disco pequeno e grande, que é
+-- o que mantém a torre coerente enquanto o raio varia plataforma a plataforma.
+local STUDS_POR_LADRILHO = 8
+
+-- Nome do Sky que este módulo cria. Público pelo mesmo motivo de PASTA: dá para
+-- achar e limpar sem guardar referência.
+ConstrutorMapa.CEU = "KoraCeu"
+
+--[[ Vira "rbxassetid://N", ou nil se não houver id aprovado. `%d` de propósito:
+	tostring num número grande do Lua sai em notação científica, e
+	"rbxassetid://1.8294e+10" não carrega nada — falha muda, sem erro. ]]
+local function urlDeAsset(assetId)
+	if type(assetId) ~= "number" or assetId <= 0 then
+		return nil
+	end
+	return "rbxassetid://" .. string.format("%d", assetId)
+end
 
 local function materialNativo(materialAssetId)
 	if type(materialAssetId) == "string" then
@@ -223,7 +249,51 @@ local function validarCamposEssenciais(mapa)
 	return nil
 end
 
-local function construirPlataforma(indice, mapa, rng, pasta)
+--[[ A imagem do acervo na face de CIMA da plataforma.
+
+	Só a face de cima: é a única que o jogador vê num disco visto de perto, e
+	seis Texture por plataforma seriam 1500 instâncias a mais numa torre de 250 —
+	para mostrar cinco faces que a câmera de escalada nunca enquadra. ]]
+local function aplicarTextura(parte, url)
+	if not url then
+		return
+	end
+
+	local textura = Instance.new("Texture")
+	textura.Texture = url
+	textura.Face = Enum.NormalId.Top
+	textura.StudsPerTileU = STUDS_POR_LADRILHO
+	textura.StudsPerTileV = STUDS_POR_LADRILHO
+	textura.Parent = parte
+end
+
+--[[ Monta o céu em Lighting, ou tira o que estiver lá.
+
+	Sempre destrói antes: sem isso, trocar de mapa empilharia um Sky por troca em
+	Lighting, e o último a entrar venceria por acidente de ordem. ]]
+local function aplicarCeu(url)
+	local existente = Lighting:FindFirstChild(ConstrutorMapa.CEU)
+	if existente then
+		existente:Destroy()
+	end
+
+	if not url then
+		return
+	end
+
+	local ceu = Instance.new("Sky")
+	ceu.Name = ConstrutorMapa.CEU
+	-- A MESMA imagem nas seis faces. Ver a nota 2 do cabeçalho.
+	ceu.SkyboxUp = url
+	ceu.SkyboxDn = url
+	ceu.SkyboxLf = url
+	ceu.SkyboxRt = url
+	ceu.SkyboxFt = url
+	ceu.SkyboxBk = url
+	ceu.Parent = Lighting
+end
+
+local function construirPlataforma(indice, mapa, rng, pasta, urlDaTextura)
 	local p = mapa.plataformas
 	local y = (indice - 1) * p.espacamentoVertical
 
@@ -255,6 +325,7 @@ local function construirPlataforma(indice, mapa, rng, pasta)
 	-- Combinado com o módulo de rastreio de outro agente: índice como
 	-- atributo, não como IntValue filho.
 	parte:SetAttribute("KoraIndice", indice)
+	aplicarTextura(parte, urlDaTextura)
 	parte.Parent = pasta
 
 	return { indice = indice, parte = parte, posicao = posicao }
@@ -322,19 +393,25 @@ local function construirTudo(mapa)
 
 	local rng = Random.new(sementeDeString(mapa.mapaId))
 	local total = mapa.totalPlataformas
+
+	-- Resolvido UMA vez, não por plataforma: são 250 iterações, e o assetId é o
+	-- mesmo em todas. `or {}` porque uma ponte antiga não manda o campo.
+	local resolvido = mapa.acervoResolvido or {}
+	local urlDaTextura = urlDeAsset(resolvido.textura)
 	local plataformas = {}
 	local plataformasPorIndice = {}
 
 	-- Loop único, síncrono, sem wait(): 250+ Instance.new de uma vez é
 	-- trabalho de servidor no carregamento do mapa, nunca por frame.
 	for indice = 1, total do
-		local registro = construirPlataforma(indice, mapa, rng, pasta)
+		local registro = construirPlataforma(indice, mapa, rng, pasta, urlDaTextura)
 		plataformas[indice] = registro
 		plataformasPorIndice[indice] = registro.parte
 	end
 
 	aplicarMarcos(mapa, plataformasPorIndice)
 	aplicarProps(mapa, plataformasPorIndice, total)
+	aplicarCeu(urlDeAsset(resolvido.skybox))
 
 	pasta.Parent = Workspace
 
@@ -361,6 +438,14 @@ function ConstrutorMapa.limpar()
 	local existente = Workspace:FindFirstChild(ConstrutorMapa.PASTA)
 	if existente then
 		existente:Destroy()
+	end
+
+	-- O céu vive em Lighting, fora da pasta da torre, então Destroy() na pasta
+	-- não o alcança. Sem esta parte, o céu do mapa anterior ficaria sobre a
+	-- torre nova — e sobre a torre NENHUMA, depois de uma sessão encerrada.
+	local ceu = Lighting:FindFirstChild(ConstrutorMapa.CEU)
+	if ceu then
+		ceu:Destroy()
 	end
 end
 

@@ -24,17 +24,67 @@ Vestiario.iniciar({
 	end,
 })
 
-local ok, erro = Sessao.iniciar()
+--[[
+	Subir a sessão é uma TENTATIVA, não um evento único.
 
-if not ok then
-	warn("[Kora] a sessão não subiu.")
-	warn(tostring(erro))
-	warn("Confira o passo a passo em game/README.md, seção 'Antes da primeira partida'.")
-	warn("O vestiário continua disponível: dá para montar o look enquanto isso.")
-	return
+	O Studio abre o lugar antes de o Rojo terminar de sincronizar, e a ponte pode
+	subir depois do Studio. Nos dois casos a primeira tentativa falha por motivo
+	que some sozinho segundos depois — e desistir de vez deixava o streamer num
+	mundo vazio, tendo que parar e dar Play de novo sem saber por quê.
+
+	Duas coisas acordam a retentativa, e as duas importam:
+	  - ChildAdded em ServerStorage: é o instante EXATO em que o Rojo entrega a
+	    KoraConfig. Reagir a ele faz o mapa aparecer no segundo do Connect.
+	  - o relógio: cobre o que não é filho de ServerStorage — ponte fora do ar,
+	    preset sem mapa — que nenhum evento do Studio sinaliza.
+]]
+local ServerStorage = game:GetService("ServerStorage")
+
+local ESPERA_ENTRE_TENTATIVAS = 3
+local subiu = false
+
+local function tentar(motivo)
+	if subiu then
+		return
+	end
+
+	local ok, erro = Sessao.iniciar()
+	if ok then
+		subiu = true
+		print("[Kora] sessão no ar (" .. motivo .. "). O jogo já está em long-poll com a ponte.")
+		return
+	end
+
+	return erro
 end
 
-print("[Kora] sessão no ar. O jogo já está em long-poll com a ponte.")
+local primeiroErro = tentar("primeira tentativa")
+
+if not subiu then
+	warn("[Kora] a sessão não subiu ainda. Vou continuar tentando.")
+	warn(tostring(primeiroErro))
+	warn("Se faltar a KoraConfig, ela chega sozinha quando o Rojo sincronizar.")
+	warn("O vestiário já está disponível: dá para montar o look enquanto isso.")
+
+	-- O Rojo entregando a config dispara isto na hora.
+	ServerStorage.ChildAdded:Connect(function()
+		tentar("Rojo sincronizou")
+	end)
+
+	task.spawn(function()
+		local ultimoAviso = nil
+		while not subiu do
+			task.wait(ESPERA_ENTRE_TENTATIVAS)
+			local erro = tentar("na retentativa")
+			-- Só avisa quando o MOTIVO muda: repetir a mesma linha a cada 3s
+			-- enterraria o Output e escondia justamente a linha que mudou.
+			if erro and erro ~= ultimoAviso then
+				warn("[Kora] ainda não: " .. tostring(erro))
+				ultimoAviso = erro
+			end
+		end
+	end)
+end
 
 game:BindToClose(function()
 	-- Fecha o long-poll e destrava o vestiário antes do lugar morrer.

@@ -18,11 +18,23 @@ const { validar } = await criarValidador();
 const acervoReal = await carregarAcervo();
 const mapaBom = await carregarExemplo("mapa-torre-vulcanica-01");
 
-/** O acervo versionado está todo pendente-upload; para testar geração, finge aprovado. */
+/**
+ * Os dois extremos, montados a partir do acervo versionado.
+ *
+ * FORÇADOS nos dois sentidos de propósito. Ler o estado real dava teste que
+ * passava só enquanto ninguém aprovasse nada — e quebrou no dia em que o
+ * streamer aprovou a primeira textura, sem nada de errado no código.
+ */
 const acervoAprovado = {
   ...acervoReal,
   skybox: acervoReal.skybox.map((i) => ({ ...i, status: "aprovado", assetId: 100000001 })),
   texturas: acervoReal.texturas.map((i) => ({ ...i, status: "aprovado", assetId: 100000002 })),
+};
+
+const acervoPendente = {
+  ...acervoReal,
+  skybox: acervoReal.skybox.map((i) => ({ ...i, status: "pendente-upload", assetId: null })),
+  texturas: acervoReal.texturas.map((i) => ({ ...i, status: "pendente-upload", assetId: null })),
 };
 
 const respondendo = (...textos) => {
@@ -120,7 +132,7 @@ test("acervo sem nada aprovado bloqueia a geração antes de gastar chamada", as
   const cliente = new ClienteGemini({ chave: "chave-de-teste", chamar });
 
   await assert.rejects(
-    () => cliente.gerarMapa("torre vulcânica", acervoReal),
+    () => cliente.gerarMapa("torre vulcânica", acervoPendente),
     (erro) => {
       assert.equal(erro.codigo, "acervo_vazio");
       return true;

@@ -112,7 +112,12 @@ export class Despachante {
 
     if (!disparo) {
       const chave = evento.presenteNome ?? evento.presenteId;
-      const anterior = this.#naoMapeados.get(chave) ?? { moedas: evento.moedas ?? 0, contagem: 0 };
+      // `presenteId` vai junto porque sem ele o contador do painel é só um
+      // lamento: com o id, o streamer vincula o presente a um slot em um
+      // clique, no meio da live, e o próximo já conta. Ele NÃO entra na chave
+      // — quem agrupa é o nome, que é o que aparece na tela.
+      const anterior = this.#naoMapeados.get(chave)
+        ?? { presenteId: evento.presenteId ?? null, moedas: evento.moedas ?? 0, contagem: 0 };
       const atualizado = { ...anterior, contagem: anterior.contagem + 1 };
       this.#naoMapeados.set(chave, atualizado);
       this.aoNaoMapeado({ presenteNome: chave, ...atualizado });
@@ -160,6 +165,23 @@ export class Despachante {
 
     this.aoDespachar(despachado);
     return despachado;
+  }
+
+  /**
+   * Ordem do streamer para o jogo (ADR-013). Não é presente, não casa com slot
+   * e não move o boneco por delta.
+   *
+   * Mora aqui pelo mesmo motivo que `testarAnimacao`: o `#cursor` é deste
+   * módulo, e id emitido por fora colidiria com o do caminho normal — o
+   * `?desde=` do Roblox então reprocessaria ou pularia evento.
+   *
+   * Não mexe em `#ocupadoAte` nem em cooldown: reiniciar não ocupa o canal de
+   * animação, e o presente que chegar no instante seguinte continua saindo na
+   * hora.
+   */
+  emitirComando(tipo, agora = Date.now()) {
+    this.#cursor += 1;
+    return { id: this.#cursor, tipo, emitidoEm: agora, tipoDeEntrada: "comando" };
   }
 
   /**

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import "./TestadorDeAnimacao.css";
 
@@ -17,8 +17,16 @@ import "./TestadorDeAnimacao.css";
  *
  * O agrupamento por direção não é enfeite: subida e descida são as duas metades
  * da biblioteca, e ver as 10 de cada lado é o que revela buraco na cobertura.
+ *
+ * A intensidade fica em estado local, como o cenário de fixture da
+ * `BarraDeSessao`: é escolha de teste, não configuração persistida. Ela vale
+ * para o próximo clique e não muda nada no preset.
  */
 export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDisparada, aoDisparar }) {
+  // 3 é o mesmo padrão da ponte quando o painel não manda nada: começar no
+  // meio da escala mostra a animação como ela é, sem exagero nem timidez.
+  const [intensidade, definirIntensidade] = useState(3);
+
   const porDirecao = useMemo(() => {
     const lista = Array.isArray(animacoes) ? animacoes : [];
     return {
@@ -43,6 +51,29 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
         </span>
       </header>
 
+      {/* A intensidade multiplica escala, duração de partícula e densidade
+          (R2). Sem este seletor o painel só sabia testar no nível 3, e "como
+          fica a Fênix no 5?" era uma pergunta que exigia montar um preset,
+          iniciar sessão e mandar um presente de verdade. */}
+      <div className="animacoes-intensidade" role="group" aria-label="Intensidade do teste">
+        <span className="animacoes-grupo-titulo">Intensidade</span>
+        {[1, 2, 3, 4, 5].map((nivel) => (
+          <button
+            key={nivel}
+            type="button"
+            className={
+              nivel === intensidade
+                ? "animacoes-nivel animacoes-nivel-escolhido"
+                : "animacoes-nivel"
+            }
+            aria-pressed={nivel === intensidade}
+            onClick={() => definirIntensidade(nivel)}
+          >
+            {nivel}
+          </button>
+        ))}
+      </div>
+
       {!jogoOnline ? (
         <p className="animacoes-recado">
           O Roblox não está conectado na ponte. Abra o jogo e espere o long-poll
@@ -65,7 +96,7 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
                   ultimaDisparada === animacao.id ? "animacoes-botao animacoes-botao-ultimo" : "animacoes-botao"
                 }
                 disabled={disparando}
-                onClick={() => aoDisparar(animacao.id)}
+                onClick={() => aoDisparar(animacao.id, intensidade)}
                 title={`${animacao.id} — ${animacao.duracaoBase}s, peso visual ${animacao.pesoVisual}`}
               >
                 <span className="animacoes-nome">{animacao.nome}</span>

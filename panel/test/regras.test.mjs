@@ -19,6 +19,7 @@ import {
   faixaDeMoedas,
   formatarDelta,
   formatarLatencia,
+  idDePreset,
   medianaDeLatencia,
   presentesRepetidos,
   saudeDaLatencia,
@@ -302,4 +303,57 @@ test("sem amostra válida a latência é desconhecida, não zero", () => {
   assert.equal(medianaDeLatencia([]), null);
   assert.equal(medianaDeLatencia([undefined, null, NaN]), null);
   assert.equal(saudeDaLatencia(medianaDeLatencia([])), "desconhecida");
+});
+
+/* ------------------------------------------------------------------ */
+/* O nome digitado vira o id do arquivo                                */
+/* ------------------------------------------------------------------ */
+
+test("o nome vira um id que o schema aceita: sem espaço, sem acento, sem maiúscula", () => {
+  assert.equal(idDePreset("Escalada da Madrugada"), "escalada-da-madrugada");
+  assert.equal(idDePreset("Escalada padrão"), "escalada-padrao");
+  // A cedilha vira "c", não some: quem escreve "Ação" espera achar "acao".
+  assert.equal(idDePreset("  Ação!!  "), "acao");
+});
+
+test("todo id gerado passa no padrão do identificador de comuns.schema.json", () => {
+  // É o mesmo padrão que a ponte valida. Um id que não passa aqui vira um erro
+  // de JSON Schema na cara do streamer, e ele não tem o que fazer com isso.
+  const PADRAO = /^[a-z0-9][a-z0-9-]*$/;
+  const nomes = [
+    "Escalada", "TESTE 2", "live de 6ª", "a---b", "Ç", "Escalada #2",
+    "  espaços  em  volta  ", "acentuação é comum", "1 2 3",
+  ];
+
+  for (const nome of nomes) {
+    const id = idDePreset(nome);
+    assert.match(id, PADRAO, `"${nome}" gerou "${id}", que a ponte recusaria`);
+    assert.ok(id.length <= 64, "o identificador tem teto de 64 no schema");
+  }
+});
+
+test("nome sem nada aproveitável devolve vazio, e não um id inválido", () => {
+  // Vazio é a resposta honesta: quem chama trata como "ainda não dá para
+  // criar". Devolver "-" ou "preset" mandaria a ponte gravar um arquivo que o
+  // streamer não pediu.
+  assert.equal(idDePreset("🔥🔥"), "");
+  assert.equal(idDePreset("   "), "");
+  assert.equal(idDePreset("---"), "");
+  assert.equal(idDePreset(null), "");
+  assert.equal(idDePreset(undefined), "");
+});
+
+test("o corte em 64 não deixa traço na ponta", () => {
+  // O padrão exige começar em [a-z0-9] e o traço final é feio no nome do
+  // arquivo; cortar no meio de uma palavra pode deixar exatamente isso.
+  // 63 letras + " bbbb" passa de 64: o corte cai exatamente em cima do traço
+  // que o espaço virou, e o que sobra tem 63 — a limpeza acontece DEPOIS de
+  // cortar, de propósito.
+  const id = idDePreset(`${"a".repeat(63)} bbbb`);
+  assert.equal(id.length, 63);
+  assert.doesNotMatch(id, /-$/);
+  assert.match(id, /^[a-z0-9][a-z0-9-]*$/);
+
+  // E um nome longo que não cai no traço usa os 64 inteiros.
+  assert.equal(idDePreset("b".repeat(80)).length, 64);
 });

@@ -89,6 +89,8 @@ export const api = {
   listarPresets: () => chamar("/api/presets").then((r) => r.presets),
   carregarPreset: (presetId) => chamar(`/api/presets/${encodeURIComponent(presetId)}`),
   salvarPreset: (preset) => chamar(`/api/presets/${encodeURIComponent(preset.presetId)}`, json("PUT", preset)),
+  /** Criar é o mesmo PUT: o repositório grava o arquivo que ainda não existe. */
+  apagarPreset: (presetId) => chamar(`/api/presets/${encodeURIComponent(presetId)}`, { method: "DELETE" }),
 
   catalogo: () => chamar("/api/catalogo"),
   atualizarCatalogo: () => chamar("/api/catalogo/atualizar", { method: "POST" }),
@@ -100,9 +102,32 @@ export const api = {
   /** F4 — o painel manda o texto, a ponte fala com o Gemini. A chave nunca sai de lá. */
   gerarMapa: (descricao) => chamar("/api/mapas/gerar", json("POST", { descricao })),
 
+  /**
+   * ADR-004 — este mapa pode ir ao ar?
+   *
+   * Só a geração respondia isso, e só para o mapa recém-nascido. A prontidão
+   * depende do ACERVO, que muda quando a moderação do Roblox aprova: o mesmo
+   * mapa que não podia ontem pode hoje, sem ninguém ter tocado nele.
+   */
+  prontidaoDoMapa: (mapaId) => chamar(`/api/mapas/${encodeURIComponent(mapaId)}/prontidao`),
+
+  /** O acervo do ADR-004, e a anotação do que a moderação devolveu. */
+  acervo: () => chamar("/api/acervo"),
+  anotarAcervo: (colecao, id, campos) =>
+    chamar(`/api/acervo/${encodeURIComponent(colecao)}/${encodeURIComponent(id)}`, json("PUT", campos)),
+
   sessao: () => chamar("/api/sessao"),
   iniciarSessao: (presetId, cenario = null) => chamar("/api/sessao/start", json("POST", { presetId, cenario })),
   encerrarSessao: () => chamar("/api/sessao/stop", { method: "POST" }),
+
+  /** R7 — trocar de preset no meio da sessão vale a partir do próximo evento. */
+  trocarPresetAtivo: (presetId) => chamar("/api/sessao/preset", json("POST", { presetId })),
+
+  /** R6 — o topo não reinicia sozinho. Este é o botão que o streamer decide apertar. */
+  reiniciarCorrida: () => chamar("/api/sessao/reiniciar", { method: "POST" }),
+
+  /** F5 — as lives passadas, já reduzidas ao resumo. Nenhum dado de espectador sobrevive até aqui. */
+  sessoes: () => chamar("/api/sessoes").then((r) => r.sessoes),
 
   /** Cenários de fixture: é o que permite montar o painel sem estar ao vivo. */
   cenarios: () => chamar("/api/cenarios").then((r) => r.cenarios),
@@ -124,6 +149,11 @@ export const api = {
    */
   testarAnimacao: (animacaoId, intensidade) =>
     chamar("/api/teste/animacao", json("POST", { animacaoId, intensidade })),
+
+  /** A conta da live: em qual live a sessão vai rodar. `null` = não configurada. */
+  configuracao: () => chamar("/api/configuracao").then((r) => r.configuracao),
+
+  salvarConfiguracao: (usuarioTiktok) => chamar("/api/configuracao", json("PUT", { usuarioTiktok })),
 
   /** Sobe o `rojo serve` e abre o Roblox Studio nesta máquina. */
   abrirNoStudio: () => chamar("/api/jogo/abrir-studio", { method: "POST" }),

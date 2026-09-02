@@ -107,6 +107,34 @@ export function avisoDeDirecao({ animacao, delta }) {
   return null;
 }
 
+/**
+ * O nome que o streamer digita vira o id que o arquivo usa.
+ *
+ * O `identificador` de `comuns.schema.json` é `^[a-z0-9][a-z0-9-]*$`: sem
+ * espaço, sem acento, sem barra — porque ele vira nome de arquivo em disco
+ * (ADR-003). "Escalada da Madrugada" precisa virar "escalada-da-madrugada"
+ * ANTES de sair do painel, senão a ponte recusa o preset com um erro de
+ * schema que não diz o que fazer.
+ *
+ * Devolve string vazia quando não sobra nada aproveitável (nome só de
+ * emoji, só de pontuação): quem chama trata isso como "ainda não dá para
+ * criar", que é diferente de mandar um id inválido para a ponte.
+ */
+export function idDePreset(nome) {
+  return String(nome ?? "")
+    // Separa o acento da letra (NFD) e joga fora só a marca: "ç" vira "c",
+    // "ã" vira "a". Trocar por "-" perderia a letra inteira.
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    // Traço na ponta não passa no padrão (ele exige começar em [a-z0-9]) e é
+    // feio no nome do arquivo.
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64)
+    .replace(/-+$/g, "");
+}
+
 /** R1 — o preset tem 6 posições, e slot vazio é válido. Sempre devolve 6. */
 export const SLOTS = 6;
 

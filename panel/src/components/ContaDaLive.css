@@ -1,0 +1,55 @@
+/* Conta da live. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.conta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.conta-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.conta-linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A arroba é fixa e sempre visível: deixa claro que o campo NÃO a leva. */
+.conta-arroba {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--painel-texto-secundario);
+}
+
+.conta-campo {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  font-size: 13px;
+  background: var(--painel-fundo);
+}
+
+.conta-salvar {
+  min-height: var(--alvo-minimo);
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--painel-fundo);
+}
+
+.conta-recado {
+  margin: 0;
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}

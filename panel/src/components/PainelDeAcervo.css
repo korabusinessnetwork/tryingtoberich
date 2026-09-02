@@ -1,0 +1,141 @@
+/* Painel do acervo. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.acervo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.acervo-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.acervo-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.acervo-recado {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.acervo-recado code,
+.acervo-item-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.acervo-colecao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acervo-colecao-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--painel-texto-secundario);
+}
+
+.acervo-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acervo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.acervo-item-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.acervo-item-nome {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acervo-item-id {
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}
+
+.acervo-item-controles {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.acervo-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 100px;
+  font-size: 11px;
+}
+
+.acervo-campo input,
+.acervo-campo select {
+  width: 100%;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.acervo-salvar {
+  flex: 1 1 100%;
+  font-size: 12px;
+  font-weight: 600;
+  border-color: var(--estado-ok);
+  color: var(--estado-ok);
+}
+
+.acervo-props {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acervo-prop {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: 999px;
+  color: var(--painel-texto-secundario);
+}

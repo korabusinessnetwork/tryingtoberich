@@ -354,6 +354,55 @@ end
 
 local paineisEmpate = { criarPainelEmpate(true), criarPainelEmpate(false) }
 
+-- ===== selo de topo (R6) =====
+--
+-- Fica no alto e no centro, o unico elemento que ocupa o meio da tela. Isso
+-- contraria a regra "HUD nas laterais" de proposito e por um caso so: aqui a
+-- corrida ACABOU, nao ha mais presente chegando pra ler nem boneco subindo
+-- pra acompanhar, e o que o espectador precisa ver e que a torre foi vencida.
+--
+-- E o unico aviso do HUD sem tempo de tela: ele fica ate o streamer reiniciar
+-- no painel, porque e exatamente essa a regra do R6 — chegar no topo nao
+-- reinicia sozinho. Sumir depois de 4 segundos apagaria a unica pista de que
+-- o jogo esta esperando uma decisao.
+
+local painelVitoria = Instance.new("Frame")
+painelVitoria.Name = "PainelVitoria"
+painelVitoria.BackgroundTransparency = 1
+painelVitoria.AnchorPoint = Vector2.new(0.5, 0)
+painelVitoria.Position = UDim2.fromScale(0.5, 0.06)
+painelVitoria.Size = UDim2.fromScale(0.5, 0.22)
+painelVitoria.Visible = false
+painelVitoria.Parent = areaSegura
+
+local escalaVitoria = Instance.new("UIScale")
+escalaVitoria.Parent = painelVitoria
+
+local layoutVitoria = Instance.new("UIListLayout")
+layoutVitoria.FillDirection = Enum.FillDirection.Vertical
+layoutVitoria.SortOrder = Enum.SortOrder.LayoutOrder
+layoutVitoria.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layoutVitoria.VerticalAlignment = Enum.VerticalAlignment.Top
+layoutVitoria.Parent = painelVitoria
+
+-- 4 caracteres: o design system manda no maximo 8 no rotulo de destaque.
+local tituloVitoria = criarRotulo(painelVitoria, {
+	Name = "TituloVitoria",
+	LayoutOrder = 1,
+	Size = UDim2.fromScale(1, 0.62),
+	TextColor3 = Tokens.estado.vitoria,
+	TextXAlignment = Enum.TextXAlignment.Center,
+}, true)
+tituloVitoria.Text = "TOPO"
+
+local alturaVitoria = criarRotulo(painelVitoria, {
+	Name = "AlturaVitoria",
+	LayoutOrder = 2,
+	Size = UDim2.fromScale(1, 0.38),
+	Font = Enum.Font.GothamBold,
+	TextXAlignment = Enum.TextXAlignment.Center,
+})
+
 tela.Parent = playerGui
 
 --------------------------------------------------------------------------
@@ -476,6 +525,36 @@ local function aoReceberCombateAnulado(dados)
 	agendarOcultar(estadoEmpate, DURACAO_EMPATE, ocultarEmpate)
 end
 
+--[[
+	R6 — chegou ao topo, ou voltou dele pelo reinicio do painel.
+
+	O servidor so dispara na TRANSICAO, entao aqui nao ha o que debouncar: cada
+	chegada e uma mudanca de verdade.
+]]
+local function aoReceberVitoria(dados)
+	if type(dados) ~= "table" then
+		return
+	end
+
+	if dados.reiniciou == true then
+		painelVitoria.Visible = false
+		return
+	end
+
+	local plataforma = tonumber(dados.plataforma)
+	local total = tonumber(dados.totalPlataformas)
+	if plataforma and total and total > 0 then
+		alturaVitoria.Text = tostring(plataforma) .. "/" .. tostring(total)
+	else
+		alturaVitoria.Text = ""
+	end
+
+	painelVitoria.Visible = true
+	-- Pulso maior que o do numero da plataforma: e o unico momento da partida
+	-- em que a torre acabou, e ele compete com a euforia do chat.
+	pulsar(escalaVitoria, 1.25, 0.35)
+end
+
 --------------------------------------------------------------------------
 -- Conexoes. Cada evento e opcional na pratica (o servidor pode nao ter
 -- criado todos ainda quando este LocalScript sobe); um Eventos.obter que
@@ -494,3 +573,4 @@ end
 conectar(Eventos.ESTADO, aoReceberEstado)
 conectar(Eventos.PRESENTE, aoReceberPresente)
 conectar(Eventos.COMBATE_ANULADO, aoReceberCombateAnulado)
+conectar(Eventos.VITORIA, aoReceberVitoria)

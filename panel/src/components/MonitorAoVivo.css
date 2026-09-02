@@ -440,3 +440,16 @@
     margin-left: auto;
   }
 }
+
+/* Vincular um não mapeado a um slot, sem sair do monitor. Pequeno de
+   propósito: a métrica é a informação, o botão é a consequência dela. */
+.monitor-perdido-vincular {
+  flex-shrink: 0;
+  min-height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--estado-atencao);
+}

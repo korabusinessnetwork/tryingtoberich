@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/configuracao.schema.json",
+  "title": "Configuração do streamer",
+  "description": "O que o streamer define no painel e vale entre sessões. Hoje só a conta da live: é ela que decide em QUAL live o jogo vai rodar. Mora aqui e não no .env porque é configuração de produto, não de ambiente — o .env continua guardando segredo e porta, que são de máquina. Nasce com streamerId para a Fase 3 não exigir migração (ADR-003).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["streamerId"],
+  "properties": {
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "usuarioTiktok": {
+      "description": "O @ da live, SEM arroba. A ponte conecta nesta conta ao iniciar a sessão. Regra do TikTok: letras, números, ponto e sublinhado, de 2 a 24 caracteres. Nulo enquanto ninguém configurou.",
+      "oneOf": [
+        { "type": "string", "minLength": 2, "maxLength": 24, "pattern": "^[A-Za-z0-9._]+$" },
+        { "type": "null" }
+      ]
+    },
+    "presetAtivo": {
+      "description": "O preset que a ponte serve ao jogo. Persistido porque o Roblox pede GET /jogo/mapa na ENTRADA, e antes disto a ponte esquecia o preset a cada reinício: o jogo caía num mundo vazio sem erro nenhum na tela.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/identificador" }, { "type": "null" }]
+    },
+    "atualizadoEm": {
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    }
+  }
+}

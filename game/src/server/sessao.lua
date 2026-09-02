@@ -38,6 +38,8 @@ local estado = {
 	look = nil,
 	jogador = nil,
 	batida = nil,
+	-- Última vitória PUBLICADA, para o aviso sair só na transição (R6).
+	venceu = false,
 }
 
 local function personagemAtual()
@@ -54,18 +56,43 @@ end
 	tela estática que o ADR-009 evita.
 ]]
 local function montarEstado()
+	local total = estado.mapa and estado.mapa.totalPlataformas or 0
 	return {
 		plataformaReferencia = Plataformas.referencia(),
 		plataformaMaxima = Plataformas.maxima(),
 		quedasNaturais = Plataformas.quedas(),
 		emAnimacao = Movimento.emAnimacao(personagemAtual()),
-		totalPlataformas = estado.mapa and estado.mapa.totalPlataformas or 0,
+		totalPlataformas = total,
 		sessaoAtiva = estado.rodando,
+		-- R6: no topo. Sai por ENCOSTAR na última plataforma, como toda
+		-- referência (R9.2) — chegar por altura, passando por cima no pulo,
+		-- não é ter subido a torre.
+		vitoria = total > 0 and Plataformas.referencia() >= total,
 	}
 end
 
+--[[
+	Publica o estado para os clientes e para a ponte.
+
+	O aviso de vitória sai daqui, e só na TRANSIÇÃO: este estado é republicado a
+	cada 2s e a cada toque de plataforma, e um evento de vitória por batimento
+	viraria o HUD piscando enquanto o streamer decide o que fazer.
+]]
 local function publicarEstado()
 	local atual = montarEstado()
+
+	if atual.vitoria ~= estado.venceu then
+		estado.venceu = atual.vitoria
+		Eventos.obter(Eventos.VITORIA):FireAllClients({
+			plataforma = atual.plataformaReferencia,
+			totalPlataformas = atual.totalPlataformas,
+			-- Sair da vitória só acontece por reinício: a referência não desce
+			-- sozinha, e presente de descida depois do topo é queda de novo ao
+			-- jogo, não fim do aviso.
+			reiniciou = not atual.vitoria,
+		})
+	end
+
 	Eventos.obter(Eventos.ESTADO):FireAllClients(atual)
 	-- Fire-and-forget do lado de lá: nunca segura o jogo esperando a ponte.
 	Ponte.enviarEstado(atual)
@@ -236,6 +263,27 @@ function Sessao.iniciar()
 		aoConexao = function()
 			publicarEstado()
 		end,
+		aoComando = function(tipo)
+			-- R6 — a única ordem que existe hoje. Chegar ao topo não reinicia
+			-- sozinho: o streamer decide no painel, e é isto que chega aqui.
+			if tipo ~= "reiniciar" then
+				return
+			end
+
+			-- Devolve o controle antes de teleportar: reiniciar no meio de uma
+			-- animação deixaria a raiz ancorada no pé da torre, e o watchdog
+			-- do R11 só a soltaria um segundo depois — com o boneco preso e o
+			-- streamer achando que o botão travou o jogo.
+			local personagem = personagemAtual()
+			if personagem then
+				Movimento.restaurar(personagem)
+				Personagem.suspenderEfeito(personagem, false)
+			end
+			Plataformas.suspenderDetector(false)
+
+			Plataformas.reiniciarCorrida("reinício pelo painel (R6)")
+			publicarEstado()
+		end,
 		aoCombateAnulado = function(disputa)
 			-- Não move ninguém, mas precisa aparecer: empate sem nada na tela
 			-- lê como travamento no exato momento em que mais gente mandou
@@ -265,6 +313,7 @@ end
 
 function Sessao.parar()
 	estado.rodando = false
+	estado.venceu = false
 	Ponte.parar()
 	Plataformas.pararDeAcompanhar()
 

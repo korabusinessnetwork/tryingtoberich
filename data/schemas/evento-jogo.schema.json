@@ -20,9 +20,24 @@
       "description": "Combates que se cancelaram exatamente (ADR-012). Não movem o boneco — delta 0 não existe aqui — mas o HUD precisa saber que aconteceram: sem nada na tela, o empate lê como travamento no exato momento em que mais gente mandou presente.",
       "type": "array",
       "items": { "$ref": "#/$defs/anulado" }
+    },
+    "comandos": {
+      "description": "Ordem do streamer, não do espectador (ADR-013). Não tem delta e não casa com slot: é o painel mandando o jogo fazer algo que nenhum presente faz. Hoje só `reiniciar`, do R6. Viaja no mesmo envelope e no mesmo cursor porque a ordem entre comando e presente importa: reiniciar depois de um presente que já saiu é diferente de reiniciar antes.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/comando" }
     }
   },
   "$defs": {
+    "comando": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tipo", "emitidoEm"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "tipo": { "type": "string", "enum": ["reiniciar"] },
+        "emitidoEm": { "type": "integer", "minimum": 0 }
+      }
+    },
     "anulado": {
       "type": "object",
       "additionalProperties": false,

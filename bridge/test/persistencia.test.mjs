@@ -177,13 +177,35 @@ test("merge do catálogo: entra novo, atualiza existente, e o que sumiu não é 
 /* Acervo                                                            */
 /* ---------------------------------------------------------------- */
 
-test("o acervo oferecível esconde o que não está aprovado (ADR-004)", async () => {
-  const acervo = await carregarAcervo();
-  assert.ok(acervo.skybox.length > 0, "o acervo versionado tem itens");
-  assert.deepEqual(acervoOferecivel(acervo).skybox, [], "todos pendente-upload hoje");
+test("o acervo oferecível esconde o que não está aprovado (ADR-004)", () => {
+  // Acervo construído aqui, NÃO o data/acervo.json real: o que este teste
+  // afirma é a regra do filtro, e ela não pode passar a falhar no dia em que o
+  // streamer aprovar um item de verdade. Foi exatamente o que aconteceu.
+  const acervo = {
+    skybox: [
+      { id: "a", status: "aprovado", assetId: 111 },
+      { id: "b", status: "em-moderacao", assetId: 222 },
+      { id: "c", status: "pendente-upload", assetId: null },
+      { id: "d", status: "rejeitado", assetId: 444 },
+      { id: "e", status: "aprovado", assetId: null },
+    ],
+    texturas: [{ id: "t", status: "aprovado", assetId: 999 }],
+    props: [{ id: "fumaca" }],
+  };
 
-  const aprovado = { ...acervo, skybox: acervo.skybox.map((i) => ({ ...i, status: "aprovado", assetId: 1 })) };
-  assert.equal(acervoOferecivel(aprovado).skybox.length, acervo.skybox.length);
+  const oferecivel = acervoOferecivel(acervo);
+  assert.deepEqual(oferecivel.skybox.map((i) => i.id), ["a"], "só aprovado COM assetId é oferecido");
+  assert.deepEqual(oferecivel.texturas.map((i) => i.id), ["t"]);
+  assert.equal(oferecivel.props.length, 1, "prop não passa por moderação e sempre entra");
+});
+
+test("o acervo versionado existe e tem as três coleções", async () => {
+  // O que vale afirmar sobre o arquivo real é a FORMA, não quantos itens estão
+  // aprovados hoje — isso muda conforme o streamer sobe imagem.
+  const acervo = await carregarAcervo();
+  assert.ok(acervo.skybox.length > 0);
+  assert.ok(acervo.texturas.length > 0);
+  assert.ok(acervo.props.length > 0);
 });
 
 /* ---------------------------------------------------------------- */

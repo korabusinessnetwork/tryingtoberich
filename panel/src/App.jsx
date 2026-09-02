@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api } from "./lib/api.js";
+import { idDePreset, SLOTS } from "./lib/regras.js";
 import { useFluxo } from "./lib/useFluxo.js";
+import { AvisoDeVitoria } from "./components/AvisoDeVitoria.jsx";
 import { BarraDeSessao } from "./components/BarraDeSessao.jsx";
 import { BotaoAbrirJogo } from "./components/BotaoAbrirJogo.jsx";
+import { ContaDaLive } from "./components/ContaDaLive.jsx";
 import { EditorDePreset } from "./components/EditorDePreset.jsx";
 import { GeradorDeMapa } from "./components/GeradorDeMapa.jsx";
+import { GerenciadorDePresets } from "./components/GerenciadorDePresets.jsx";
+import { HistoricoDeSessoes } from "./components/HistoricoDeSessoes.jsx";
 import { MonitorAoVivo } from "./components/MonitorAoVivo.jsx";
 import { NavegacaoDePaginas } from "./components/NavegacaoDePaginas.jsx";
+import { PainelDeAcervo } from "./components/PainelDeAcervo.jsx";
 import { PainelDeLogs } from "./components/PainelDeLogs.jsx";
+import { ResumoDaLive } from "./components/ResumoDaLive.jsx";
 import { PreviaDeMapa } from "./components/PreviaDeMapa.jsx";
 import { SeletorDeAnimacao } from "./components/SeletorDeAnimacao.jsx";
 import { SeletorDeLook } from "./components/SeletorDeLook.jsx";
@@ -49,6 +56,19 @@ export function App() {
   const [disparando, definirDisparando] = useState(false);
   const [disparandoAnimacao, definirDisparandoAnimacao] = useState(false);
   const [ultimaAnimacao, definirUltimaAnimacao] = useState(null);
+  const [salvandoConta, definirSalvandoConta] = useState(false);
+  const [atualizandoCatalogo, definirAtualizandoCatalogo] = useState(false);
+  const [trocandoPreset, definirTrocandoPreset] = useState(false);
+  const [reiniciando, definirReiniciando] = useState(false);
+  // O resumo do F5, guardado do retorno do Stop. Some quando o streamer fecha
+  // ou quando a próxima sessão começa — ele é sobre a live que acabou.
+  const [resumoDaLive, definirResumoDaLive] = useState(null);
+  const [sessoes, definirSessoes] = useState(null);
+  const [carregandoSessoes, definirCarregandoSessoes] = useState(false);
+  const [sessaoEscolhida, definirSessaoEscolhida] = useState(null);
+  const [acervo, definirAcervo] = useState(null);
+  const [salvandoAcervo, definirSalvandoAcervo] = useState(false);
+  const [erroDeAcervo, definirErroDeAcervo] = useState(null);
   const [abrindoJogo, definirAbrindoJogo] = useState(false);
   const [studio, definirStudio] = useState(null);
   const [erroDoStudio, definirErroDoStudio] = useState(null);
@@ -66,11 +86,11 @@ export function App() {
 
   const carregar = useCallback(async () => {
     try {
-      const [modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios] = await Promise.all([
+      const [modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao] = await Promise.all([
         api.modalidades(), api.listarPresets(), api.animacoes(), api.catalogo(),
-        api.looks(), api.mapas(), api.sessao(), api.cenarios(),
+        api.looks(), api.mapas(), api.sessao(), api.cenarios(), api.configuracao(),
       ]);
-      definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios });
+      definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao });
       // O que a ponte registrou ANTES do painel abrir. O que vem depois chega
       // pelo SSE, e o hook junta os dois.
       api.logs()
@@ -132,17 +152,177 @@ export function App() {
     definirSalvando(false);
   }, [preset, executar]);
 
+  /**
+   * Cria um preset vazio. É o mesmo PUT do salvar: o repositório grava o
+   * arquivo que ainda não existe, e `streamerId` quem preenche é a ponte —
+   * o painel não conhece o tenant (ADR-003).
+   */
+  const criarPreset = useCallback(async (nome, presetId) => {
+    definirSalvando(true);
+    const novo = await executar(() => api.salvarPreset({
+      presetId,
+      nome,
+      modalidade: preset?.modalidade ?? "escalada",
+      slots: [],
+    }));
+    if (novo) {
+      definirDados((d) => ({ ...d, presets: [...d.presets.filter((p) => p.presetId !== novo.presetId), novo] }));
+      definirPreset(novo);
+      definirAviso(null);
+    }
+    definirSalvando(false);
+  }, [executar, preset]);
+
+  /**
+   * Duplica o preset atual. Montar os 6 slots dá trabalho, e a live de sexta é
+   * a de quinta com dois presentes trocados.
+   */
+  const duplicarPreset = useCallback(async (base) => {
+    if (!base) return;
+    const existentes = new Set((dados?.presets ?? []).map((p) => p.presetId));
+    // "-copia", "-copia-2", "-copia-3"… duplicar duas vezes seguidas não pode
+    // sobrescrever a primeira cópia em silêncio.
+    let sufixo = 1;
+    let id = idDePreset(`${base.presetId}-copia`);
+    while (existentes.has(id)) {
+      sufixo += 1;
+      id = idDePreset(`${base.presetId}-copia-${sufixo}`);
+    }
+
+    definirSalvando(true);
+    const copia = await executar(() => api.salvarPreset({
+      ...base,
+      presetId: id,
+      nome: sufixo === 1 ? `${base.nome} (cópia)` : `${base.nome} (cópia ${sufixo})`,
+    }));
+    if (copia) {
+      definirDados((d) => ({ ...d, presets: [...d.presets, copia] }));
+      definirPreset(copia);
+    }
+    definirSalvando(false);
+  }, [executar, dados]);
+
+  const apagarPreset = useCallback(async (presetId) => {
+    definirSalvando(true);
+    const apagado = await executar(() => api.apagarPreset(presetId));
+    if (apagado) {
+      definirDados((d) => {
+        const restantes = d.presets.filter((p) => p.presetId !== presetId);
+        // O preset apagado era o que estava na tela: cai para o primeiro que
+        // sobrou, senão o editor fica montado em cima de um arquivo que já não
+        // existe e o Salvar o ressuscitaria.
+        definirPreset((atual) => (atual?.presetId === presetId ? restantes[0] ?? null : atual));
+        return { ...d, presets: restantes };
+      });
+    }
+    definirSalvando(false);
+  }, [executar]);
+
+  /**
+   * Troca o preset da tela — e, com a sessão rodando, o preset ATIVO na ponte.
+   *
+   * R7: trocar no meio da sessão é permitido e vale a partir do próximo
+   * evento. Fora da sessão isso é só escolher o que editar, e não precisa
+   * falar com a ponte.
+   */
+  const escolherPreset = useCallback(async (presetId) => {
+    const escolhido = (dados?.presets ?? []).find((p) => p.presetId === presetId) ?? null;
+    if (!escolhido) return;
+
+    const rodando = fluxo.estado?.sessao === "rodando" || dados?.sessao?.estado?.sessao === "rodando";
+    if (!rodando) {
+      definirPreset(escolhido);
+      return;
+    }
+
+    definirTrocandoPreset(true);
+    // Só troca na tela depois que a ponte confirmou: mostrar o preset novo com
+    // a ponte ainda casando presente pelo antigo seria mentir na única tela que
+    // o streamer olha durante a live.
+    const ativo = await executar(() => api.trocarPresetAtivo(presetId));
+    if (ativo) definirPreset(ativo);
+    definirTrocandoPreset(false);
+  }, [executar, dados, fluxo.estado]);
+
   const iniciarSessao = useCallback(async (presetId, cenario) => {
     definirIniciando(true);
+    // O resumo é da live anterior. Começar outra com ele na tela confundiria
+    // dois números que não têm nada a ver um com o outro.
+    definirResumoDaLive(null);
     await executar(() => api.iniciarSessao(presetId, cenario));
     await executar(() => api.sessao().then((sessao) => definirDados((d) => ({ ...d, sessao }))));
     definirIniciando(false);
   }, [executar]);
 
-  const pararSessao = useCallback(async () => {
-    await executar(() => api.encerrarSessao());
-    await executar(() => api.sessao().then((sessao) => definirDados((d) => ({ ...d, sessao }))));
+  const carregarSessoes = useCallback(async () => {
+    definirCarregandoSessoes(true);
+    const lista = await executar(() => api.sessoes());
+    if (lista) definirSessoes(lista);
+    definirCarregandoSessoes(false);
   }, [executar]);
+
+  const pararSessao = useCallback(async () => {
+    // F5.5 — "Painel mostra o resumo da live". A ponte reduz a sessão ao
+    // agregado, grava e DEVOLVE; até aqui o painel jogava essa resposta fora.
+    const resumo = await executar(() => api.encerrarSessao());
+    if (resumo) definirResumoDaLive(resumo);
+    await executar(() => api.sessao().then((sessao) => definirDados((d) => ({ ...d, sessao }))));
+    // A live que acabou é uma linha nova no histórico. Recarrega só se a
+    // página já foi aberta alguma vez — senão é requisição para ninguém.
+    if (sessoes) carregarSessoes();
+  }, [executar, sessoes, carregarSessoes]);
+
+  /** R6 — o topo não reinicia sozinho. Este é o botão que o streamer decide apertar. */
+  const reiniciarCorrida = useCallback(async () => {
+    definirReiniciando(true);
+    const resultado = await executar(() => api.reiniciarCorrida());
+    if (resultado && !resultado.jogoOnline) {
+      definirAviso("O comando de reinício saiu, mas o Roblox não está conectado — ele foi descartado.");
+    }
+    definirReiniciando(false);
+  }, [executar]);
+
+  /** F2.4 — coleta o catálogo de verdade da live, no lugar da semente. */
+  const atualizarCatalogo = useCallback(async () => {
+    definirAtualizandoCatalogo(true);
+    const catalogo = await executar(() => api.atualizarCatalogo());
+    if (catalogo) definirDados((d) => ({ ...d, catalogo }));
+    definirAtualizandoCatalogo(false);
+  }, [executar]);
+
+  const carregarAcervo = useCallback(async () => {
+    const carregado = await executar(() => api.acervo(), {
+      aoFalhar: (falha) => definirErroDeAcervo(falha?.message ?? "Não consegui ler o acervo."),
+    });
+    if (carregado) {
+      definirAcervo(carregado);
+      definirErroDeAcervo(null);
+    }
+  }, [executar]);
+
+  /**
+   * Anota o resultado da moderação num item do acervo (ADR-004).
+   *
+   * Depois de gravar, a prontidão do mapa escolhido é relida: aprovar o skybox
+   * é exatamente o que faz um mapa que não podia ir ao ar passar a poder, sem
+   * ninguém ter tocado no mapa.
+   */
+  const anotarAcervo = useCallback(async (colecao, id, campos) => {
+    definirSalvandoAcervo(true);
+    const resultado = await executar(() => api.anotarAcervo(colecao, id, campos), {
+      aoFalhar: (falha) => definirErroDeAcervo(falha?.message ?? "Não consegui gravar."),
+    });
+    if (resultado) {
+      definirAcervo(resultado.acervo);
+      definirErroDeAcervo(null);
+      const mapaId = preset?.mapaId;
+      if (mapaId) {
+        const prontidaoNova = await executar(() => api.prontidaoDoMapa(mapaId), { aoFalhar: () => {} });
+        if (prontidaoNova) definirProntidao(prontidaoNova);
+      }
+    }
+    definirSalvandoAcervo(false);
+  }, [executar, preset]);
 
   const gerarMapa = useCallback(async (descricao) => {
     definirGerando(true);
@@ -164,9 +344,9 @@ export function App() {
     definirDisparando(false);
   }, [executar]);
 
-  const testarAnimacao = useCallback(async (animacaoId) => {
+  const testarAnimacao = useCallback(async (animacaoId, intensidade) => {
     definirDisparandoAnimacao(true);
-    const resultado = await executar(() => api.testarAnimacao(animacaoId));
+    const resultado = await executar(() => api.testarAnimacao(animacaoId, intensidade));
     // Marca o botão só se o disparo saiu. Marcar antes da resposta faria o
     // painel dizer que tocou quando a ponte recusou.
     if (resultado) {
@@ -176,6 +356,15 @@ export function App() {
       if (!resultado.jogoOnline) definirAviso("A animação saiu, mas o Roblox não está conectado — nada vai aparecer na tela.");
     }
     definirDisparandoAnimacao(false);
+  }, [executar]);
+
+  const salvarConta = useCallback(async (usuarioTiktok) => {
+    definirSalvandoConta(true);
+    const salva = await executar(() => api.salvarConfiguracao(usuarioTiktok));
+    // Guarda o que a PONTE devolveu, não o que foi digitado: ela normaliza
+    // (tira arroba, aceita URL colada), e a tela tem que mostrar o que valeu.
+    if (salva) definirDados((d) => ({ ...d, configuracao: salva }));
+    definirSalvandoConta(false);
   }, [executar]);
 
   const abrirNoStudio = useCallback(async () => {
@@ -189,6 +378,70 @@ export function App() {
     if (resultado) definirStudio(resultado);
     definirAbrindoJogo(false);
   }, [executar]);
+
+  /**
+   * ADR-004 — a prontidão do mapa escolhido, sempre que ele muda.
+   *
+   * Antes disto só a geração respondia essa pergunta, e só para o mapa
+   * recém-nascido: escolher um mapa salvo deixava a prévia dizendo "prontidão
+   * ainda não avaliada", que desenha igual a "pode ir ao ar" para quem olha com
+   * pressa. E a resposta muda sem o mapa mudar — ela depende do acervo.
+   */
+  useEffect(() => {
+    const mapaId = preset?.mapaId;
+    if (!mapaId) {
+      definirProntidao(null);
+      return undefined;
+    }
+
+    // O painel pode desmontar ou o streamer trocar de mapa antes da resposta
+    // chegar. Sem esta trava, a prontidão do mapa antigo pintaria a prévia do
+    // novo — e nesta tela isso é dizer que um mapa pode ir ao ar quando não pode.
+    let valeAinda = true;
+    api.prontidaoDoMapa(mapaId)
+      .then((resultado) => { if (valeAinda) definirProntidao(resultado); })
+      .catch(() => { if (valeAinda) definirProntidao(null); });
+    return () => { valeAinda = false; };
+  }, [preset?.mapaId]);
+
+  /** O acervo e o histórico só carregam quando a página que os usa abre. */
+  useEffect(() => {
+    if (pagina === "configurar" && !acervo) carregarAcervo();
+    if (pagina === "historico" && !sessoes) carregarSessoes();
+  }, [pagina, acervo, sessoes, carregarAcervo, carregarSessoes]);
+
+  /**
+   * F2.4 — põe um presente não mapeado no primeiro slot livre.
+   *
+   * O monitor contava o que estava sendo deixado na mesa e não deixava agir:
+   * era anotar o nome, abrir o editor e procurar o presente no catálogo, no
+   * meio da live. Aqui o slot já sai preenchido e válido — com delta e
+   * animação padrão, que o modal aberto em seguida deixa ajustar — porque
+   * slot pela metade seria recusado pelo schema no Salvar.
+   */
+  const vincularNaoMapeado = useCallback((item) => {
+    if (!preset) return;
+    if (!item?.presenteId) return;
+
+    const ocupadas = new Set((preset.slots ?? []).map((slot) => slot.posicao));
+    const livre = Array.from({ length: SLOTS }, (_, i) => i + 1).find((posicao) => !ocupadas.has(posicao));
+    if (!livre) {
+      definirAviso("Os 6 slots estão ocupados. Limpe um antes de vincular outro presente.");
+      return;
+    }
+
+    const padrao = (dados?.animacoes ?? []).find((a) => a.direcao === "subida") ?? (dados?.animacoes ?? [])[0];
+    mudarSlot(livre, {
+      presenteId: item.presenteId,
+      animacaoId: padrao?.id,
+      delta: 1,
+      intensidade: 1,
+    });
+    // Abre a escolha de animação na sequência: o padrão existe para o slot
+    // nascer válido, não para ser a escolha final.
+    definirEditando({ posicao: livre, tipo: "animacao" });
+    definirAviso(null);
+  }, [preset, dados, mudarSlot]);
 
   const slotEditado = useMemo(
     () => (editando ? (preset?.slots ?? []).find((s) => s.posicao === editando.posicao) ?? null : null),
@@ -241,9 +494,10 @@ export function App() {
         presetId={preset?.presetId ?? null}
         cenarios={dados.cenarios}
         iniciando={iniciando}
+        trocandoPreset={trocandoPreset}
         aoIniciar={iniciarSessao}
         aoParar={pararSessao}
-        aoTrocarPreset={(presetId) => definirPreset(dados.presets.find((p) => p.presetId === presetId) ?? null)}
+        aoTrocarPreset={escolherPreset}
       />
 
       {aviso ? <p className="pastilha pastilha-erro app-aviso">{aviso}</p> : null}
@@ -253,6 +507,7 @@ export function App() {
           { id: "aovivo", rotulo: "Ao vivo" },
           { id: "configurar", rotulo: "Configurar" },
           { id: "jogo", rotulo: "Jogo" },
+          { id: "historico", rotulo: "Histórico" },
           { id: "log", rotulo: "Log", contador: naoVistos },
         ]}
         atual={pagina}
@@ -265,6 +520,24 @@ export function App() {
 
       {pagina === "aovivo" ? (
         <div className="app-pagina">
+          {/* R6 — o único bloco que pode empurrar os 6 slots para baixo, e só
+              enquanto durar a decisão que o jogo está esperando. */}
+          <AvisoDeVitoria
+            estado={fluxo.estado ?? dados.sessao?.estado ?? null}
+            reiniciando={reiniciando}
+            aoReiniciar={reiniciarCorrida}
+          />
+
+          {/* F5.5 — aparece no Stop e fica até o streamer fechar. Não some
+              sozinho: é a única leitura da live que acabou. */}
+          {resumoDaLive && (
+            <ResumoDaLive
+              sessao={resumoDaLive}
+              titulo="A live que acabou"
+              aoFechar={() => definirResumoDaLive(null)}
+            />
+          )}
+
           <EditorDePreset
             preset={preset}
             catalogo={dados.catalogo}
@@ -282,6 +555,7 @@ export function App() {
             naoMapeados={fluxo.naoMapeados}
             estado={fluxo.estado}
             conectado={fluxo.conectado}
+            aoVincular={vincularNaoMapeado}
           />
 
           <TestadorDePresente
@@ -299,6 +573,28 @@ export function App() {
       {pagina === "configurar" ? (
         <div className="app-colunas">
           <section className="app-coluna">
+            {/* Primeiro da página de propósito: é o único campo sem o qual a
+                sessão não inicia. */}
+            <ContaDaLive
+              configuracao={dados.configuracao}
+              salvando={salvandoConta}
+              travado={aoVivo}
+              aoSalvar={salvarConta}
+            />
+
+            {/* Antes da modalidade: numa máquina limpa não existe preset
+                nenhum, e escolher a modalidade de um preset que não existe é
+                configurar o nada. */}
+            <GerenciadorDePresets
+              presets={dados.presets}
+              presetAtual={preset}
+              travado={aoVivo}
+              salvando={salvando}
+              aoCriar={criarPreset}
+              aoDuplicar={duplicarPreset}
+              aoApagar={apagarPreset}
+            />
+
             <SeletorModalidade
               modalidades={dados.modalidades}
               modalidade={preset?.modalidade ?? "escalada"}
@@ -327,6 +623,15 @@ export function App() {
 
           <aside className="app-coluna">
             <PreviaDeMapa mapa={mapaEscolhido} prontidao={prontidao} />
+
+            {/* Colado na prévia de propósito: quando ela diz "ainda não pode ir
+                ao ar", é aqui embaixo que está o motivo e o conserto (ADR-004). */}
+            <PainelDeAcervo
+              acervo={acervo}
+              salvando={salvandoAcervo}
+              erro={erroDeAcervo}
+              aoAnotar={anotarAcervo}
+            />
           </aside>
         </div>
       ) : null}
@@ -353,6 +658,31 @@ export function App() {
         </div>
       ) : null}
 
+      {/* O histórico é a única página que olha para trás. Ela não tem nada que
+          sirva durante a live, e por isso fica longe de "Ao vivo". */}
+      {pagina === "historico" ? (
+        <div className="app-pagina">
+          <HistoricoDeSessoes
+            sessoes={sessoes}
+            carregando={carregandoSessoes}
+            sessaoEscolhida={sessaoEscolhida}
+            aoEscolher={definirSessaoEscolhida}
+            aoAtualizar={carregarSessoes}
+          />
+
+          {/* O mesmo bloco que aparece no Stop, agora sobre uma live passada:
+              o resumo é o mesmo objeto, venha ele da resposta do Stop ou do
+              arquivo em disco. */}
+          {sessaoEscolhida && (
+            <ResumoDaLive
+              sessao={(sessoes ?? []).find((s) => s.sessaoId === sessaoEscolhida) ?? null}
+              titulo="Resumo desta live"
+              aoFechar={() => definirSessaoEscolhida(null)}
+            />
+          )}
+        </div>
+      ) : null}
+
       {pagina === "log" ? (
         <div className="app-pagina">
           <PainelDeLogs
@@ -368,6 +698,8 @@ export function App() {
       <SeletorDePresente
         aberto={editando?.tipo === "presente"}
         catalogo={dados.catalogo}
+        atualizando={atualizandoCatalogo}
+        aoAtualizar={atualizarCatalogo}
         presenteIdAtual={slotEditado?.presenteId ?? null}
         presenteIdsUsados={(preset?.slots ?? [])
           .filter((s) => s.posicao !== editando?.posicao)

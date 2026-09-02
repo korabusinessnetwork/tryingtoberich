@@ -17,7 +17,12 @@
       "maxLength": 500
     },
     "geradoEm": { "$ref": "comuns.schema.json#/$defs/instante" },
-    "totalPlataformas": { "type": "integer", "minimum": 100, "maximum": 400 },
+    "totalPlataformas": {
+      "description": "Altura da torre. O padrão do produto é 1000: torre curta acaba no meio da live e o jogo fica sem para onde subir. O teto existe porque cada plataforma é um Instance.new no carregamento do mapa.",
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 1000
+    },
     "jumpHeight": {
       "description": "Altura de pulo do personagem em studs, aplicada no Humanoid. É o que define o teto de espacamentoVertical. Ver ADR-009.3.",
       "type": "number",
@@ -85,7 +90,7 @@
         "additionalProperties": false,
         "required": ["plataforma", "tipo"],
         "properties": {
-          "plataforma": { "type": "integer", "minimum": 1, "maximum": 400 },
+          "plataforma": { "description": "Anda de 1 a totalPlataformas. O teto acompanha o de totalPlataformas: marco acima do topo da torre nao existe.", "type": "integer", "minimum": 1, "maximum": 1000 },
           "tipo": { "type": "string", "enum": ["checkpoint_visual", "topo"] }
         }
       },

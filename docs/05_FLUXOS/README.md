@@ -73,7 +73,11 @@ vivo travaria a partida. Isso é limitação aceita, documentada em ADR-004.
 3. Sessão é finalizada: grava resumo (altura máxima, total de presentes por slot,
    latência média).
 4. **Todo dado de espectador do log é descartado.** Ver `11_SEGURANCA`.
-5. Painel mostra o resumo da live.
+5. Painel mostra o resumo da live: o `POST /api/sessao/stop` **devolve** o
+   resumo que acabou de gravar, e o `ResumoDaLive` desenha na hora, na página
+   "Ao vivo". Ele fica até o streamer fechar — é a única leitura da live que
+   acabou, e some sozinho seria perdê-la.
+6. A mesma sessão vira uma linha na página "Histórico", pelo `GET /api/sessoes`.
 
 ## F6 — Queda da live
 1. Conector perde conexão.
@@ -88,3 +92,20 @@ vivo travaria a partida. Isso é limitação aceita, documentada em ADR-004.
 3. Eventos que chegarem nesse período são **descartados**, não acumulados. Aplicar
    uma pilha de deltas de uma vez quando o jogo voltasse seria pior que perder.
 4. Painel mostra o aviso para o streamer reabrir a experiência.
+
+## F8 — Topo da torre (R6)
+1. O boneco **encosta** na última plataforma. Chegar por altura, passando por
+   cima no pulo, não conta — a referência é sempre por colisão (R9.2).
+2. O jogo publica `vitoria: true` no estado e dispara o evento `VITORIA` para
+   os clientes. O HUD mostra o selo "TOPO", que **não some sozinho**.
+3. A ponte guarda a vitória e a repassa ao painel pelo SSE.
+4. **Nada reinicia.** Presente de subida continua chegando e para no teto (R6);
+   o jogo fica esperando uma decisão que só o streamer pode tomar.
+5. O painel mostra o `AvisoDeVitoria` acima dos slots, com o botão de
+   reiniciar. É o momento de narrar a vitória na live — por isso o jogo espera.
+6. Streamer clica em reiniciar. A ponte emite o comando `reiniciar` no
+   long-poll (ADR-013); o jogo devolve o controle ao streamer, volta a corrida
+   ao pé da torre, zera máxima e quedas, e reposiciona pela mesma sequência da
+   queda natural — sem contar como queda.
+7. Com o Roblox offline o comando é descartado, como presente é (F7), e o
+   painel diz isso em vez de deixar o streamer clicando.

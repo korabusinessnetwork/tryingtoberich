@@ -117,3 +117,31 @@ despejar um evento cru, comparar, corrigir a fixture e anotar aqui.
 - Latência real ponte → Roblox com long-poll (estimativa: 100 a 300ms).
 - Taxa de reconexão do tiktok-live-connector numa live de 2 horas.
 - Se o Roblox derruba a conexão de long-poll antes dos 20s configurados.
+
+## Painel: o que a ponte entrega e a tela ignora (2026-09-02)
+O Bloco 3 entregou um painel completo como TELA e incompleto como PRODUTO. Três
+padrões apareceram juntos, e vale procurar os três de novo antes de dar bloco
+por fechado:
+
+1. **Resposta descartada.** `POST /api/sessao/stop` devolvia o resumo agregado
+   da live — calculado, validado e gravado — e o `App.jsx` fazia
+   `await executar(...)` sem guardar o retorno. O F5.5 mandava mostrar isso
+   desde sempre.
+2. **Verbo morto na camada de serviços.** `api.atualizarCatalogo()` existia em
+   `lib/api.js` e nenhum componente chamava. O aviso da semente apontava o
+   problema e não oferecia a saída que estava a uma linha de distância.
+3. **Parâmetro nunca passado.** `api.testarAnimacao(id, intensidade)` aceitava
+   intensidade e o App só mandava o id.
+
+Um grep por verbo de `api.js` que nenhum componente usa acha a classe (2) em
+segundos. A (1) e a (3) exigem ler a assinatura contra a chamada.
+
+## Regra de negócio sem controle na tela (2026-09-02)
+R6 ("chegar no topo não reinicia sozinho: o streamer decide no painel") não
+existia em processo NENHUM — nem no Luau, nem na ponte, nem no painel. R7
+("trocar de preset no meio da sessão é permitido") existia na ponte e o painel
+proibia, desabilitando o seletor.
+
+Ler `03_REGRAS_DE_NEGOCIO` procurando o CONTROLE de cada regra, e não a
+implementação dela, achou as duas. A pergunta que funciona é "onde o streamer
+clica para exercer isto?", não "isto está implementado?".

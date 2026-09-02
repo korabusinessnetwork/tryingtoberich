@@ -39,3 +39,15 @@ números enormes.
 Faixa de presente (só exibição, ver R3): I cinza, II azul, III roxo, IV laranja,
 V dourado. Os mesmos hex no painel e no HUD, definidos uma vez em
 `panel/src/styles/tokens.css` e espelhados em `game/src/shared/tokens.lua`.
+
+A fonte dos dois é `data/tokens.json`, e quem espelha é `npm run gerar`. Só o
+bloco `estado` vai para as DUAS superfícies — é onde mora `vitoria` (R6), que
+aparece no selo "TOPO" do HUD e no aviso do painel: o mesmo estado visto de
+dois lugares tem que ser a mesma cor. O bloco `hud` é só do jogo.
+
+### Exceção à regra das laterais
+O selo de vitória é o único elemento do HUD no centro da tela. Ali a corrida
+ACABOU: não há presente chegando para ler nem boneco subindo para acompanhar, e
+o que o espectador precisa ver é que a torre foi vencida. É também o único
+aviso do HUD sem tempo de tela — ele fica até o streamer reiniciar no painel,
+porque é exatamente essa a regra do R6.

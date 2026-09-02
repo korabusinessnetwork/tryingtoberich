@@ -28,6 +28,7 @@ local Ponte = {}
 --   opcoes = {
 --     aoEvento = function(evento) end,   -- evento JÁ validado por Tipos.validarEvento
 --     aoConexao = function(online, detalhe) end,  -- opcional, para o HUD saber
+--     aoComando = function(tipo) end,    -- ordem do painel, ver ADR-013
 --   }
 -- Ponte.parar()
 -- Ponte.online() -> boolean
@@ -57,6 +58,7 @@ local avisouHttpDesligado = false
 local aoEvento = nil
 local aoConexao = nil
 local aoCombateAnulado = nil
+local aoComando = nil
 
 local cursorAtual = 0
 local backoffAtual = BACKOFF_INICIAL
@@ -232,6 +234,28 @@ local function cicloEventos()
 					end
 				end
 
+				--[[
+					Comando do painel (ADR-013). Não é presente: não tem delta,
+					não casa com slot e não veio de espectador nenhum.
+
+					Processado ANTES dos anulados e DEPOIS dos eventos, na ordem
+					em que o envelope os traz: reiniciar depois de um presente
+					que já saiu é diferente de reiniciar antes dele, e o cursor
+					único é o que preserva essa ordem.
+
+					Só `reiniciar` existe hoje, e tipo desconhecido é ignorado
+					em silêncio de propósito — uma ponte mais nova falando com
+					um jogo mais velho não pode derrubar o laço.
+				]]
+				if type(corpo.comandos) == "table" then
+					for _, comando in ipairs(corpo.comandos) do
+						if type(comando) == "table" and comando.tipo == "reiniciar" then
+							entregou = true
+							chamarComSeguranca(aoComando, comando.tipo)
+						end
+					end
+				end
+
 				-- Combate que se anulou (ADR-012). Não move o boneco — delta 0
 				-- não existe no contrato — mas o HUD mostra, senão o empate lê
 				-- como travamento. Vem em lista separada por isso mesmo.
@@ -299,6 +323,7 @@ function Ponte.iniciar(opcoes)
 	aoEvento = opcoes.aoEvento
 	aoConexao = opcoes.aoConexao
 	aoCombateAnulado = opcoes.aoCombateAnulado
+	aoComando = opcoes.aoComando
 
 	cursorAtual = 0
 	backoffAtual = BACKOFF_INICIAL

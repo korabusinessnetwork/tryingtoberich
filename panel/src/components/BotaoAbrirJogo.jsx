@@ -1,32 +1,26 @@
 import "./BotaoAbrirJogo.css";
 
 /**
- * Abre o jogo no Roblox Studio, nesta máquina.
+ * Abre o jogo no Roblox Studio, pronto para dar Play.
  *
  * Quem executa é a PONTE, não o navegador: página web não abre programa local,
  * e nem deveria. O painel só pede; o processo nasce no Node, que já roda aqui.
  *
- * O botão faz as duas partes mecânicas do `game/README.md` — sobe o `rojo
- * serve` e abre o Studio. O Connect no plugin e o Play continuam na mão, porque
- * são cliques dentro do Studio, fora do alcance da ponte. O componente diz
- * isso na tela em vez de fingir que terminou.
+ * O botão não abre o Studio vazio — ele monta um `.rbxlx` com o jogo inteiro E
+ * com os dois passos manuais do `game/README` já feitos: o `KoraConfig` no
+ * ServerStorage (URL e token da ponte) e o HttpService ligado. Sem isso o
+ * streamer criava uma Folder e dois StringValue na mão, e errar um nome dava
+ * "falta configurar a ponte" sem dizer onde.
+ *
+ * Sobra o Play. Só isso.
  */
 export function BotaoAbrirJogo({ abrindo, resultado, erro, aoAbrir }) {
   const recado = () => {
     if (erro) return { texto: erro, classe: "pastilha pastilha-erro" };
     if (!resultado) return null;
 
-    if (resultado.rojo === "ausente") {
-      return {
-        texto: "Studio aberto, mas o Rojo não está instalado — o jogo não vai sincronizar.",
-        classe: "pastilha pastilha-atencao",
-      };
-    }
     return {
-      texto:
-        resultado.rojo === "ja_rodando"
-          ? `Studio aberto. O Rojo já servia na ${resultado.portaRojo}.`
-          : `Studio aberto e Rojo servindo na ${resultado.portaRojo}.`,
+      texto: "Studio abrindo com o jogo montado e a ponte já configurada. É só dar Play.",
       classe: "pastilha pastilha-ok",
     };
   };
@@ -36,26 +30,17 @@ export function BotaoAbrirJogo({ abrindo, resultado, erro, aoAbrir }) {
   return (
     <section className="abrir-jogo" aria-label="Abrir o jogo">
       <button type="button" className="abrir-jogo-botao" disabled={abrindo} onClick={aoAbrir}>
-        {abrindo ? "Abrindo…" : "Abrir no Studio"}
+        {abrindo ? "Montando o jogo…" : "Abrir o jogo no Studio"}
       </button>
 
       {aviso ? <p className={aviso.classe}>{aviso.texto}</p> : null}
 
-      {/* Sempre à vista, e não só depois do clique: são os dois passos que a
-          ponte não tem como dar, e descobrir isso olhando um Studio parado
-          custa mais que ler uma linha. */}
+      {/* O único passo que sobrou para a pessoa. Fica à vista antes do clique
+          porque um Studio abrindo é lento, e saber o que fazer quando ele abrir
+          evita o "e agora?". */}
       <p className="abrir-jogo-passos">
-        No Studio: plugin <strong>Rojo → Connect</strong>, depois <strong>Play</strong>.
+        Quando o Studio abrir: aperte <strong>Play</strong>. O resto já vai montado.
       </p>
-
-      {resultado?.rojo === "ausente" ? (
-        <p className="abrir-jogo-passos">
-          {/* winget e não `cargo install rojo`: o cargo obrigaria a instalar o
-              Rust inteiro antes, e o winget já vem no Windows 11. */}
-          Instalar o Rojo: <code>winget install Rojo.Rojo</code>{" "}
-          (ou <a href="https://rojo.space" target="_blank" rel="noreferrer">rojo.space</a>).
-        </p>
-      ) : null}
     </section>
   );
 }

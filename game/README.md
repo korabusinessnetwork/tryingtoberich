@@ -30,7 +30,16 @@ Para conferir que a árvore monta sem abrir o Studio:
 rojo build game/default.project.json --output /tmp/teste.rbxlx
 ```
 
-### Antes da primeira partida
+### O caminho curto: o botão do painel
+
+Na página **Jogo** do painel, **Abrir o jogo no Studio** monta um `.rbxlx` com o
+projeto inteiro e com os dois passos abaixo JÁ FEITOS — o `KoraConfig` no
+ServerStorage e o HttpService ligado — e abre o Studio nele. Sobra dar Play.
+
+O arquivo nasce na pasta temporária do sistema, nunca no repositório, porque
+leva o `BRIDGE_TOKEN` dentro (11_SEGURANCA).
+
+### Antes da primeira partida (só se você montar à mão)
 
 1. **Ligue o HttpService.** Game Settings → Security → Allow HTTP Requests.
    Sem isso o long-poll não sai do lugar.

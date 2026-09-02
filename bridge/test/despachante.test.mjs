@@ -165,3 +165,49 @@ test("o jogo informando que saiu da animação libera a fila antes do previsto (
   despachante.avancar(T0 + 200);
   assert.equal(disparos.length, 2, "o jogo é dono do estado: se ele diz que acabou, a fila anda");
 });
+
+test("o não mapeado carrega o presenteId, e não só o nome", () => {
+  // O contador do painel era um lamento: dizia o que estava sendo deixado na
+  // mesa e não dava como agir. Com o id, vincular a um slot é um clique no
+  // meio da live — sem ele, o painel só teria um nome para procurar no
+  // catálogo à mão. A CHAVE continua sendo o nome, que é o que aparece na
+  // tela; o id vai junto, como carga.
+  const naoMapeados = [];
+  const despachante = new Despachante({ animacoes, aoNaoMapeado: (d) => naoMapeados.push(d) });
+  despachante.definirPreset(preset);
+
+  const evento = { presenteId: "sem-nao-mapeado", presenteNome: "Fora do preset", moedas: 42, repeticoes: 1, recebidoEm: T0 };
+  despachante.receber(evento, T0);
+  despachante.receber(evento, T0 + 10);
+
+  assert.equal(naoMapeados.length, 2);
+  assert.deepEqual(naoMapeados.at(-1), {
+    presenteNome: "Fora do preset",
+    presenteId: "sem-nao-mapeado",
+    moedas: 42,
+    contagem: 2,
+  });
+});
+
+test("o comando do painel usa o MESMO cursor dos presentes (ADR-013)", () => {
+  // Cursor emitido por fora colidiria com o do caminho normal, e o `?desde=`
+  // do Roblox então reprocessaria um presente já entregue ou pularia o
+  // próximo. É por isso que o comando nasce aqui e não no núcleo.
+  const disparos = [];
+  const despachante = new Despachante({ animacoes, aoDespachar: (d) => disparos.push(d) });
+  despachante.definirPreset(preset);
+
+  despachante.receber({ presenteId: "sem-galaxy", presenteNome: "Galaxy", repeticoes: 1, recebidoEm: T0 }, T0);
+  const comando = despachante.emitirComando("reiniciar", T0 + 10);
+
+  assert.equal(comando.id, disparos.at(-1).id + 1, "o comando é o próximo do mesmo cursor");
+  assert.equal(comando.tipo, "reiniciar");
+  assert.equal(comando.tipoDeEntrada, "comando");
+
+  // E não ocupa o canal de animação: o presente seguinte continua saindo na
+  // hora, que é o Princípio nº1.
+  const antes = disparos.length;
+  despachante.informarEstadoDoJogo({ emAnimacao: false }, T0 + 20);
+  despachante.receber({ presenteId: "sem-rose", presenteNome: "Rose", repeticoes: 1, recebidoEm: T0 + 20 }, T0 + 20);
+  assert.equal(disparos.length, antes + 1, "reiniciar não segura o próximo presente");
+});

@@ -111,11 +111,13 @@ export class RegistroDeLongPoll {
   }
 
   #responder(resposta, entradas) {
-    // Duas listas no mesmo envelope, com um cursor só. `eventos` move o boneco;
+    // Três listas no mesmo envelope, com um cursor só. `eventos` move o boneco;
     // `anulados` não move nada mas o HUD precisa mostrar, senão o empate do
-    // ADR-012 lê como travamento. Ver evento-jogo.schema.json.
+    // ADR-012 lê como travamento; `comandos` é ordem do streamer, não de
+    // espectador (ADR-013). Ver evento-jogo.schema.json.
     const anulados = entradas.filter((e) => e.tipoDeEntrada === "anulado");
-    const eventos = entradas.filter((e) => e.tipoDeEntrada !== "anulado");
+    const comandos = entradas.filter((e) => e.tipoDeEntrada === "comando");
+    const eventos = entradas.filter((e) => e.tipoDeEntrada !== "anulado" && e.tipoDeEntrada !== "comando");
 
     const corpo = {
       cursor: Math.max(...entradas.map((e) => e.id)),
@@ -127,6 +129,7 @@ export class RegistroDeLongPoll {
       anulados: anulados.map(({ id, somaSubida, somaDescida, participantes, emitidoEm }) => ({
         id, somaSubida, somaDescida, participantes, emitidoEm,
       })),
+      comandos: comandos.map(({ id, tipo, emitidoEm }) => ({ id, tipo, emitidoEm })),
     };
     try {
       resposta.status(200).json(corpo);

@@ -1,0 +1,184 @@
+/* Resumo da live. Estilo fora do JSX, para o white-label da Fase 3.
+
+   Esta é uma das duas telas do painel feitas para LER, e não para olhar de
+   canto de olho: ela só existe com a live parada. Por isso ela pode gastar
+   espaço com rótulo e texto, ao contrário do monitor ao vivo. */
+
+.resumo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.resumo-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.resumo-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.resumo-quando {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.resumo-fechar {
+  flex-shrink: 0;
+  min-width: var(--alvo-minimo);
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.resumo-recado {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+/* Os números da live, lado a lado. `auto-fit` mantém a linha única enquanto
+   couber e quebra sozinha na segunda tela estreita. */
+.resumo-numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.resumo-numero {
+  padding: 8px 10px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.resumo-rotulo {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--painel-texto-secundario);
+}
+
+.resumo-valor {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Duração é texto ("12min 30s") e não cabe no corpo de 24px numa coluna
+   estreita sem estourar. */
+.resumo-valor-texto {
+  font-size: 18px;
+}
+
+/* Os nomes vêm de `saudeDaLatencia` em lib/regras.js: ok / atencao / erro /
+   desconhecida. Sem classe para "desconhecida" de propósito — latência que
+   nunca foi medida (live sem presente) fica na cor do texto, e não pintada. */
+.resumo-latencia-ok { color: var(--estado-ok); }
+.resumo-latencia-atencao { color: var(--estado-atencao); }
+.resumo-latencia-erro { color: var(--estado-erro); }
+
+.resumo-listas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--espaco);
+}
+
+.resumo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resumo-contador {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--estado-atencao);
+  color: var(--painel-fundo);
+  font-variant-numeric: tabular-nums;
+}
+
+.resumo-barras,
+.resumo-perdidos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Barra em vez de número solto: a pergunta real é "qual slot puxou a live",
+   e comparação de comprimento se lê antes de comparação de dígito. */
+.resumo-barra {
+  display: grid;
+  grid-template-columns: 28px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumo-barra-slot {
+  font-weight: 700;
+  color: var(--painel-texto-secundario);
+}
+
+.resumo-barra-trilho {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  overflow: hidden;
+}
+
+.resumo-barra-preenchida {
+  display: block;
+  height: 100%;
+  background: var(--estado-ok);
+}
+
+.resumo-barra-total {
+  text-align: right;
+}
+
+.resumo-perdido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  border-radius: var(--raio);
+  font-size: 12px;
+}
+
+.resumo-perdido-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumo-perdido-contagem {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--estado-atencao);
+}

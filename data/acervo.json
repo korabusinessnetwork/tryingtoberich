@@ -1,26 +1,214 @@
 {
-  "atualizadoEm": null,
+  "atualizadoEm": "2026-09-02T14:01:30.817590Z",
   "skybox": [
-    { "id": "skybox_entardecer_vulcanico", "nome": "Entardecer vulcânico", "tags": ["vulcanico", "entardecer", "quente", "laranja", "dramatico"], "assetId": null, "status": "pendente-upload" },
-    { "id": "skybox_noite_estrelada", "nome": "Noite estrelada", "tags": ["noturno", "estrelado", "frio", "azul", "calmo"], "assetId": null, "status": "pendente-upload" },
-    { "id": "skybox_ceu_limpo_dia", "nome": "Céu limpo de dia", "tags": ["diurno", "claro", "azul", "ameno"], "assetId": null, "status": "pendente-upload" },
-    { "id": "skybox_tempestade", "nome": "Tempestade", "tags": ["tempestade", "nublado", "cinza", "dramatico", "chuva"], "assetId": null, "status": "pendente-upload" },
-    { "id": "skybox_aurora_polar", "nome": "Aurora polar", "tags": ["gelo", "aurora", "frio", "verde", "noturno"], "assetId": null, "status": "pendente-upload" },
-    { "id": "skybox_deserto_meio_dia", "nome": "Deserto ao meio-dia", "tags": ["deserto", "arido", "quente", "amarelo", "diurno"], "assetId": null, "status": "pendente-upload" }
+    {
+      "id": "skybox_entardecer_vulcanico",
+      "nome": "Entardecer vulcânico",
+      "tags": [
+        "vulcanico",
+        "entardecer",
+        "quente",
+        "laranja",
+        "dramatico"
+      ],
+      "assetId": 135660972193972,
+      "status": "aprovado"
+    },
+    {
+      "id": "skybox_noite_estrelada",
+      "nome": "Noite estrelada",
+      "tags": [
+        "noturno",
+        "estrelado",
+        "frio",
+        "azul",
+        "calmo"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "skybox_ceu_limpo_dia",
+      "nome": "Céu limpo de dia",
+      "tags": [
+        "diurno",
+        "claro",
+        "azul",
+        "ameno"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "skybox_tempestade",
+      "nome": "Tempestade",
+      "tags": [
+        "tempestade",
+        "nublado",
+        "cinza",
+        "dramatico",
+        "chuva"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "skybox_aurora_polar",
+      "nome": "Aurora polar",
+      "tags": [
+        "gelo",
+        "aurora",
+        "frio",
+        "verde",
+        "noturno"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "skybox_deserto_meio_dia",
+      "nome": "Deserto ao meio-dia",
+      "tags": [
+        "deserto",
+        "arido",
+        "quente",
+        "amarelo",
+        "diurno"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    }
   ],
   "texturas": [
-    { "id": "textura_rocha_vulcanica", "nome": "Rocha vulcânica", "tags": ["rocha", "vulcanico", "escuro", "aspero", "quente"], "assetId": null, "status": "pendente-upload" },
-    { "id": "textura_gelo", "nome": "Gelo", "tags": ["gelo", "liso", "frio", "claro"], "assetId": null, "status": "pendente-upload" },
-    { "id": "textura_metal_industrial", "nome": "Metal industrial", "tags": ["metal", "industrial", "cinza", "urbano"], "assetId": null, "status": "pendente-upload" },
-    { "id": "textura_madeira_velha", "nome": "Madeira velha", "tags": ["madeira", "rustico", "marrom", "floresta"], "assetId": null, "status": "pendente-upload" },
-    { "id": "textura_pedra_musgo", "nome": "Pedra com musgo", "tags": ["pedra", "floresta", "verde", "umido"], "assetId": null, "status": "pendente-upload" },
-    { "id": "textura_areia_compacta", "nome": "Areia compacta", "tags": ["areia", "deserto", "claro", "arido"], "assetId": null, "status": "pendente-upload" }
+    {
+      "id": "textura_rocha_vulcanica",
+      "nome": "Rocha vulcânica",
+      "tags": [
+        "rocha",
+        "vulcanico",
+        "escuro",
+        "aspero",
+        "quente"
+      ],
+      "assetId": 83250464918775,
+      "status": "aprovado"
+    },
+    {
+      "id": "textura_gelo",
+      "nome": "Gelo",
+      "tags": [
+        "gelo",
+        "liso",
+        "frio",
+        "claro"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "textura_metal_industrial",
+      "nome": "Metal industrial",
+      "tags": [
+        "metal",
+        "industrial",
+        "cinza",
+        "urbano"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "textura_madeira_velha",
+      "nome": "Madeira velha",
+      "tags": [
+        "madeira",
+        "rustico",
+        "marrom",
+        "floresta"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "textura_pedra_musgo",
+      "nome": "Pedra com musgo",
+      "tags": [
+        "pedra",
+        "floresta",
+        "verde",
+        "umido"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    },
+    {
+      "id": "textura_areia_compacta",
+      "nome": "Areia compacta",
+      "tags": [
+        "areia",
+        "deserto",
+        "claro",
+        "arido"
+      ],
+      "assetId": null,
+      "status": "pendente-upload"
+    }
   ],
   "props": [
-    { "id": "fumaca", "nome": "Fumaça", "tags": ["vulcanico", "tempestade", "denso", "escuro"], "descricao": "ParticleEmitter de fumaça subindo devagar ao lado da plataforma." },
-    { "id": "fagulha", "nome": "Fagulha", "tags": ["vulcanico", "fogo", "quente", "laranja"], "descricao": "Partícula curta e brilhante, boa para complementar fumaça." },
-    { "id": "neve", "nome": "Neve", "tags": ["gelo", "frio", "polar", "claro"], "descricao": "Partícula caindo em volume, densidade controla o quanto tampa a visão." },
-    { "id": "folhas", "nome": "Folhas ao vento", "tags": ["floresta", "vento", "verde", "organico"], "descricao": "Partícula com deriva lateral, sugere vento sem custo de física." },
-    { "id": "poeira", "nome": "Poeira", "tags": ["deserto", "arido", "seco", "amarelo"], "descricao": "Névoa baixa e rala colada na plataforma." }
+    {
+      "id": "fumaca",
+      "nome": "Fumaça",
+      "tags": [
+        "vulcanico",
+        "tempestade",
+        "denso",
+        "escuro"
+      ],
+      "descricao": "ParticleEmitter de fumaça subindo devagar ao lado da plataforma."
+    },
+    {
+      "id": "fagulha",
+      "nome": "Fagulha",
+      "tags": [
+        "vulcanico",
+        "fogo",
+        "quente",
+        "laranja"
+      ],
+      "descricao": "Partícula curta e brilhante, boa para complementar fumaça."
+    },
+    {
+      "id": "neve",
+      "nome": "Neve",
+      "tags": [
+        "gelo",
+        "frio",
+        "polar",
+        "claro"
+      ],
+      "descricao": "Partícula caindo em volume, densidade controla o quanto tampa a visão."
+    },
+    {
+      "id": "folhas",
+      "nome": "Folhas ao vento",
+      "tags": [
+        "floresta",
+        "vento",
+        "verde",
+        "organico"
+      ],
+      "descricao": "Partícula com deriva lateral, sugere vento sem custo de física."
+    },
+    {
+      "id": "poeira",
+      "nome": "Poeira",
+      "tags": [
+        "deserto",
+        "arido",
+        "seco",
+        "amarelo"
+      ],
+      "descricao": "Névoa baixa e rala colada na plataforma."
+    }
   ]
 }

@@ -19,14 +19,21 @@ import { ConectorDeFixture } from "./tiktok/conector-fixture.mjs";
 import { ClienteGemini } from "./gemini/cliente.mjs";
 import { ClienteRoblox } from "./roblox/catalogo-itens.mjs";
 import { carregarAnimacoes, indexarAnimacoes } from "./repos/animacoes.mjs";
-import { carregarAcervo } from "./repos/acervo.mjs";
+import { carregarAcervo, resolverAssetsDoMapa } from "./repos/acervo.mjs";
+import { carregarConfiguracao, salvarConfiguracao } from "./repos/configuracao.mjs";
 import { carregarCatalogo, salvarColeta } from "./repos/catalogo.mjs";
-import { carregarPreset } from "./repos/presets.mjs";
+import { carregarPreset, listarPresets } from "./repos/presets.mjs";
 import { carregarMapa, salvarMapa } from "./repos/mapas.mjs";
 import { carregarLook } from "./repos/looks.mjs";
 
 /** Com que frequência o despachante é cutucado para fechar combate vencido. */
 const PASSO_DO_RELOGIO_MS = 50;
+
+/** O id do único preset instalado, ou null se houver zero ou vários. */
+async function umPresetSozinho() {
+  const presets = await listarPresets();
+  return presets.length === 1 ? presets[0].presetId : null;
+}
 
 export class Nucleo {
   #despachante;
@@ -36,6 +43,14 @@ export class Nucleo {
   #preset = null;
   #relogio = null;
   #estadoDaLive = ESTADO.DESLIGADA;
+  /**
+   * O último estado que o JOGO reportou (R9: ele é a fonte de verdade da
+   * posição). Guardado porque o painel lê o estado por dois caminhos — o SSE e
+   * o GET de abertura — e os dois precisam contar a mesma história. Sem isto,
+   * quem abrisse o painel no meio de uma live veria a vitória sumir até o
+   * próximo batimento do jogo.
+   */
+  #doJogo = { totalPlataformas: 0, vitoria: false };
   #ouvintes = new Set();
   #catalogoEmMemoria = null;
   #animacoesEmMemoria = null;
@@ -71,6 +86,10 @@ export class Nucleo {
       sessao: this.#sessao ? "rodando" : "parada",
       presetId: this.#preset?.presetId ?? null,
       plataformaAtual: this.#sessao?.instantaneo.plataformaReferencia ?? 0,
+      totalPlataformas: this.#doJogo.totalPlataformas,
+      // R6 — o topo não reinicia sozinho. Enquanto isto for verdadeiro, o
+      // painel mostra a decisão que só o streamer pode tomar.
+      vitoria: this.#doJogo.vitoria,
     };
   }
 
@@ -171,6 +190,11 @@ export class Nucleo {
     this.#despachante.definirPreset(preset);
     this.#despachante.limpar();
     this.#sessao = new Sessao({ presetId, mapaId: preset.mapaId ?? null });
+    // Vitória e tamanho do mapa são da CORRIDA, não da ponte. Sessão nova
+    // começa sem os dois, e o jogo republica no primeiro batimento — senão a
+    // live que acabou no topo abriria a próxima já com o aviso de vitória na
+    // tela e um botão de reiniciar que não tem o que reiniciar.
+    this.#doJogo = { totalPlataformas: 0, vitoria: false };
 
     this.#conector = cenario
       ? new ConectorDeFixture({
@@ -180,7 +204,7 @@ export class Nucleo {
           aoEstado: (e) => this.#aoEstadoDaLive(e),
         })
       : new ConectorTikTok({
-          usuario: this.config.usuarioTiktok,
+          usuario: await this.#contaDaLive(),
           aoEvento: (e) => this.#aoEventoDaLive(e),
           aoEstado: (e) => this.#aoEstadoDaLive(e),
           aoCatalogo: (presentes) => this.#aoCatalogo(presentes),
@@ -191,6 +215,38 @@ export class Nucleo {
     await this.#conector.conectar();
     log.info("sessao_iniciada", { sessaoId: this.#sessao.id, presetId, cenario });
     return this.#sessao.instantaneo;
+  }
+
+  /**
+   * Em qual live a sessão vai rodar.
+   *
+   * O painel manda; o `.env` é só semente para quem já tinha configurado antes
+   * de a tela existir. Falhar AQUI, com mensagem, é o ponto: antes disso a
+   * ponte tentava conectar no placeholder do `.env.example` e o streamer via um
+   * erro do TikTok sobre uma conta que nunca existiu.
+   */
+  async #contaDaLive() {
+    const configuracao = await carregarConfiguracao(this.config.usuarioTiktok);
+    if (!configuracao.usuarioTiktok) {
+      throw new ErroDeDominio(
+        "sem_conta_da_live",
+        "Nenhuma conta configurada. Digite o @ da sua live no painel, em Configurar.",
+        { status: 409 },
+      );
+    }
+    return configuracao.usuarioTiktok;
+  }
+
+  /** A conta configurada, para o painel mostrar. `null` = ninguém configurou ainda. */
+  async configuracao() {
+    return carregarConfiguracao(this.config.usuarioTiktok);
+  }
+
+  async definirConfiguracao(dados) {
+    const salva = await salvarConfiguracao(dados, this.config.usuarioTiktok);
+    log.info("conta_da_live_definida", { streamerId: salva.streamerId });
+    this.#publicar("estado", this.estado);
+    return salva;
   }
 
   async encerrarSessao() {
@@ -205,6 +261,11 @@ export class Nucleo {
 
     const resumo = await this.#sessao.encerrar();
     this.#sessao = null;
+    // Idem no Stop: o jogo não tem como avisar que a corrida acabou (os
+    // long-polls já foram fechados na linha acima), então quem esquece a
+    // vitória é a ponte. Sem isto o aviso do R6 fica na tela por cima do
+    // resumo da live, oferecendo reiniciar uma corrida que não existe mais.
+    this.#doJogo = { totalPlataformas: 0, vitoria: false };
     this.#publicar("estado", this.estado);
     log.info("sessao_encerrada", { sessaoId: resumo.sessaoId, totalPresentes: resumo.resumo.totalPresentes });
     return resumo;
@@ -339,11 +400,58 @@ export class Nucleo {
   aplicarEstadoDoJogo(estado) {
     this.#despachante.informarEstadoDoJogo(estado);
     this.#sessao?.atualizarEstadoDoJogo(estado);
+
+    const venceuAgora = estado.vitoria === true && !this.#doJogo.vitoria;
+    this.#doJogo = {
+      totalPlataformas: Number.isInteger(estado.totalPlataformas)
+        ? estado.totalPlataformas
+        : this.#doJogo.totalPlataformas,
+      vitoria: estado.vitoria === true,
+    };
+    // Só na transição: o jogo republica o estado a cada 2s, e uma linha de log
+    // por batimento afogaria o painel justo no momento de mais atenção.
+    if (venceuAgora) log.info("vitoria", { plataforma: estado.plataformaReferencia });
+
     this.#publicar("estado", { ...this.estado, emAnimacao: estado.emAnimacao });
   }
 
+  /**
+   * R6 — reinicia a corrida. Ordem do streamer, não de espectador (ADR-013).
+   *
+   * A ponte NÃO zera posição nenhuma: quem é dono de onde o boneco está é o
+   * jogo (R9.1), e ele devolve a posição nova pelo POST de estado. Aqui só sai
+   * o comando. Com o jogo offline o long-poll descarta, como faz com presente
+   * (F7), e é por isso que a resposta diz `jogoOnline` — senão o streamer fica
+   * clicando um botão que não chega em lugar nenhum.
+   */
+  reiniciarCorrida() {
+    const jogoOnline = this.#longpoll.jogoOnline();
+    const comando = this.#despachante.emitirComando("reiniciar");
+    this.#longpoll.publicar([comando]);
+
+    // Otimista de propósito: se o comando saiu, a vitória deixa de valer no
+    // painel na hora. O jogo confirma no próximo estado, e se ele não recebeu,
+    // o `vitoria: true` volta sozinho no batimento seguinte.
+    if (jogoOnline) this.#doJogo = { ...this.#doJogo, vitoria: false };
+
+    log.info("corrida_reiniciada", { jogoOnline });
+    this.#publicar("estado", this.estado);
+    return { id: comando.id, jogoOnline };
+  }
+
+  /**
+   * O mapa que o jogo recebe, já com os assetId do acervo resolvidos.
+   *
+   * A tradução acontece AQUI e não no disco: o schema do mapa é
+   * `additionalProperties: false`, então `acervoResolvido` não pode ser gravado
+   * no arquivo. E não deveria mesmo — o assetId é estado do acervo, que muda
+   * quando a moderação do Roblox aprova, sem o mapa mudar em nada.
+   */
   async mapaAtivo() {
-    return carregarMapa(this.#preset?.mapaId ?? null);
+    const mapa = await carregarMapa(this.#preset?.mapaId ?? null);
+    if (!mapa) return null;
+
+    return { ...mapa, acervoResolvido: resolverAssetsDoMapa(mapa, await carregarAcervo()) };
   }
 
   async lookAtivo() {
@@ -360,8 +468,65 @@ export class Nucleo {
     // R7 — trocar de preset no meio da sessão vale a partir do próximo evento.
     this.#preset = preset;
     this.#despachante.definirPreset(preset);
+
+    // Persistido, e fora do caminho crítico: o Roblox pede GET /jogo/mapa na
+    // ENTRADA, então sem isto uma ponte reiniciada servia 404 e o jogo caía num
+    // mundo vazio, sem erro na tela. Fire-and-forget porque trocar de preset não
+    // pode esperar disco (CLAUDE.md, Princípio nº1).
+    salvarConfiguracao({ presetAtivo: presetId }, this.config.usuarioTiktok)
+      .catch((erro) => log.aviso("preset_ativo_nao_persistido", { motivo: erro.message }));
+
     this.#publicar("estado", this.estado);
     return preset;
+  }
+
+  /**
+   * Restaura o que valia antes do reinício. Chamado uma vez, no arranque.
+   *
+   * Sem isto a ponte subia sem preset e o jogo, que pede o mapa na entrada,
+   * recebia `sem_mapa` — mundo vazio, HUD funcionando, e nada explicando.
+   */
+  async restaurar() {
+    const { presetAtivo } = await carregarConfiguracao(this.config.usuarioTiktok);
+
+    // Nada persistido e existe UM preset só: ativa ele. É instalação nova, e a
+    // alternativa é o jogo abrir vazio até alguém clicar em algo no painel.
+    const escolhido = presetAtivo ?? (await umPresetSozinho());
+    if (!escolhido) return null;
+
+    try {
+      await this.definirPresetAtivo(escolhido);
+      log.info("preset_restaurado", { presetId: escolhido });
+      return escolhido;
+    } catch (erro) {
+      // Preset apagado do disco depois de configurado não pode impedir a ponte
+      // de subir: sem ela, o painel nem abre para o streamer arrumar.
+      log.aviso("preset_nao_restaurado", { presetId: escolhido, motivo: erro.message });
+      return null;
+    }
+  }
+
+  /**
+   * R7 — troca o preset com a sessão rodando.
+   *
+   * Separado de `definirPresetAtivo` porque a sessão precisa saber com QUAL
+   * preset ela terminou: o resumo de F5 carrega o `presetId`, e trocar sem
+   * registrar deixaria o histórico apontando para o preset errado.
+   */
+  async trocarPresetAtivo(presetId) {
+    const preset = await this.definirPresetAtivo(presetId);
+    if (this.#sessao) {
+      this.#sessao.trocarPreset(presetId);
+      log.info("preset_trocado_ao_vivo", { presetId });
+    }
+    return preset;
+  }
+
+  /** ADR-004 — a prontidão de um mapa já salvo. Ela muda com o ACERVO, não com o mapa. */
+  async prontidaoDoMapa(mapaId) {
+    const mapa = await carregarMapa(mapaId);
+    if (!mapa) throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, { status: 404 });
+    return { mapaId, ...ClienteGemini.prontidao(mapa, await carregarAcervo()) };
   }
 
   async gerarMapa(descricao) {

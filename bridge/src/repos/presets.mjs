@@ -2,7 +2,7 @@
 
 import { ErroDeDominio } from "../erros.mjs";
 import { presentesRepetidos } from "../dominio/regras.mjs";
-import { caminhoDeDados, escreverJsonAtomico, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
+import { apagar, caminhoDeDados, escreverJsonAtomico, existe, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
 
 const arquivo = (presetId) => caminhoDeDados("presets", `${presetId}.json`);
@@ -36,4 +36,20 @@ export async function salvarPreset(preset) {
   const comCarimbo = { ...preset, atualizadoEm: new Date().toISOString() };
   await escreverJsonAtomico(arquivo(preset.presetId), comCarimbo);
   return comCarimbo;
+}
+
+/**
+ * Apaga um preset.
+ *
+ * Recusa apagar o que não existe em vez de responder sucesso silencioso: o
+ * painel usa a resposta para tirar o item da lista, e "apaguei" sobre um id
+ * errado esconderia um preset que continua lá.
+ */
+export async function apagarPreset(presetId) {
+  const caminho = arquivo(presetId);
+  if (!(await existe(caminho))) {
+    throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, { status: 404 });
+  }
+  await apagar(caminho);
+  return { presetId };
 }

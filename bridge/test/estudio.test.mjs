@@ -13,7 +13,7 @@ import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { acharRojo, acharStudio } from "../src/roblox/estudio.mjs";
+import { absolutizarCaminhos, acharRojo, acharStudio } from "../src/roblox/estudio.mjs";
 
 async function comPasta(corpo) {
   const pasta = await mkdtemp(path.join(os.tmpdir(), "kora-estudio-"));
@@ -70,4 +70,34 @@ test("sem Roblox instalado não estoura, devolve null", () => {
   // String vazia, não `undefined`: undefined cai no parâmetro padrão e vai ler
   // o LOCALAPPDATA de verdade da máquina, que numa máquina com Studio acha.
   assert.equal(acharStudio(""), null);
+});
+
+/* ---------------------------------------------------------------- */
+/* O place gerado                                                    */
+/* ---------------------------------------------------------------- */
+
+test("os $path viram absolutos, para o projeto poder sair do repositório", () => {
+  // Isto é segurança, não arrumação. O projeto gerado leva o BRIDGE_TOKEN
+  // dentro. Com caminho relativo ele teria que nascer em `game/` para o Rojo
+  // resolver `src/shared` — ou seja, um arquivo com o token viveria dentro do
+  // repositório, a um `git add -A` de ser publicado. Absoluto deixa o projeto e
+  // o place na pasta temporária do sistema.
+  const arvore = {
+    ReplicatedStorage: {
+      $className: "ReplicatedStorage",
+      KoraCompartilhado: { $path: "src/shared" },
+      KoraAnimacoes: { $path: "src/animacoes" },
+    },
+  };
+
+  absolutizarCaminhos(arvore, path.join("C:", "repo", "game"));
+
+  assert.ok(path.isAbsolute(arvore.ReplicatedStorage.KoraCompartilhado.$path));
+  assert.ok(arvore.ReplicatedStorage.KoraAnimacoes.$path.endsWith(path.join("game", "src", "animacoes")));
+});
+
+test("absolutizar não quebra em nó sem $path nem em valor nulo", () => {
+  const arvore = { $className: "DataModel", vazio: null, texto: "nada", numero: 7 };
+  assert.doesNotThrow(() => absolutizarCaminhos(arvore, "C:\repo"));
+  assert.equal(arvore.texto, "nada", "só $path muda");
 });

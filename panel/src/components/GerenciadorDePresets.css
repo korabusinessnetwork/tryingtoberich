@@ -1,0 +1,90 @@
+/* Gerenciador de presets. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.presets-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.presets-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.presets-contagem {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.presets-recado {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.presets-recado code {
+  color: var(--painel-texto-primario);
+}
+
+.presets-criar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.presets-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Cresce e encolhe, mas nunca fica menor que um nome legível. */
+  flex: 1 1 220px;
+  font-size: 12px;
+}
+
+.presets-botao {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--painel-fundo);
+}
+
+/* Ação destrutiva separada por uma linha e alinhada à direita: ela não pode
+   ficar na mesma fileira de "criar" e receber um clique de pressa. */
+.presets-perigo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: var(--borda);
+}
+
+.presets-apagar {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--estado-erro);
+  background: var(--painel-fundo);
+}
+
+/* Só o segundo tempo fica vermelho de verdade: o primeiro clique é um aviso,
+   não a ação. Mesmo padrão do Stop na barra de sessão. */
+.presets-apagar-confirmar {
+  border-color: var(--estado-erro);
+  background: var(--estado-erro);
+  color: var(--painel-fundo);
+}

@@ -69,6 +69,8 @@ export function SeletorDePresente({
   catalogo,
   presenteIdAtual,
   presenteIdsUsados,
+  atualizando,
+  aoAtualizar,
   aoEscolher,
   aoFechar,
 }) {
@@ -162,10 +164,26 @@ export function SeletorDePresente({
         </header>
 
         {catalogo?.confirmado === false && (
-          <p className="seletor-presente-semente">
-            Catálogo da <strong>semente de desenvolvimento</strong> — os valores em moedas
-            ainda não são confirmados. A primeira coleta da live sobrescreve esses números.
-          </p>
+          <div className="seletor-presente-semente">
+            <p className="seletor-presente-semente-texto">
+              Catálogo da <strong>semente de desenvolvimento</strong> — os valores em moedas
+              ainda não são confirmados. A primeira coleta da live sobrescreve esses números.
+            </p>
+            {/* O aviso apontava um problema e não oferecia a saída. A coleta
+                fala com a TikTok pela ponte e traz os ids e valores de verdade
+                — que é o que faz o presente do preset casar com o presente que
+                o espectador vê no painel de desejos. */}
+            {aoAtualizar && (
+              <button
+                type="button"
+                className="seletor-presente-atualizar"
+                onClick={aoAtualizar}
+                disabled={atualizando}
+              >
+                {atualizando ? "Coletando…" : "Coletar da live agora"}
+              </button>
+            )}
+          </div>
         )}
 
         <input

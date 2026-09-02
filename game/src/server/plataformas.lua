@@ -471,6 +471,46 @@ function Plataformas.definirReferencia(indice, motivo)
 end
 
 --[[
+	R6 — volta a corrida ao pé da torre, por ordem do painel (ADR-013).
+
+	Zera referência, máxima e quedas, e reposiciona pela MESMA sequência da
+	queda natural (zera velocidade, posiciona, zera de novo), sem contar como
+	queda: reiniciar não é o streamer tendo caído.
+
+	O que este módulo NÃO faz é decidir quando reiniciar. Chegar ao topo não
+	reinicia nada sozinho (R6): quem manda é o streamer, no painel, e a ordem
+	atravessa a ponte. Aqui é só a execução.
+]]
+function Plataformas.reiniciarCorrida(motivo)
+	local base = Tipos.PLATAFORMA_MIN
+	if #ordenadas > 0 then
+		-- O pé da torre é a menor plataforma que o construtor entregou, não o
+		-- zero teórico: mapa numerado a partir de 1 não tem plataforma 0, e
+		-- teleportar para ela cairia no vizinho mais próximo por sorte.
+		base = ordenadas[1].indice
+		for i = 2, #ordenadas do
+			if ordenadas[i].indice < base then
+				base = ordenadas[i].indice
+			end
+		end
+	end
+
+	plataformaReferencia = Tipos.limitarPlataforma(base, totalPlataformas)
+	plataformaMaxima = plataformaReferencia
+	quedasNaturais = 0
+	tempoCaindo = 0
+
+	-- `reposicionar` já notifica; quando ele não roda (personagem morto, raiz
+	-- ancorada por animação) o estado acima mudou mesmo assim e o painel
+	-- precisa ver. Por isso a notificação de reserva.
+	if not reposicionar(motivo or "reinício pelo painel (R6)", false) then
+		notificar()
+	end
+
+	return plataformaReferencia
+end
+
+--[[
 	Cala o detector durante animação (F4b.4). Quem chama é o orquestrador, no
 	começo e no fim da tomada de controle. O rastreio de toque continua ligado.
 ]]

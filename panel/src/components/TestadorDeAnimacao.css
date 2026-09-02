@@ -94,3 +94,28 @@
   font-variant-numeric: tabular-nums;
   color: var(--painel-texto-secundario);
 }
+
+/* Escala de intensidade. Cinco alvos pequenos numa linha só: é escolha de
+   teste, não a ação principal do bloco, e não pode competir com os 20 botões
+   de animação abaixo. */
+.animacoes-intensidade {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.animacoes-nivel {
+  min-width: var(--alvo-minimo);
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--painel-fundo);
+}
+
+.animacoes-nivel-escolhido {
+  border-color: var(--estado-ok);
+  color: var(--painel-texto-primario);
+}

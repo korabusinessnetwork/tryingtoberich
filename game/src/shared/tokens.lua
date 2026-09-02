@@ -17,6 +17,7 @@ Tokens.estado = {
 	ok = Color3.fromRGB(34, 197, 94),
 	atencao = Color3.fromRGB(245, 158, 11),
 	erro = Color3.fromRGB(239, 68, 68),
+	vitoria = Color3.fromRGB(34, 211, 238),
 }
 
 Tokens.hud = {

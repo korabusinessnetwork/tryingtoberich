@@ -1,0 +1,62 @@
+/* Aviso de vitória. Estilo fora do JSX, para o white-label da Fase 3.
+
+   A cor vem de --estado-vitoria, que é gerado de data/tokens.json e espelhado
+   no HUD do jogo: o selo "TOPO" na live e este bloco no painel são o mesmo
+   estado visto de dois lugares, e precisam ser a mesma cor. */
+
+.vitoria {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+  flex-wrap: wrap;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: 1px solid var(--estado-vitoria);
+  border-radius: var(--raio);
+}
+
+.vitoria-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Encolhe antes do botão: o texto explica, o botão é a ação. */
+  flex: 1 1 320px;
+}
+
+.vitoria-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--estado-vitoria);
+}
+
+.vitoria-detalhe {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.vitoria-acao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.vitoria-botao {
+  min-height: var(--alvo-minimo);
+  padding: 0 16px;
+  font-weight: 700;
+  border-color: var(--estado-vitoria);
+  color: var(--estado-vitoria);
+}
+
+.vitoria-nota {
+  font-size: 11px;
+  max-width: 32ch;
+  text-align: right;
+}

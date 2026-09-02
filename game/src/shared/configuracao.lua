@@ -50,15 +50,30 @@ function Configuracao.carregar()
 		return nil, "Configuracao só existe no servidor: o cliente nunca vê o token."
 	end
 
+	-- As três falhas abaixo davam a MESMA mensagem, e são causas diferentes:
+	-- pasta ausente é place errado ou Rojo sincronizando por cima; valor
+	-- ausente é a Folder criada pela metade. Dizer qual foi economiza a rodada
+	-- de adivinhação que custou uma tarde.
+	-- As falhas abaixo davam a MESMA mensagem e são causas diferentes: pasta
+	-- ausente é place errado ou Rojo ainda não sincronizado; valor ausente é a
+	-- Folder criada pela metade. Dizer qual foi economiza uma rodada inteira de
+	-- adivinhação.
 	local pasta = ServerStorage:FindFirstChild(Configuracao.PASTA)
 	if not pasta then
-		return nil, INSTRUCAO
+		return nil, "Não achei a Folder " .. Configuracao.PASTA .. " em ServerStorage. " .. INSTRUCAO
 	end
 
 	local url = ler(pasta, Configuracao.URL)
 	local token = ler(pasta, Configuracao.TOKEN)
-	if not url or not token then
-		return nil, INSTRUCAO
+
+	if not url and not token then
+		return nil, "A Folder " .. Configuracao.PASTA .. " existe, mas está VAZIA. " .. INSTRUCAO
+	end
+	if not url then
+		return nil, "Falta o StringValue " .. Configuracao.URL .. " dentro de " .. Configuracao.PASTA .. ". " .. INSTRUCAO
+	end
+	if not token then
+		return nil, "Falta o StringValue " .. Configuracao.TOKEN .. " dentro de " .. Configuracao.PASTA .. ". " .. INSTRUCAO
 	end
 
 	-- Barra no fim quebra a montagem de caminho mais adiante, e é erro comum

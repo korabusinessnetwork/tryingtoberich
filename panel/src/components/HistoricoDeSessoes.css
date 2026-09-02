@@ -1,0 +1,99 @@
+/* Histórico de lives. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.historico {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.historico-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.historico-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.historico-atualizar {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--painel-fundo);
+}
+
+.historico-recado {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.historico-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A linha inteira é o alvo: o streamer clica com pressa, e um link de 12px
+   dentro de uma linha de tabela é o oposto do alvo de 40px que o doc pede. */
+.historico-linha {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco);
+  width: 100%;
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  text-align: left;
+  font-size: 12px;
+  background: var(--painel-fundo);
+}
+
+.historico-linha-escolhida {
+  border-color: var(--estado-ok);
+}
+
+.historico-quando {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.historico-numero {
+  font-variant-numeric: tabular-nums;
+  color: var(--painel-texto-secundario);
+}
+
+.historico-numero strong {
+  color: var(--painel-texto-primario);
+}
+
+/* Empurra preset e marca para a direita: o que muda entre linhas fica alinhado
+   à esquerda, e o que identifica fica na borda oposta. */
+.historico-preset,
+.historico-marca {
+  margin-left: auto;
+}
+
+.historico-duracao {
+  flex-shrink: 0;
+}
+
+.historico-preset {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 20ch;
+}

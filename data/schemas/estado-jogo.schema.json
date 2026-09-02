@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kora.local/kora-stream-games/estado-jogo.schema.json",
   "title": "Estado reportado pelo jogo (Roblox → ponte)",
-  "description": "Corpo de POST /jogo/estado. O jogo é a fonte de verdade da posição porque só ele vê o streamer jogando (R9). A ponte apenas repassa ao painel: nunca calcula, nunca acumula. Valor fora da faixa é DESCARTADO, não corrigido (11_SEGURANCA, camada 3).",
+  "description": "Corpo de POST /jogo/estado. O jogo é a fonte de verdade da posição porque só ele vê o streamer jogando (R9). A ponte apenas repassa ao painel: nunca calcula, nunca acumula. Valor fora da faixa é DESCARTADO, não corrigido (11_SEGURANCA, camada 3). O jogo publica ESTE MESMO objeto para os clientes (ver game/src/shared/eventos.lua, evento ESTADO): campo que existe lá e falta aqui derruba o payload inteiro na validação, e o painel fica cego sem nenhum erro visível.",
   "type": "object",
   "additionalProperties": false,
   "required": ["plataformaReferencia", "plataformaMaxima", "emAnimacao"],
@@ -21,6 +21,20 @@
     },
     "emAnimacao": { "type": "boolean" },
     "quedasNaturais": { "type": "integer", "minimum": 0 },
+    "totalPlataformas": {
+      "description": "Tamanho do mapa construído. Vem do jogo e não do spec porque quem constrói a torre é ele: é contra ESTE número que o painel mostra o progresso e que a vitória do R6 é lida.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 400
+    },
+    "sessaoAtiva": {
+      "description": "O jogo tem sessão de pé. Existe para o vestiário se trancar (ADR-011) e viaja no mesmo objeto que vai para os clientes.",
+      "type": "boolean"
+    },
+    "vitoria": {
+      "description": "R6 — o boneco chegou ao topo. NÃO reinicia sozinho: o streamer decide no painel, e é o comando `reiniciar` do long-poll que zera a corrida (ADR-013).",
+      "type": "boolean"
+    },
     "enviadoEm": { "type": "integer", "minimum": 0 }
   }
 }
