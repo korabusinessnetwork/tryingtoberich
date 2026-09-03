@@ -13,7 +13,10 @@
 Cada slot preenchido tem:
 - `presenteId` — escolhido no catálogo (ver `04_MODELAGEM/catalogo-presentes.md`)
 - `animacaoId` — qualquer uma das 20 da biblioteca, sem restrição
-- `delta` — inteiro. Positivo sobe, negativo desce. Faixa aceita: -200 a +200.
+- `delta` — inteiro. Positivo sobe, negativo desce. **Sem teto** — a faixa de
+  -200 a +200 caiu por decisão do dono quando a torre passou a ter 5000 andares.
+  Só o 0 é recusado: presente que não move nada não é presente. Quem grampeia o
+  resultado é o jogo, nas pontas da torre, não o painel nem o contrato.
 - `intensidade` — 1 a 5. Multiplica escala, duração e densidade de partícula.
 - `cooldownMs` — opcional, padrão 0.
 

@@ -129,7 +129,13 @@ export class RegistroDeLongPoll {
       anulados: anulados.map(({ id, somaSubida, somaDescida, participantes, emitidoEm }) => ({
         id, somaSubida, somaDescida, participantes, emitidoEm,
       })),
-      comandos: comandos.map(({ id, tipo, emitidoEm }) => ({ id, tipo, emitidoEm })),
+      // `quantidade` viaja porque um donate de placar pode valer N rodadas
+      // (R4). Esta lista é fechada de propósito, e por isso é uma armadilha:
+      // campo novo no comando some aqui em SILÊNCIO, sem erro de contrato nem
+      // de tipo — o jogo simplesmente recebe 6 derrotas como se fosse uma.
+      comandos: comandos.map(({ id, tipo, quantidade, emitidoEm }) => ({
+        id, tipo, quantidade: quantidade ?? 1, emitidoEm,
+      })),
     };
     try {
       resposta.status(200).json(corpo);

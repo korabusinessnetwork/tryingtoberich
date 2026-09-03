@@ -18,6 +18,13 @@ Tipos.DURACAO_MAX = 3.5
 Tipos.INTENSIDADE_MAX = 5
 Tipos.PLATAFORMA_MIN = 0
 
+--[[ Onde a corrida COMEÇA: o primeiro degrau, não o zero.
+
+	`PLATAFORMA_MIN` é o piso do contrato — 0 quer dizer "abaixo da torre", e
+	existe para o delta negativo ter onde parar. Mas ninguém joga a partir do 0:
+	o boneco nasce em cima do degrau 1, e é de lá que a referência parte. ]]
+Tipos.PLATAFORMA_INICIAL = 1
+
 local function ehNumero(valor)
 	return type(valor) == "number" and valor == valor and valor ~= math.huge and valor ~= -math.huge
 end
@@ -40,6 +47,47 @@ Tipos.ehInteiro = ehInteiro
 	propósito — recebe animação e delta e executa, sem saber o que é presente
 	nem quanto vale. Ver ADR-007 e memory/patterns.md.
 ]]
+--[[
+	A contagem regressiva do fim de rodada, em UM lugar só.
+
+	O servidor soma isto para saber quando reiniciar; o cliente percorre para
+	desenhar. Dois números escritos separados divergiriam, e o sintoma seria o
+	pior possível: a torre reiniciando antes ou depois do "1" sumir da tela.
+
+	Duração crescente de propósito: o "1" é o momento de tensão e precisa durar
+	mais que o "3", que é só o aviso de que algo vai acontecer.
+]]
+--[[
+	Vida do portal, quando o preset não diz outra.
+
+	A unidade é ANDAR de empurrão para baixo, a mesma do delta: um presente de
+	-20 tira 20. Com a torre de 1000 andares, 2000 é o equivalente a duas torres
+	inteiras de queda — é o preço de fazer o streamer perder à força.
+]]
+Tipos.VIDA_PADRAO_DO_PORTAL = 2000
+
+--[[ Espessura do degrau em studs. Espelha ESPESSURA_DISCO no construtor e
+	ESPESSURA_DO_DEGRAU na ponte.
+
+	É regra, não aparência: na passarela os degraus se encostam, e é a espessura
+	que diz qual subida deixa um degrau APOIADO no anterior em vez de flutuando
+	acima dele com o jogador preso na fresta. ]]
+Tipos.ESPESSURA_DO_DEGRAU = 2
+
+Tipos.CONTAGEM_DE_RODADA = {
+	{ numero = 3, segundos = 2 },
+	{ numero = 2, segundos = 3 },
+	{ numero = 1, segundos = 5 },
+}
+
+function Tipos.duracaoDaContagem()
+	local total = 0
+	for _, passo in ipairs(Tipos.CONTAGEM_DE_RODADA) do
+		total = total + passo.segundos
+	end
+	return total
+end
+
 function Tipos.validarEvento(bruto)
 	if type(bruto) ~= "table" then
 		return nil, "evento não é tabela"

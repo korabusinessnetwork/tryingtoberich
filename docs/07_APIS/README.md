@@ -78,6 +78,12 @@ O campo é acrescentado ao SERVIR, nunca gravado: o schema do mapa é
 `additionalProperties: false`, e o assetId é estado do acervo, que muda quando a
 moderação aprova, sem o mapa mudar em nada.
 
+### `GET /jogo/galeria` e `GET /jogo/skin?nick=`
+A lista de nicks curada no painel, e a skin de um deles para o vestiário vestir
+como base. **Só leitura nesta superfície**: curar a lista é do painel, que não é
+publicado pelo túnel — escrever configuração do streamer por aqui daria ao túnel
+poder de mexer no que o jogo carrega.
+
 ### `GET /jogo/look`
 Devolve o look do preset ativo, já resolvido, para o Roblox aplicar por
 `HumanoidDescription`. Chamado na entrada e no respawn.
@@ -89,6 +95,11 @@ Filtro de preço zero aplicado na origem. Ver ADR-011.
 
 ### `PUT /jogo/looks/:lookId`
 O vestiário no jogo salva o look montado. Valida contra o schema antes de gravar.
+
+> Os comandos `vitoria` e `derrota` carregam `quantidade`: um donate mandado em
+> rajada vale N rodadas, cobradas uma a uma pelo jogo (ADR-007). Ordem de painel
+> vale sempre 1. A resposta de `GET /jogo/mapa` traz também `portal.vida`, que
+> sai do preset ativo — o jogo não conhece preset.
 
 ### `POST /jogo/estado`
 O Roblox informa o estado. **O jogo é a fonte de verdade da posição, não a
@@ -132,23 +143,32 @@ protege é o bind em `127.0.0.1` e o túnel não conhecer esta porta.
 | GET | `/api/modalidades` | Lista modalidades (Fase 1: só `escalada`) |
 | GET | `/api/presets` | Lista presets |
 | GET | `/api/presets/:id` | Um preset |
-| PUT | `/api/presets/:id` | Salva preset (valida R1 e R2). **Cria também**: grava o arquivo que ainda não existe, e preenche `streamerId` quando o corpo não traz |
+| PUT | `/api/presets/:id` | Salva preset (valida R1 e R2). **Cria também**: grava o arquivo que ainda não existe, e preenche `streamerId` quando o corpo não traz. Se for o preset ATIVO e o `mapaId` mudou, emite `recarregar-mapa` (ADR-013) — o jogo busca o mapa uma vez só |
 | DELETE | `/api/presets/:id` | Apaga preset. 409 se ele for o preset ativo de uma sessão rodando |
 | GET | `/api/catalogo` | Catálogo de presentes |
-| POST | `/api/catalogo/atualizar` | Força nova coleta |
-| GET | `/api/animacoes` | As 20 animações, para o seletor |
+| POST | `/api/catalogo/atualizar` | Traz os presentes de verdade: da SALA se houver live, do painel público da TikTok se não. Não exige sessão — montar preset é trabalho de antes da live. 502 `catalogo_indisponivel` quando a TikTok não responde, e o que está em disco continua valendo |
+| GET | `/api/animacoes` | A biblioteca inteira, para o seletor. Traz também as `ativa:false` — o painel é que filtra, porque preset salvo pode referenciar uma delas e o cartão do slot precisa do nome para mostrar |
 | GET | `/api/looks` | Lista looks salvos, com ícones das peças |
 | GET | `/api/mapas` | Lista mapas |
-| POST | `/api/mapas/gerar` | Gera mapa com Gemini (ver F4) |
+| POST | `/api/mundo` | Monta o mundo com as peças escolhidas na galeria (céu, texturas, formato) e põe no ar. Sem IA. Grava sempre no mesmo mapa: montar é compor, não criar acervo. 409 `peca_nao_aprovada` quando alguma peça ainda espera a moderação |
+| POST | `/api/mapas/gerar` | Gera mapa com Gemini (ver F4). `formato` escolhe a construção da torre: `disco` (degraus com vão) ou `laje` (passarela encostada), ADR-009. 400 `formato_invalido` fora desses dois |
 | GET | `/api/mapas/:id/prontidao` | O mapa pode ir ao ar? (ADR-004). A resposta muda com o ACERVO, sem o mapa mudar |
 | GET | `/api/acervo` | O acervo do ADR-004, com status e assetId de cada peça |
 | PUT | `/api/acervo/:colecao/:id` | Anota o que a moderação do Roblox devolveu. Só `skybox` e `texturas`: props são nativos |
+| GET | `/api/acervo/imagem/:colecao/:id` | A foto da peça, desenhada na hora em 128px. Determinística — mesmo id e mesmas tags, mesma imagem — então não há cache para invalidar. É a galeria do painel; o jogo carrega a textura de verdade pelo assetId |
+| DELETE | `/api/mapas/:id` | Apaga um mapa gerado. 409 `mapa_em_uso` quando QUALQUER preset ainda o referencia, não só o ativo |
+| POST | `/api/mapas/:id/formato` | Converte entre escada e passarela sem regerar (ADR-009). Reergue a torre quando é o mapa no ar |
+| POST | `/api/acervo/publicar` | Desenha as imagens que faltam, sobe pelo Open Cloud e anota o assetId (ADR-004). Lento de propósito: espera a operação de cada item. 400 `roblox_sem_chave` sem `ROBLOX_API_KEY` no `.env` |
 | POST | `/api/sessao/start` | Conecta na live e abre a sessão |
 | POST | `/api/sessao/stop` | Encerra e limpa dado de espectador. **Devolve o resumo** — é ele que o painel mostra (F5.5) |
 | POST | `/api/sessao/preset` | Troca o preset ativo com a sessão rodando. Vale do próximo evento em diante (R7) |
 | POST | `/api/sessao/reiniciar` | R6 — volta a corrida ao pé da torre. Responde `jogoOnline`: com o Roblox fora, o comando é descartado |
 | GET | `/api/sessoes` | Histórico das lives, já reduzido ao resumo. Nunca traz o detalhe por evento (F5) |
 | GET | `/api/sessao/stream` | **SSE**: evento aplicado, latência, estado |
+| POST | `/api/sessao/zerar-placar` | Zera vitórias e derrotas SEM mexer na corrida |
+| POST | `/api/sessao/recarregar-mapa` | Reergue a torre com o mapa do preset, sem parar a sessão |
+| PUT | `/api/galeria` | Cura a lista de nicks cujas skins o vestiário oferece |
+| GET | `/api/skin?nick=` | Espia a skin de um nick antes de acrescentar à galeria |
 | POST | `/api/teste/presentes` | Dispara presente à mão. **Exige sessão**: precisa do preset para casar o slot |
 | POST | `/api/teste/animacao` | Dispara uma animação direto no jogo. **Não exige sessão nem preset** |
 | POST | `/api/jogo/abrir-studio` | Monta um `.rbxlx` com `KoraConfig` e HttpService prontos e abre o Studio nele |

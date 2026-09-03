@@ -1,0 +1,15 @@
+{
+  "lookId": "escalador-vulcanico",
+  "streamerId": "local",
+  "nome": "Escalador Vulcânico",
+  "itensCatalogo": [
+    123456,
+    234567
+  ],
+  "efeitoPermanente": null,
+  "roupaCustomizada": null,
+  "fallbackItens": [
+    111111
+  ],
+  "atualizadoEm": "2026-09-03T01:45:38.010Z"
+}

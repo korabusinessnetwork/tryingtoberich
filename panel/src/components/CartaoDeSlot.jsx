@@ -38,9 +38,18 @@ import "./CartaoDeSlot.css";
  * vínculo continua sendo escolha explícita do streamer (ADR-007).
  */
 
-/** R2 — delta é inteiro de -200 a 200, e nunca 0. */
-const DELTA_MINIMO = -200;
-const DELTA_MAXIMO = 200;
+/**
+ * R2 — delta é inteiro e nunca 0. **Não tem teto.**
+ *
+ * A faixa fixa de -200 a 200 saiu por decisão do dono: com a torre em 5000
+ * andares, 200 é 4% dela, e o campo recusava em vermelho justamente o vínculo
+ * grande que faz o presente caro valer a pena. Quem grampeia o resultado é o
+ * jogo, nas pontas da torre (`Tipos.limitarPlataforma`) — nunca o campo.
+ *
+ * `Number.isSafeInteger` continua de pé, e não é faixa: é o limite em que o
+ * JavaScript para de contar de um em um. Passar dali seria gravar no preset um
+ * número que nem soma direito.
+ */
 const INTENSIDADES = [1, 2, 3, 4, 5];
 
 /**
@@ -50,18 +59,16 @@ const INTENSIDADES = [1, 2, 3, 4, 5];
  */
 function lerDelta(texto) {
   const limpo = String(texto ?? "").trim();
-  if (!/^[+-]?\d{1,3}$/.test(limpo)) return null;
+  if (!/^[+-]?\d+$/.test(limpo)) return null;
   const valor = Number(limpo);
-  if (!Number.isInteger(valor) || valor === 0) return null;
-  if (valor < DELTA_MINIMO || valor > DELTA_MAXIMO) return null;
+  if (!Number.isSafeInteger(valor) || valor === 0) return null;
   return valor;
 }
 
 /** Passo do stepper. Pula o 0 em vez de parar nele: delta 0 não existe (R2). */
 function passoDeDelta(delta, passo) {
   const bruto = (Number.isInteger(delta) ? delta : 0) + passo;
-  const semZero = bruto === 0 ? bruto + passo : bruto;
-  return Math.min(DELTA_MAXIMO, Math.max(DELTA_MINIMO, semZero));
+  return bruto === 0 ? bruto + passo : bruto;
 }
 
 const plural = (n, singular, plural) => (Math.abs(n) === 1 ? singular : plural);
@@ -235,7 +242,6 @@ export function CartaoDeSlot({
             type="button"
             className="cartao-slot-passo"
             onClick={() => aplicarPasso(-1)}
-            disabled={delta <= DELTA_MINIMO}
             aria-label="Diminuir delta"
           >
             −
@@ -244,7 +250,6 @@ export function CartaoDeSlot({
             type="button"
             className="cartao-slot-passo"
             onClick={() => aplicarPasso(1)}
-            disabled={delta >= DELTA_MAXIMO}
             aria-label="Aumentar delta"
           >
             +
@@ -260,7 +265,7 @@ export function CartaoDeSlot({
 
       {(rascunhoInvalido || guardadoInvalido) && (
         <p className="cartao-slot-aviso cartao-slot-aviso-regra">
-          Delta é inteiro de {DELTA_MINIMO} a {DELTA_MAXIMO}, e nunca 0.
+          Delta é um número inteiro, e nunca 0.
         </p>
       )}
 
@@ -273,6 +278,10 @@ export function CartaoDeSlot({
                 `peso ${animacao.pesoVisual}`,
                 textoDeDuracao(animacao.duracaoBase),
                 animacao.aceitaDeltaVariavel === false ? "delta fixo" : null,
+                // Preset salvo antes da aposentadoria continua valendo e continua
+                // tocando no jogo. O cartão diz que está assim de propósito — sem
+                // isso, o streamer só descobriria ao abrir o seletor e não achar.
+                animacao.ativa === false ? "aposentada" : null,
               ]
                 .filter(Boolean)
                 .join(" · ")

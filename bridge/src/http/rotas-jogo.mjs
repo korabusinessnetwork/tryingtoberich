@@ -43,6 +43,28 @@ export function rotasDoJogo(nucleo) {
     res.json({ itens: await nucleo.roblox.buscarComIcone(busca) });
   });
 
+  /**
+   * A galeria de nicks e a skin de um deles.
+   *
+   * Só LEITURA nesta superfície. Curar a lista é do painel, que não é publicado
+   * pelo túnel: escrever configuração do streamer por aqui daria ao túnel poder
+   * de mexer no que o jogo carrega (11_SEGURANCA).
+   */
+  rotas.get("/galeria", async (req, res) => res.json({ nicks: await nucleo.galeriaDeSkins() }));
+
+  rotas.get("/skin", async (req, res) => {
+    const nick = String(req.query.nick ?? "").trim();
+    if (nick.length < 3) {
+      throw new ErroDeDominio("nick_curto", "Digite ao menos 3 letras do nick.", { status: 400 });
+    }
+
+    const skin = await nucleo.skins.buscarSkin(nick);
+    if (!skin) {
+      throw new ErroDeDominio("skin_nao_encontrada", `Não achei o usuário "${nick}" no Roblox.`, { status: 404 });
+    }
+    res.json(skin);
+  });
+
   /** O vestiário salva o look montado. Valida contra o schema antes de gravar. */
   rotas.put("/looks/:lookId", async (req, res) => {
     if (nucleo.sessaoAtiva) {
@@ -66,13 +88,19 @@ export function rotasDoJogo(nucleo) {
     const { validar } = await criarValidador();
     const problemas = validar("estado-jogo", req.body);
 
+    // A RESPOSTA leva o estado da live de volta. Motivo: o jogo precisa saber
+    // se há plateia — é isso que tranca o vestiário (ADR-011) — e não tinha
+    // como saber. Aproveita este canal, que o jogo já usa a cada ~2s, em vez de
+    // abrir rota nova na superfície pública, que é a que atravessa o túnel.
+    const resposta = { live: nucleo.estado.live === "conectada" };
+
     if (problemas.length > 0) {
       log.aviso("estado_do_jogo_descartado", { problemas });
-      return res.status(204).end();
+      return res.status(200).json(resposta);
     }
 
     nucleo.aplicarEstadoDoJogo(req.body);
-    return res.status(204).end();
+    return res.status(200).json(resposta);
   });
 
   return rotas;

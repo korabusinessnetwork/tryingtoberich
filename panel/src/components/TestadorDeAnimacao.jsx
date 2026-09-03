@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 
+import { animacoesOferecidas, contarAposentadas } from "../lib/regras.js";
+
 import "./TestadorDeAnimacao.css";
 
 /**
@@ -16,7 +18,8 @@ import "./TestadorDeAnimacao.css";
  * esconderia que são perguntas diferentes com pré-requisitos diferentes.
  *
  * O agrupamento por direção não é enfeite: subida e descida são as duas metades
- * da biblioteca, e ver as 10 de cada lado é o que revela buraco na cobertura.
+ * da biblioteca, e ver os dois lados lado a lado é o que revela buraco na
+ * cobertura — um lado com menos opções que o outro salta aos olhos.
  *
  * A intensidade fica em estado local, como o cenário de fixture da
  * `BarraDeSessao`: é escolha de teste, não configuração persistida. Ela vale
@@ -27,13 +30,21 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
   // meio da escala mostra a animação como ela é, sem exagero nem timidez.
   const [intensidade, definirIntensidade] = useState(3);
 
+  // Só as ativas. Aqui não existe "já está em uso" como no seletor de slot —
+  // este componente é uma vitrine do que se pode escolher hoje, e um botão de
+  // animação aposentada convidaria a montar preset com ela. `ativa` ausente
+  // conta como ativa: índice velho em disco não pode esvaziar a vitrine.
   const porDirecao = useMemo(() => {
-    const lista = Array.isArray(animacoes) ? animacoes : [];
+    const lista = animacoesOferecidas(animacoes);
     return {
       subida: lista.filter((a) => a.direcao === "subida"),
       descida: lista.filter((a) => a.direcao === "descida"),
     };
   }, [animacoes]);
+
+  // Quantas ficaram de fora, para a tela não mentir sobre o tamanho da
+  // biblioteca — sem isso, "3 de subida" parece cadastro incompleto.
+  const aposentadas = contarAposentadas(animacoes);
 
   const grupos = [
     { direcao: "subida", rotulo: "Subida", sinal: "+1" },
@@ -111,7 +122,14 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
 
       {porDirecao.subida.length + porDirecao.descida.length === 0 ? (
         <p className="animacoes-recado">
-          Nenhuma animação no índice. Rode <code>npm run gerar</code> na raiz.
+          {aposentadas > 0
+            ? `As ${aposentadas} animações da biblioteca estão aposentadas. Marque alguma como ativa na tabela de biblioteca-animacoes.md e rode npm run gerar.`
+            : "Nenhuma animação no índice. Rode npm run gerar na raiz."}
+        </p>
+      ) : aposentadas > 0 ? (
+        <p className="animacoes-recado secundario">
+          {aposentadas} aposentadas não aparecem aqui. Ver a coluna Ativa em{" "}
+          <code>biblioteca-animacoes.md</code>.
         </p>
       ) : null}
     </section>

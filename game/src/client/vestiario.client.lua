@@ -62,7 +62,7 @@
 --   aqui no cliente com aviso — nunca manda lista vazia pro schema rejeitar.
 --
 -- Eventos.ESTADO (servidor → cliente, eu só CONSUMO)
---   Formato em shared/eventos.lua. O campo que importa aqui é `sessaoAtiva`:
+--   Formato em shared/eventos.lua. O campo que importa aqui é `aoVivo`:
 --   é ele que tranca o vestiário durante a live, como o ADR-011 exige.
 --
 -- ============================================================================
@@ -173,7 +173,7 @@ local ultimoTermoBuscado = nil
 local buscando = false
 local salvando = false
 
-local sessaoAtivaExplicita = nil
+local aoVivoExplicito = nil
 local guiAberta = false
 
 local estadoPreviewEfeito = { instancia = nil, anexos = {} }
@@ -185,6 +185,11 @@ local estadoPreviewEfeito = { instancia = nil, anexos = {} }
 local telaCheia
 local backdrop
 local painel
+-- Declaradas aqui porque `abrirVestiario` chama as duas, e as duas nascem bem
+-- depois, junto com a GUI. Sem isto viram busca de global e estouram só na hora
+-- de abrir o vestiário — o pior lugar para descobrir.
+local mostrarAba
+local pedirGaleria
 local botaoAlternarVestiario
 local rotuloAviso
 local avisoGeracao = 0
@@ -225,12 +230,18 @@ end
 -- ============================================================================
 -- Bloqueio de sessão ao vivo (ADR-011, consequência negativa; regra 1)
 -- ============================================================================
--- `sessaoAtiva` é campo do contrato de ESTADO (ver shared/eventos.lua). Antes
--- de ele existir isto era heurística de tempo — "recebi ESTADO há pouco, logo
--- tem sessão" —, e heurística erra nos dois sentidos: tranca o vestiário fora
--- da live e abre no meio dela, que é o caso que o ADR-011 proíbe.
+-- Lê `aoVivo`, NÃO `sessaoAtiva`. Os dois existem e são diferentes:
+-- `sessaoAtiva` é só "o jogo tem sessão de pé", e no Studio isso é verdade sem
+-- live nenhuma. `aoVivo` é sessão E live conectada — que é o caso que o ADR-011
+-- proíbe, porque a razão dele é não entediar a PLATEIA.
+--
+-- Esta guarda é a SEGUNDA: o servidor tem a dele, em vestiario.lua, e recusa o
+-- pedido mesmo que esta falhe. Aqui é só para o botão não mentir na tela.
+--
+-- Antes do campo existir isto era heurística de tempo — "recebi ESTADO há
+-- pouco, logo tem sessão" —, e heurística erra nos dois sentidos.
 local function sessaoEstaAtiva()
-	return sessaoAtivaExplicita == true
+	return aoVivoExplicito == true
 end
 
 -- ============================================================================
@@ -827,6 +838,51 @@ local function definirEstadoSalvar(texto, cor)
 	rotuloEstadoSalvar.TextColor3 = cor or CORES.textoSecundario
 end
 
+--[[
+	Volta o personagem ao padrão: sem item, sem cor de corpo, sem efeito.
+
+	Existe porque o caminho de volta não existia. Havia botão para escolher
+	efeito e nenhum para desfazer o conjunto — e a aura, uma vez salva,
+	acompanhava o boneco em todo respawn. O streamer tinha três bugs somados
+	contra ele (a sessão relia o look nunca, o efeito antigo só era destruído se
+	houvesse um novo, e daqui não saía nada que zerasse), e nenhum deles
+	aparecia como erro.
+
+	Reseta o FORMULÁRIO e salva na sequência, quando dá: `fallbackItens` é
+	obrigatório e não pode ser vazio (ADR-010, item despublicado não pode deixar
+	o boneco pelado numa live), então um look totalmente vazio não é gravável
+	por contrato. Sem item equipado, isto limpa a tela e diz o que falta.
+]]
+local function restaurarPadrao()
+	if salvando then
+		return
+	end
+
+	for _, assetId in ipairs(itensEquipadosLista) do
+		estilizarCelulaResultado(assetId)
+	end
+
+	itensEquipadosLista = {}
+	itensEquipadosSet = {}
+	fallbackSelecionado = {}
+	coresCorpoDefinidas = {}
+
+	tipoEfeitoAtual = nil
+	corEfeitoAtual = COR_EFEITO_PADRAO
+	intensidadeEfeitoAtual = INTENSIDADE_PADRAO
+
+	restilizarBotoesTipoEfeito()
+	restilizarBotoesIntensidade()
+	aplicarEfeitoPreview()
+	renderizarEquipados()
+	atualizarPreviaPersonagem()
+
+	definirEstadoSalvar(
+		"Voltou ao padrão. Equipe ao menos um item e salve para valer também no próximo respawn.",
+		CORES.textoSecundario
+	)
+end
+
 local function executarSalvar()
 	if salvando then
 		return
@@ -926,6 +982,12 @@ local function abrirVestiario()
 	guiAberta = true
 	backdrop.Visible = true
 	painel.Visible = true
+	-- Sempre na aba de itens: é por onde se começa a montar um look, e reabrir
+	-- na aba onde se parou faria o vestiário abrir num lugar diferente a cada
+	-- vez sem o streamer ter pedido.
+	mostrarAba("Itens")
+	-- A galeria é curada no painel e pode ter mudado desde a última abertura.
+	pedirGaleria()
 end
 
 --[[ Ponto único de entrada pro botão E pro atalho de teclado — a regra 1
@@ -936,15 +998,15 @@ local function tentarAbrirVestiario()
 		return
 	end
 	if sessaoEstaAtiva() then
-		mostrarAviso("Vestiário indisponível durante a sessão ao vivo.", Tokens.estado.atencao)
+		mostrarAviso("Vestiário indisponível com a live no ar.", Tokens.estado.atencao)
 		return
 	end
 	abrirVestiario()
 end
 
 RemotoEstado.OnClientEvent:Connect(function(dados)
-	if type(dados) == "table" and type(dados.sessaoAtiva) == "boolean" then
-		sessaoAtivaExplicita = dados.sessaoAtiva
+	if type(dados) == "table" and type(dados.aoVivo) == "boolean" then
+		aoVivoExplicito = dados.aoVivo
 	end
 end)
 
@@ -952,7 +1014,7 @@ task.spawn(function()
 	while true do
 		task.wait(1)
 		if guiAberta and sessaoEstaAtiva() then
-			fecharVestiario("Sessão ao vivo começou. Vestiário fechado.", Tokens.estado.atencao)
+			fecharVestiario("A live entrou no ar. Vestiário fechado.", Tokens.estado.atencao)
 		end
 		if botaoAlternarVestiario then
 			botaoAlternarVestiario.BackgroundColor3 = sessaoEstaAtiva() and CORES.borda or CORES.superficie
@@ -980,18 +1042,34 @@ jogador.CharacterAdded:Connect(aoPersonagemAdicionado)
 -- ============================================================================
 local jogadorGui = jogador:WaitForChild("PlayerGui")
 
+--[[
+	ZIndexBehavior.Sibling, explícito.
+
+	Sem isto vale o modo Global, em que o ZIndex é comparado na tela INTEIRA e
+	não entre irmãos. O painel tem ZIndex 2 e os 57 elementos construídos dentro
+	dele não definem ZIndex nenhum — ficam em 1 — então todos desenhavam ATRÁS
+	do próprio painel. O vestiário abria como um retângulo preto, sem erro no
+	Output e sem nada para depurar.
+
+	Em Sibling, filho sempre desenha acima do pai e o ZIndex só ordena irmãos,
+	que é o que o resto deste arquivo assume: backdrop 1, painel 2, aviso 6.
+]]
 telaCheia = Novo("ScreenGui", {
 	Name = "KoraVestiarioGui",
 	ResetOnSpawn = false,
 	DisplayOrder = 50,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 }, jogadorGui)
 
 -- Botão sempre visível (regra 1: nunca some, só recusa com aviso quando a
 -- sessão está ao vivo) + o rótulo de aviso/toast que ele e o atalho usam.
+-- Canto INFERIOR direito. No topo ele dividia espaço com o HUD de altura, que
+-- é o número grande que o espectador acompanha — e o botão passava por cima.
+-- Embaixo ele continua sempre à mão e não disputa com nada.
 local containerBotao = Novo("Frame", {
 	Name = "BotaoContainer",
-	AnchorPoint = Vector2.new(1, 0),
-	Position = UDim2.new(1, -16, 0, 16),
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(1, -16, 1, -16),
 	Size = UDim2.new(0, 190, 0, 40),
 	BackgroundTransparency = 1,
 	ZIndex = 5,
@@ -1011,10 +1089,12 @@ botaoAlternarVestiario = Novo("TextButton", {
 Novo("UICorner", { CornerRadius = UDim.new(0, 8) }, botaoAlternarVestiario)
 Novo("UIStroke", { Color = CORES.borda, Thickness = 1 }, botaoAlternarVestiario)
 
+-- O aviso acompanha o botão: ele explica por que o clique foi recusado, e
+-- aparecer longe de onde a pessoa clicou faria ela não ver.
 rotuloAviso = Novo("TextLabel", {
 	Name = "Aviso",
-	AnchorPoint = Vector2.new(1, 0),
-	Position = UDim2.new(1, -16, 0, 60),
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(1, -16, 1, -64),
 	Size = UDim2.new(0, 300, 0, 56),
 	BackgroundColor3 = CORES.fundo,
 	BackgroundTransparency = 0.05,
@@ -1034,11 +1114,13 @@ Novo("UIPadding", {
 	PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10),
 }, rotuloAviso)
 
+-- Quase transparente: ele existe para capturar o clique fora e fechar, não
+-- para escurecer a cena. A 0,45 ele apagava o boneco junto com o resto.
 backdrop = Novo("TextButton", {
 	Name = "Backdrop",
 	Size = UDim2.new(1, 0, 1, 0),
 	BackgroundColor3 = Color3.new(0, 0, 0),
-	BackgroundTransparency = 0.45,
+	BackgroundTransparency = 0.82,
 	BorderSizePixel = 0,
 	AutoButtonColor = false,
 	Text = "",
@@ -1049,11 +1131,28 @@ backdrop.MouseButton1Click:Connect(function()
 	fecharVestiario()
 end)
 
+--[[
+	Encostado na DIREITA, não centralizado.
+
+	A prévia de efeito anexa partícula e rastro ao boneco REAL no mundo (ver
+	`aplicarPreviewEfeito` acima) — ver o personagem é o ponto inteiro do
+	vestiário dentro do jogo, e é isso que o ADR-011 compra ao não renderizar
+	corpo no painel do navegador.
+
+	Centralizado e com 920 de largura, ele tapava exatamente o que se estava
+	tentando customizar. Encostado na direita sobra a metade esquerda da tela
+	para o boneco, e a altura em escala se adapta a qualquer resolução.
+]]
 painel = Novo("Frame", {
 	Name = "Painel",
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Position = UDim2.new(0.5, 0, 0.5, 0),
-	Size = UDim2.new(0, 920, 0, 680),
+	AnchorPoint = Vector2.new(1, 0.5),
+	-- Um pouco acima do centro: embaixo à direita fica o botão que abre o
+	-- próprio vestiário, e os dois se sobrepunham.
+	Position = UDim2.new(1, -20, 0.47, 0),
+	-- Estreito de novo: com uma aba por vez, 460 bastam — e cada 100 studs a
+	-- menos aqui é mais boneco visível, que é o ponto de o vestiário estar
+	-- dentro do jogo.
+	Size = UDim2.new(0, 460, 0.86, 0),
 	BackgroundColor3 = CORES.superficie,
 	BorderSizePixel = 0,
 	Active = true, -- consome clique: não deixa passar pro backdrop atrás
@@ -1112,7 +1211,21 @@ botaoFechar.MouseButton1Click:Connect(function()
 	fecharVestiario()
 end)
 
--- Corpo: duas colunas
+--[[
+	Corpo em ABAS, não em duas colunas.
+
+	As colunas eram o problema: tudo aparecia de uma vez, e a coluna direita
+	sozinha carregava seis cores de corpo, o efeito com quatro botões, a cor, a
+	intensidade e o salvar. Em qualquer janela que não fosse larga, algo saía
+	cortado — e o corte era mudo, sem indicação de que havia mais coisa.
+
+	Uma aba por vez resolve na raiz: cada uma usa a LARGURA INTEIRA do painel, o
+	que dá espaço de sobra para os botões, e o painel pode ser estreito o
+	bastante para não tapar o boneco — que é o ponto do vestiário estar dentro
+	do jogo (ADR-011).
+
+	Cada aba rola sozinha, então nada depende da altura da janela.
+]]
 local corpo = Novo("Frame", {
 	Name = "Corpo",
 	Position = UDim2.new(0, 0, 0, 64),
@@ -1120,21 +1233,183 @@ local corpo = Novo("Frame", {
 	BackgroundTransparency = 1,
 }, painel)
 
-local colunaEsquerda = Novo("Frame", {
-	Name = "ColunaEsquerda",
-	Position = UDim2.new(0, 16, 0, 8),
-	Size = UDim2.new(0.55, -24, 1, -16),
+local barraDeAbas = Novo("Frame", {
+	Name = "BarraDeAbas",
+	Position = UDim2.new(0, 16, 0, 0),
+	Size = UDim2.new(1, -32, 0, 34),
 	BackgroundTransparency = 1,
 }, corpo)
-Novo("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, colunaEsquerda)
+Novo("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	Padding = UDim.new(0, 6),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+}, barraDeAbas)
 
-local colunaDireita = Novo("Frame", {
-	Name = "ColunaDireita",
-	Position = UDim2.new(0.55, 8, 0, 8),
-	Size = UDim2.new(0.45, -24, 1, -16),
-	BackgroundTransparency = 1,
-}, corpo)
-Novo("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, colunaDireita)
+local paginas = {}
+local botoesDeAba = {}
+local abaAtual = nil
+
+function mostrarAba(nome)
+	abaAtual = nome
+	for chave, pagina in pairs(paginas) do
+		pagina.Visible = (chave == nome)
+	end
+	for chave, botao in pairs(botoesDeAba) do
+		local ativa = chave == nome
+		botao.BackgroundColor3 = ativa and CORES.superficie or CORES.fundo
+		botao.TextColor3 = ativa and CORES.textoPrimario or CORES.textoSecundario
+	end
+end
+
+--[[ Cada aba é um ScrollingFrame de canvas automático.
+
+	Rolagem por aba e não no painel inteiro: assim o cabeçalho e as abas ficam
+	sempre à vista, e só o conteúdo se move. ]]
+local function criarAba(nome, rotulo, ordem)
+	local botao = Novo("TextButton", {
+		Name = "Aba" .. nome,
+		LayoutOrder = ordem,
+		Size = UDim2.new(0.2, -5, 1, 0),
+		BackgroundColor3 = CORES.fundo,
+		BorderSizePixel = 0,
+		Font = FONTE_MEDIA,
+		TextSize = 13,
+		TextColor3 = CORES.textoSecundario,
+		Text = rotulo,
+	}, barraDeAbas)
+	Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, botao)
+
+	local pagina = Novo("ScrollingFrame", {
+		Name = "Pagina" .. nome,
+		Position = UDim2.new(0, 16, 0, 42),
+		Size = UDim2.new(1, -32, 1, -50),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollBarThickness = 4,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		Visible = false,
+	}, corpo)
+	Novo("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, pagina)
+
+	paginas[nome] = pagina
+	botoesDeAba[nome] = botao
+	botao.MouseButton1Click:Connect(function()
+		mostrarAba(nome)
+	end)
+	return pagina
+end
+
+local abaGaleria = criarAba("Galeria", "Galeria", 0)
+local colunaEsquerda = criarAba("Itens", "Itens", 1)
+local abaCores = criarAba("Cores", "Cores", 2)
+local abaEfeito = criarAba("Efeito", "Efeito", 3)
+local abaSalvar = criarAba("Salvar", "Salvar", 4)
+
+--[[
+	A galeria: skins de outras pessoas do Roblox, como BASE.
+
+	A ideia é não montar do zero. O streamer cura no painel uma lista de nicks
+	de quem já tem um visual pronto, veste um deles com um clique e customiza
+	por cima nas outras abas.
+
+	O botão de recarregar existe porque a lista é curada FORA daqui: acrescentar
+	um nick no painel com o jogo aberto não teria como chegar sozinho.
+]]
+local listaGaleria = Novo("Frame", {
+	LayoutOrder = 2, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
+	AutomaticSize = Enum.AutomaticSize.Y,
+}, abaGaleria)
+Novo("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, listaGaleria)
+
+local recadoGaleria = Novo("TextLabel", {
+	LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 34),
+	Font = FONTE, TextSize = 12, TextColor3 = CORES.textoSecundario,
+	TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
+	Text = "Skins de quem já tem visual montado. Veste como base e ajusta nas outras abas.",
+}, abaGaleria)
+
+local botaoRecarregarGaleria = Novo("TextButton", {
+	LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 32),
+	BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
+	Font = FONTE_MEDIA, TextSize = 12, TextColor3 = CORES.textoPrimario,
+	Text = "Recarregar galeria",
+}, abaGaleria)
+Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, botaoRecarregarGaleria)
+
+local RemotoGaleria = Eventos.obter(Eventos.VESTIARIO_GALERIA)
+
+function pedirGaleria()
+	recadoGaleria.Text = "Carregando a galeria..."
+	RemotoGaleria:FireServer({ acao = "listar" })
+end
+
+local function desenharGaleria(nicks)
+	for _, filho in ipairs(listaGaleria:GetChildren()) do
+		if filho:IsA("TextButton") then
+			filho:Destroy()
+		end
+	end
+
+	if type(nicks) ~= "table" or #nicks == 0 then
+		recadoGaleria.Text = "Galeria vazia. Acrescente nicks do Roblox no painel, em Configurar."
+		return
+	end
+
+	recadoGaleria.Text = "Clique num nome para vestir a skin dele."
+	for indice, nick in ipairs(nicks) do
+		local cartao = Novo("TextButton", {
+			LayoutOrder = indice, Size = UDim2.new(1, 0, 0, 36),
+			BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
+			Font = FONTE_MEDIA, TextSize = 13, TextColor3 = CORES.textoPrimario,
+			Text = nick,
+		}, listaGaleria)
+		Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, cartao)
+
+		cartao.MouseButton1Click:Connect(function()
+			recadoGaleria.Text = "Vestindo " .. nick .. "..."
+			RemotoGaleria:FireServer({ acao = "vestir", nick = nick })
+		end)
+	end
+end
+
+botaoRecarregarGaleria.MouseButton1Click:Connect(pedirGaleria)
+
+RemotoGaleria.OnClientEvent:Connect(function(resposta)
+	if type(resposta) ~= "table" then
+		return
+	end
+
+	if resposta.erro and not resposta.acao then
+		recadoGaleria.Text = tostring(resposta.erro)
+		return
+	end
+
+	if resposta.acao == "listar" then
+		if resposta.erro then
+			recadoGaleria.Text = "Não consegui ler a galeria: " .. tostring(resposta.erro)
+			return
+		end
+		desenharGaleria(resposta.nicks)
+		return
+	end
+
+	if resposta.acao == "vestir" then
+		if resposta.ok then
+			-- Peças que o Roblox recusar somem em silêncio no ApplyDescription,
+			-- então dizer QUANTAS vieram é o que deixa isso visível.
+			recadoGaleria.Text = "Vestiu a skin de " .. tostring(resposta.nick) .. " (" .. tostring(resposta.pecas) .. " peças). Ajuste nas outras abas."
+		else
+			recadoGaleria.Text = "Não deu: " .. tostring(resposta.erro)
+		end
+	end
+end)
+
+-- `colunaDireita` é REATRIBUÍDA entre os blocos abaixo: o código que constrói
+-- cor de corpo, efeito e salvar já vinha em ordem, e apontar cada trecho para
+-- a sua aba é o que evita reescrever as trezentas linhas seguintes.
+local colunaDireita = abaCores
 
 -- --- Coluna esquerda: busca, resultados, equipados ---------------------
 Novo("TextLabel", {
@@ -1244,6 +1519,8 @@ for indice, campo in ipairs(ORDEM_CAMPO_COR) do
 	criarLinhaCor(blocoCores, campo)
 end
 
+colunaDireita = abaEfeito
+
 Novo("TextLabel", {
 	LayoutOrder = 3, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
@@ -1260,7 +1537,9 @@ Novo("UIListLayout", {
 for indice, opcao in ipairs(OPCOES_TIPO_EFEITO) do
 	local botaoTipo = Novo("TextButton", {
 		LayoutOrder = indice,
-		Size = UDim2.new(0, 78, 1, 0),
+		-- Proporcional, nao 78 fixos: quatro botoes de largura fixa estouram a
+		-- coluna assim que o painel estreita, e o quarto some fora da tela.
+		Size = UDim2.new(0.25, -5, 1, 0),
 		BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
 		Font = FONTE, TextSize = 12, TextColor3 = CORES.textoPrimario,
 		Text = opcao.rotulo,
@@ -1287,7 +1566,7 @@ Novo("UIListLayout", {
 for n = 1, 5 do
 	local botaoIntensidade = Novo("TextButton", {
 		LayoutOrder = n,
-		Size = UDim2.new(0, 40, 1, 0),
+		Size = UDim2.new(0.2, -5, 1, 0),
 		BorderSizePixel = 0,
 		Font = FONTE_TITULO, TextSize = 13, TextColor3 = CORES.textoPrimario,
 		Text = tostring(n),
@@ -1298,6 +1577,8 @@ for n = 1, 5 do
 		selecionarIntensidade(n)
 	end)
 end
+
+colunaDireita = abaSalvar
 
 Novo("TextLabel", {
 	LayoutOrder = 7, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
@@ -1343,6 +1624,14 @@ Novo("TextLabel", {
 	Text = "Trocar de look não aplica no meio da partida: só no início da sessão ou no próximo respawn de checkpoint.",
 }, colunaDireita)
 
+local botaoRestaurar = Novo("TextButton", {
+	LayoutOrder = 11.5, Size = UDim2.new(1, 0, 0, 32),
+	BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
+	Font = FONTE, TextSize = 13, TextColor3 = CORES.textoSecundario,
+	Text = "Restaurar padrão",
+}, colunaDireita)
+Novo("UICorner", { CornerRadius = UDim.new(0, 8) }, botaoRestaurar)
+
 botaoSalvar = Novo("TextButton", {
 	LayoutOrder = 12, Size = UDim2.new(1, 0, 0, 38),
 	BackgroundColor3 = Tokens.estado.ok, BorderSizePixel = 0,
@@ -1367,6 +1656,7 @@ caixaBusca.FocusLost:Connect(function(enterPressionado)
 		executarBusca()
 	end
 end)
+botaoRestaurar.MouseButton1Click:Connect(restaurarPadrao)
 botaoSalvar.MouseButton1Click:Connect(executarSalvar)
 
 UserInputService.InputBegan:Connect(function(input, processado)

@@ -28,6 +28,26 @@ Ciclo do presente:
 O passo 4 zera a velocidade de novo de propósito. Sem isso, o momento residual
 do Tween lança o boneco no primeiro frame após desancorar.
 
+### "Ao longo do caminho" é literal
+
+O passo 3 diz **caminho**, não reta. A torre do ADR-009 é uma espiral quadrada:
+a reta entre a plataforma 10 e a 110 atravessa o miolo dela, e o boneco chega ao
+destino sem ter passado por degrau nenhum — o presente vira teleporte com efeito
+por cima. O caminho são os pontos de pouso dos degraus entre origem e destino
+(`Plataformas.caminhoEntre`), tocados como uma **corrente de Tweens**.
+
+Duas escolhas dentro disso:
+
+- **Os degraus são amostrados, no máximo 24.** Um presente de 180 plataformas
+  não pode virar 180 trechos de 12ms: trecho mais curto que dois frames não
+  desenha nada e só custa agendamento. O teto real aperta junto com a duração —
+  o efeito curto do ADR-012, de 0,25s, tece 4 trechos. O **destino entra
+  sempre**, porque é o único ponto que o contrato com quem pagou exige.
+- **A curva saiu do Tween e foi para a duração de cada trecho.** Os pontos são
+  equidistantes e cada trecho toca em Linear; quem dá o Quad Out da subida e o
+  Quad In da descida é o tempo que cada trecho recebe, pela inversa da curva.
+  Encadear Quad por trecho daria um solavanco a cada degrau.
+
 ## Alternativas consideradas
 ### Só Tween, boneco sem controle do jogador
 - Descartado porque: o streamer joga. Era o modelo errado da primeira versão.
@@ -59,3 +79,7 @@ do Tween lança o boneco no primeiro frame após desancorar.
   nenhuma animação passa de 3,5s, o bloqueio máximo é curto.
 - Presente que chega **durante** outra animação não reinicia o ciclo: entra na
   fila de coalescência (R5).
+- **O caminho amostrado passa raspando cada degrau, e isso acorda o `Touched`.**
+  A referência de plataforma anda junto com a viagem em vez de saltar só no
+  fim. Não muda o estado final — a descida ainda fecha por decreto do ADR-008 —,
+  mas é notificação a mais durante a animação.

@@ -8,7 +8,7 @@
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 0, "slot": 6, "animacaoId": "des_buraco_negro", "delta": -180, "intensidade": 5 }
+      { "emMs": 0, "slot": 6, "animacaoId": "des_meteoro_igneo", "delta": -180, "intensidade": 5 }
     ],
     "naoMapeados": [],
     "descartados": []

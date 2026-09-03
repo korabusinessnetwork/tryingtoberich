@@ -20,6 +20,7 @@ import { log } from "../log.mjs";
 import { exigirToken, limitarTaxa } from "./guardas.mjs";
 import { rotasDoJogo } from "./rotas-jogo.mjs";
 import { rotasDoPainel } from "./rotas-painel.mjs";
+import { montarOverlay } from "./overlay.mjs";
 
 function baseComum(nucleo) {
   const app = express();
@@ -61,5 +62,12 @@ export function criarAppDoJogo(nucleo, { token }) {
 export function criarAppDoPainel(nucleo) {
   const app = baseComum(nucleo);
   app.use("/api", rotasDoPainel(nucleo));
+  //[[ O overlay fica FORA de `/api` de propósito.
+  //
+  // `/api` é a conversa do painel com a ponte; o overlay é uma página que o OBS
+  // abre como Browser Source. Enfiá-lo debaixo de `/api` faria a URL que o
+  // streamer digita no OBS parecer uma chamada de API, e ele vive na mesma
+  // porta do painel, que nunca sai da máquina. ]]
+  montarOverlay(app);
   return fecharComTratamentoDeErro(app);
 }

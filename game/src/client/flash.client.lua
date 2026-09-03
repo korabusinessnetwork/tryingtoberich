@@ -18,6 +18,9 @@ local Eventos = require(Compartilhado.eventos)
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 local tela = Instance.new("ScreenGui")
+-- Sibling explicito: em Global o ZIndex vale para a tela inteira e filho pode
+-- sumir atras do proprio pai. Ver a nota em vestiario.client.lua.
+tela.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 tela.Name = "KoraFlash"
 tela.ResetOnSpawn = false
 tela.IgnoreGuiInset = true

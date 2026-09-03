@@ -114,11 +114,20 @@ test("preset: delta 0 é rejeitado, porque presente que não move nada não é p
   assert.notDeepEqual(validar("preset", parado), []);
 });
 
-test("preset: delta fora de -200..200 e intensidade fora de 1..5 são rejeitados (R2)", () => {
-  for (const [campo, valor] of [["delta", 201], ["delta", -201], ["intensidade", 0], ["intensidade", 6]]) {
+test("preset: intensidade fora de 1..5 é rejeitada, mas delta grande NÃO (R2)", () => {
+  for (const [campo, valor] of [["intensidade", 0], ["intensidade", 6]]) {
     const fora = clonar(preset);
     fora.slots[0][campo] = valor;
     assert.notDeepEqual(validar("preset", fora), [], `${campo}=${valor} deveria ser rejeitado`);
+  }
+
+  // O delta perdeu o teto por decisão do dono: com a torre em 5000 andares, um
+  // vínculo de 500 é o presente caro fazendo diferença, não erro de digitação.
+  // O único valor recusado continua sendo o 0.
+  for (const valor of [201, -201, 500, -2500, 5000]) {
+    const grande = clonar(preset);
+    grande.slots[0].delta = valor;
+    assert.deepEqual(validar("preset", grande), [], `delta=${valor} deveria passar`);
   }
 });
 
@@ -142,18 +151,38 @@ test("mapa de exemplo é jogável só com o pulo do jogador", () => {
 });
 
 test("mapa com salto acima do pulo é rejeitado, não arredondado (ADR-009.4)", () => {
+  // Derivado do jumpHeight do mapa: número fixo deixa de violar quando o
+  // exemplo muda de pulo.
   const intransponivel = clonar(mapa);
-  intransponivel.plataformas.espacamentoVertical = 6;
+  intransponivel.plataformas.espacamentoVertical = mapa.jumpHeight * FATOR_SALTO_VERTICAL + 1;
   const problemas = problemasDeJogabilidade(intransponivel);
   assert.equal(problemas.length, 1);
   assert.match(problemas[0], /espacamentoVertical/);
 });
 
 test("subir o jumpHeight sobe o teto de espaçamento junto, pela fórmula (ADR-009.3)", () => {
-  const aberto = clonar(mapa);
+  // Este teste é sobre o teto VERTICAL. As outras duas regras — alcance
+  // horizontal e degrau — são neutralizadas de propósito: baixar o jumpHeight
+  // baixa o alcance horizontal junto, e sem folgar o passo e o raio o teste
+  // falharia pela regra errada, escondendo o que ele existe para medir.
+  const semInterferencia = (m) => {
+    m.plataformas.variacaoHorizontal = 6;
+    m.plataformas.raioBase = 3;
+    m.plataformas.variacaoRaio = 0.2;
+    return m;
+  };
+
+  const aberto = semInterferencia(clonar(mapa));
   aberto.jumpHeight = 10;
   aberto.plataformas.espacamentoVertical = 6;
   assert.deepEqual(problemasDeJogabilidade(aberto), [], "6 <= 10 × 0,7");
+
+  // E o mesmo espaçamento reprova num pulo menor: é a fórmula que manda, não
+  // um número escolhido.
+  const apertado = semInterferencia(clonar(mapa));
+  apertado.jumpHeight = 8;
+  apertado.plataformas.espacamentoVertical = 6;
+  assert.match(problemasDeJogabilidade(apertado).join(" "), /espacamentoVertical/, "6 > 8 × 0,7");
 });
 
 test("mapa com marco topo fora da última plataforma é rejeitado", () => {
@@ -263,7 +292,7 @@ test("sessão encerrada não pode carregar detalhe por evento (F5)", async () =>
 
   const naoDescartou = clonar(encerrada);
   naoDescartou.eventos = [
-    { em: "2026-09-01T20:03:11Z", slot: 5, presenteId: "sem-galaxy", repeticoes: 1, delta: 40, animacaoId: "sub_cometa" },
+    { em: "2026-09-01T20:03:11Z", slot: 5, presenteId: "sem-galaxy", repeticoes: 1, delta: 40, animacaoId: "sub_shuriken_vento" },
   ];
   assert.notDeepEqual(validar("sessao", naoDescartou), []);
 
@@ -291,7 +320,7 @@ test("nome de doador tem teto de tamanho antes de virar texto na tela do jogo", 
 test("resposta de long-poll: delta 0 não chega ao jogo", () => {
   const resposta = {
     cursor: 412,
-    eventos: [{ id: 412, animacaoId: "sub_cometa", delta: 15, intensidade: 3, emitidoEm: 1756742591123 }],
+    eventos: [{ id: 412, animacaoId: "sub_shuriken_vento", delta: 15, intensidade: 3, emitidoEm: 1756742591123 }],
   };
   assert.deepEqual(validar("evento-jogo", resposta), []);
 
@@ -300,11 +329,28 @@ test("resposta de long-poll: delta 0 não chega ao jogo", () => {
   assert.notDeepEqual(validar("evento-jogo", zerado), []);
 });
 
-test("estado do jogo fora da faixa do mapa é rejeitado, para ser descartado e não corrigido", () => {
+test("estado do jogo fora da faixa do mapa é rejeitado, para ser descartado e não corrigido", async () => {
   const estado = { plataformaReferencia: 184, plataformaMaxima: 191, emAnimacao: false, quedasNaturais: 12 };
   assert.deepEqual(validar("estado-jogo", estado), []);
   assert.notDeepEqual(validar("estado-jogo", { ...estado, plataformaReferencia: -1 }), []);
-  assert.notDeepEqual(validar("estado-jogo", { ...estado, plataformaReferencia: 401 }), []);
+
+  //[[ O teto acompanha o do mapa, e já ficou para trás DUAS vezes: em 400
+  // quando a torre virou 1000, e em 1000 quando ela virou 5000.
+  //
+  // O efeito é silencioso do pior jeito: todo POST /jogo/estado passa a ser
+  // recusado assim que o jogador cruza o teto velho, e o painel congela a
+  // plataforma sem nada na tela — só um `estado_do_jogo_descartado` no log,
+  // que ninguém lê no meio de uma live.
+  //
+  // O número não é escrito aqui: sai do mapa.schema.json, que é quem manda.
+  // `test/jogo.test.mjs` confere que os dois continuam iguais. ]]
+  // Lido do contrato do MAPA, que é quem manda no tamanho da torre.
+  const mapaSchema = JSON.parse(
+    await readFile(path.join(RAIZ, "data", "schemas", "mapa.schema.json"), "utf8"),
+  );
+  const teto = mapaSchema.properties.totalPlataformas.maximum;
+  assert.deepEqual(validar("estado-jogo", { ...estado, plataformaReferencia: teto }), []);
+  assert.notDeepEqual(validar("estado-jogo", { ...estado, plataformaReferencia: teto + 1 }), []);
 });
 
 /* -------------------------------------------------------------- */

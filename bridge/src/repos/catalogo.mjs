@@ -35,8 +35,13 @@ export async function carregarCatalogo() {
  * Merge da coleta com o que já está em disco:
  * item novo entra, item existente tem valor e ícone atualizados, item que
  * sumiu vira `ativo: false` mas não é apagado — preset antigo referencia.
+ *
+ * `podeDesativar` existe porque "sumiu" só faz sentido contra a MESMA fonte.
+ * O painel público da TikTok não conhece os presentes exclusivos de uma sala, e
+ * a sala não lista tudo que o painel global lista: deixar uma fonte apagar a
+ * outra faria a lista encolher a cada troca, sem ninguém ter mexido em nada.
  */
-export function mesclarPresentes(existentes, coletados, agora) {
+export function mesclarPresentes(existentes, coletados, agora, { podeDesativar = true } = {}) {
   const porId = new Map(existentes.map((p) => [p.presenteId, p]));
 
   for (const coletado of coletados) {
@@ -44,24 +49,37 @@ export function mesclarPresentes(existentes, coletados, agora) {
     porId.set(coletado.presenteId, { ...anterior, ...coletado, ativo: true, vistoEm: agora });
   }
 
-  const idsColetados = new Set(coletados.map((p) => p.presenteId));
-  for (const [id, presente] of porId) {
-    if (!idsColetados.has(id)) porId.set(id, { ...presente, ativo: false });
+  if (podeDesativar) {
+    const idsColetados = new Set(coletados.map((p) => p.presenteId));
+    for (const [id, presente] of porId) {
+      if (!idsColetados.has(id)) porId.set(id, { ...presente, ativo: false });
+    }
   }
 
   return [...porId.values()].sort((a, b) => b.moedas - a.moedas || a.nome.localeCompare(b.nome));
 }
 
-export async function salvarColeta(coletados, agora = new Date().toISOString()) {
+/**
+ * Grava a coleta. `origem` diz de onde ela veio: `live` é a sala, `publico` é o
+ * painel de presentes da própria TikTok (ver `tiktok/catalogo-publico.mjs`).
+ *
+ * As duas são reais e se acumulam no mesmo arquivo, porque os ids são os
+ * mesmos da TikTok. A semente é a única que nunca se mistura: os ids dela são
+ * inventados, e um `sem-rose` marcado `ativo: false` sujaria o seletor do
+ * painel para sempre.
+ */
+export async function salvarColeta(coletados, agora = new Date().toISOString(), { origem = "live" } = {}) {
   const emDisco = await lerJsonOuPadrao(ARQUIVO_REAL);
-  const existentes = emDisco?.origem === "live" ? emDisco.presentes : [];
+  const anterior = emDisco && emDisco.origem !== "semente" ? emDisco : null;
 
   const catalogo = {
     streamerId: REGRAS.STREAMER_ID,
-    origem: "live",
+    origem,
     confirmado: true,
     atualizadoEm: agora,
-    presentes: mesclarPresentes(existentes, coletados, agora),
+    presentes: mesclarPresentes(anterior?.presentes ?? [], coletados, agora, {
+      podeDesativar: anterior?.origem === origem,
+    }),
   };
 
   const { validar } = await criarValidador();

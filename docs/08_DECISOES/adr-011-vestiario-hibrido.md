@@ -59,7 +59,15 @@ O look vive em `data/looks/<lookId>.json` com a composição completa.
 ### Negativas / trade-offs
 - **O vestiário não pode ficar acessível durante a sessão ao vivo.** Streamer
   parado num menu é exatamente a tela estática que o ADR-009 existe para evitar.
-  A GUI do vestiário fica bloqueada enquanto houver sessão rodando.
+  A GUI do vestiário fica bloqueada enquanto houver **live conectada**.
+
+  > **Correção de 2026-09-02.** A regra dizia "enquanto houver sessão rodando",
+  > e o código a implementou ao pé da letra. O efeito foi tornar o vestiário
+  > inacessível em TODO teste no Studio — onde a sessão roda e live não existe —
+  > que é justamente quando ele mais serve, para montar o look antes da estreia.
+  > A razão da regra é não entediar a PLATEIA; sem plateia ela não se aplica.
+  > O jogo passou a saber da live pela resposta de `POST /jogo/estado`, que já
+  > era chamada a cada ~2s e antes devolvia 204 vazio.
 - Trocar de look **não** aplica no meio da partida. Aplica no início da sessão ou
   no próximo respawn de checkpoint, para não interromper a jogatina.
 - A busca no catálogo do Roblox usa API web, não Open Cloud. É pública mas não é

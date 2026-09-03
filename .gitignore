@@ -25,3 +25,12 @@ data/configuracao.json
 
 # Entrada temporária do gate do painel (scripts/verificar-painel.mjs).
 panel/src/gate-gerado.jsx
+data/acervo-previa/
+
+# Arte e vídeo do streamer: pesam 62 MB juntos e são de INSTALAÇÃO, não do
+# produto — mesma lógica de data/icones/ e data/configuracao.json acima.
+# O que o repositório precisa saber sobre eles já está em data/acervo.json: o
+# assetId de cada peça, que é o que o jogo pede ao Roblox. O arquivo local só
+# alimenta a miniatura da galeria e o overlay do OBS, e vive no OneDrive.
+data/acervo-imagens/
+data/cutscenes/

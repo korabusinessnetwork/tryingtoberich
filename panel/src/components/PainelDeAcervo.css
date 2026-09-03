@@ -139,3 +139,80 @@
   border-radius: 999px;
   color: var(--painel-texto-secundario);
 }
+
+/* A publicação do acervo. Fica logo abaixo do recado porque é a resposta para
+   "e como eu consigo esse assetId?", e essa pergunta vem antes da lista. */
+.acervo-publicar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.acervo-publicar-botao {
+  min-height: var(--alvo-minimo);
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--painel-fundo);
+}
+
+.acervo-publicar-dica {
+  flex: 1;
+  min-width: 200px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+.acervo-relatorio {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.acervo-relatorio-linha {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+.acervo-relatorio-falhou {
+  color: var(--estado-erro);
+}
+
+/* A galeria: a foto de cada peça, ao lado do nome.
+
+   56px é o menor tamanho em que um bloco de grama ainda se distingue de um de
+   pedregulho — abaixo disso vira mancha colorida e a galeria não serve. */
+.acervo-item-foto {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: var(--raio);
+  border: var(--borda);
+  background: var(--painel-fundo);
+  object-fit: cover;
+  /* Textura de bloco é pixel grande de propósito: suavizar apagaria o que ela
+     tem de característico. */
+  image-rendering: pixelated;
+}
+
+/* Com a foto na frente, o nome é quem ocupa a sobra — senão o
+   `space-between` da regra original empurraria os três para os cantos. */
+.acervo-item-nome {
+  flex: 1;
+  min-width: 0;
+}
+
+.acervo-item-tags {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}

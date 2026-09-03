@@ -1,0 +1,135 @@
+/* Galeria de skins. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.galeria {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.galeria-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.galeria-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.galeria-etiqueta,
+.galeria-explicacao,
+.galeria-vazio {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+.galeria-busca {
+  display: flex;
+  gap: 6px;
+}
+
+.galeria-campo {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  font-size: 13px;
+  background: var(--painel-fundo);
+}
+
+.galeria-espiar,
+.galeria-adicionar {
+  min-height: var(--alvo-minimo);
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--painel-fundo);
+}
+
+/* A prévia é o coração do componente: imagem grande o bastante para
+   reconhecer a skin de relance, ao lado do que ela tem dentro. */
+.galeria-previa {
+  display: flex;
+  gap: var(--espaco);
+  padding: 8px;
+  background: var(--painel-fundo);
+  border-radius: var(--raio);
+}
+
+.galeria-previa-imagem {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+  object-fit: contain;
+}
+
+.galeria-previa-vazia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--painel-texto-secundario);
+  text-align: center;
+}
+
+.galeria-previa-dados {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.galeria-previa-nick {
+  font-size: 14px;
+}
+
+.galeria-previa-detalhe {
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}
+
+.galeria-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.galeria-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.galeria-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.galeria-remover {
+  min-height: var(--alvo-minimo);
+  min-width: var(--alvo-minimo);
+  font-size: 16px;
+  background: var(--painel-fundo);
+}

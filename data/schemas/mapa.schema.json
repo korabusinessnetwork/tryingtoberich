@@ -18,10 +18,10 @@
     },
     "geradoEm": { "$ref": "comuns.schema.json#/$defs/instante" },
     "totalPlataformas": {
-      "description": "Altura da torre. O padrão do produto é 1000: torre curta acaba no meio da live e o jogo fica sem para onde subir. O teto existe porque cada plataforma é um Instance.new no carregamento do mapa.",
+      "description": "Altura da torre. O padrão do produto é 5000: torre curta acaba no meio da live e o jogo fica sem para onde subir — e com presente sem teto de delta, 1000 andares viravam meia dúzia de donates. O teto existe porque cada plataforma é um Instance.new no carregamento do mapa.",
       "type": "integer",
       "minimum": 100,
-      "maximum": 1000
+      "maximum": 5000
     },
     "jumpHeight": {
       "description": "Altura de pulo do personagem em studs, aplicada no Humanoid. É o que define o teto de espacamentoVertical. Ver ADR-009.3.",
@@ -46,25 +46,36 @@
       "required": ["formato", "raioBase", "variacaoRaio", "espacamentoVertical", "variacaoHorizontal", "materialAssetId"],
       "properties": {
         "formato": {
-          "description": "A Fase 1 constrói só disco. Formato é uma das alavancas de variedade do ADR-009: acrescentar valor aqui exige implementar no construtor de mapa (Bloco 2) e citar no prompt P1.",
+          "description": "Como os degraus são construídos, e é a regra de jogabilidade que muda junto (ADR-009). \"disco\": degraus separados, com VÃO entre as bordas, que o jogador vence pulando — o passo tem que ser maior que o raio. \"laje\": lajes largas que se ENCOSTAM formando um caminho contínuo, sem vão, subidas quase andando — o passo tem que caber dentro da laje. As duas regras são opostas, e o validador escolhe pela formato.",
           "type": "string",
-          "enum": ["disco"]
+          "enum": ["disco", "laje"]
         },
-        "raioBase": { "type": "number", "minimum": 4, "maximum": 14 },
+        "raioBase": {
+          "description": "Meia-largura do degrau ao longo do caminho. No formato \"disco\" ele tem que caber DENTRO do passo horizontal, senão as plataformas se cobrem e não há salto. No formato \"laje\" é o contrário: a laje tem que ALCANÇAR a seguinte, senão abre buraco no caminho. Ver a regra em bridge/src/dominio/regras.mjs.",
+          "type": "number",
+          "minimum": 1.5,
+          "maximum": 14
+        },
         "variacaoRaio": { "type": "number", "minimum": 0, "maximum": 0.5 },
         "espacamentoVertical": {
-          "description": "Teto absoluto 8,4 = jumpHeight máximo (12) * 0,7. O teto real depende do jumpHeight deste mapa e é checado no validador. Ver ADR-009.1.",
+          "description": "Teto absoluto 8,4 = jumpHeight máximo (12) * 0,7. O teto real depende do jumpHeight deste mapa e é checado no validador. O PISO depende do formato e também é checado lá: no \"disco\" a subida é de pular e não desce de 3; na passarela (\"laje\") é de ANDAR e não passa da espessura do degrau. Ver ADR-009.1.",
           "type": "number",
-          "minimum": 3,
+          "minimum": 1,
           "maximum": 8.4
         },
         "variacaoHorizontal": {
-          "description": "Dois tetos, vale o menor: geometria (raioBase * 1,2) e alcance horizontal do pulo com a margem do ADR-009. O teto absoluto 7,83 é o alcance no jumpHeight máximo (12); o teto real deste mapa depende do jumpHeight dele e é checado no validador.",
+          "description": "Passo horizontal entre uma plataforma e a seguinte, de CENTRO a centro. O que o pulo precisa vencer é o VÃO entre as bordas (passo menos os dois raios), e é esse vão que o validador compara com o alcance. No formato \"disco\" também tem que ser maior que o raio, senão um disco cobre o outro e a torre vira coluna. No formato \"laje\" tem que ser MENOR que a largura da laje, que é o que faz o caminho ser contínuo.",
           "type": "number",
           "minimum": 0,
-          "maximum": 7.83
+          "maximum": 60
         },
-        "materialAssetId": { "$ref": "#/$defs/idAcervo" }
+        "materialAssetId": {
+          "description": "A textura dos degraus. Um id só pinta a torre inteira igual; uma LISTA reveza as texturas degrau a degrau, na ordem dada, e é assim que se faz uma torre de blocos variados. Todos os ids têm que existir no acervo e estar aprovados (ADR-004).",
+          "oneOf": [
+            { "$ref": "#/$defs/idAcervo" },
+            { "type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": { "$ref": "#/$defs/idAcervo" } }
+          ]
+        }
       }
     },
     "props": {
@@ -82,7 +93,7 @@
       }
     },
     "marcos": {
-      "description": "Um checkpoint visual a cada 50 plataformas e um marco topo na última. Ver P1.",
+      "description": "Um checkpoint visual a cada 250 plataformas e um marco topo na última. A cadência acompanhou a torre quando ela foi para 5000: a cada 50 seriam 99 marcos, e marco que aparece o tempo todo deixa de marcar alguma coisa. Ver P1.",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -90,7 +101,7 @@
         "additionalProperties": false,
         "required": ["plataforma", "tipo"],
         "properties": {
-          "plataforma": { "description": "Anda de 1 a totalPlataformas. O teto acompanha o de totalPlataformas: marco acima do topo da torre nao existe.", "type": "integer", "minimum": 1, "maximum": 1000 },
+          "plataforma": { "description": "Anda de 1 a totalPlataformas. O teto acompanha o de totalPlataformas: marco acima do topo da torre nao existe.", "type": "integer", "minimum": 1, "maximum": 5000 },
           "tipo": { "type": "string", "enum": ["checkpoint_visual", "topo"] }
         }
       },

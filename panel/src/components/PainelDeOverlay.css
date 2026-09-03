@@ -1,0 +1,136 @@
+/* A aba de overlay.
+
+   Tela de CONFIGURAÇÃO, não de canto de olho: o streamer vem aqui antes da
+   live, uma vez, para colar uma URL no OBS. Por isso ela pode respirar e
+   explicar — ao contrário da página Ao vivo, que é olhada por 2 segundos.
+
+   Nenhum hex literal: toda cor vem de tokens.css (02_DESIGN_SYSTEM). */
+
+.overlay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+}
+
+.overlay-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.overlay-titulo {
+  margin: 0;
+  font-size: 15px;
+}
+
+.overlay-etiqueta {
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+.overlay-explicacao,
+.overlay-vazio {
+  margin: 0;
+  color: var(--painel-texto-secundario);
+  line-height: 1.5;
+}
+
+.overlay-url {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.overlay-endereco {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 13px;
+  /* A URL é o item a ser copiado: quebrar não pode esconder o fim dela. */
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.overlay-copiar { min-width: 96px; }
+
+.overlay-passos {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--painel-texto-secundario);
+  line-height: 1.5;
+}
+
+.overlay-subtitulo {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--painel-texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.overlay-arquivos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overlay-arquivo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+}
+
+.overlay-marca {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.overlay-marca-ok { background: var(--estado-ok); }
+.overlay-marca-falta { background: var(--estado-erro); }
+
+.overlay-arquivo-nome {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.overlay-arquivo-caminho {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.overlay-arquivo-estado {
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+.overlay-aviso { margin: 0; }
+
+.overlay-recarregar { align-self: flex-start; }

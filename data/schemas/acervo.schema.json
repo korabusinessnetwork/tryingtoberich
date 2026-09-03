@@ -33,10 +33,40 @@
         "nome": { "type": "string", "minLength": 1, "maxLength": 80 },
         "tags": { "$ref": "#/$defs/tags" },
         "assetId": {
-          "description": "Nulo até a imagem ser enviada e aprovada. Montar o acervo é trabalho manual de véspera (ADR-004).",
+          "description": "Nulo até a imagem ser enviada e aprovada. Num céu de SEIS faces é o da face `ft`, que serve de miniatura na galeria e de imagem única para o jogo que só sabe pintar uma.",
           "oneOf": [{ "$ref": "comuns.schema.json#/$defs/assetIdRoblox" }, { "type": "null" }]
         },
-        "status": { "type": "string", "enum": ["pendente-upload", "em-moderacao", "aprovado", "rejeitado"] }
+        "faces": {
+          "description": "As seis faces de um skybox, quando a peça tem uma imagem por face. Céu de verdade tem horizonte, e horizonte só existe com faces distintas: uma imagem só nas seis põe a mesma linha no teto e no chão da caixa. Ausente = a peça é uma imagem única, aplicada nas seis.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ft", "bk", "lf", "rt", "up", "dn"],
+          "properties": {
+            "ft": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" },
+            "bk": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" },
+            "lf": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" },
+            "rt": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" },
+            "up": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" },
+            "dn": { "$ref": "comuns.schema.json#/$defs/assetIdRoblox" }
+          }
+        },
+        "status": { "type": "string", "enum": ["pendente-upload", "em-moderacao", "aprovado", "rejeitado"] },
+        "forma": {
+          "description": "A GEOMETRIA do degrau, para textura. Uma rosquinha redonda com furo no meio não é a mesma coisa que um quadrado com a foto de uma rosquinha, e a diferença é o que faz a peça temática valer. \"bloco\" é o padrão; \"placa\" é fina e chapada; \"disco\" é cilíndrico; \"anel\" tem furo no meio (e o furo é o risco); \"tabuas\" são réguas paralelas com fresta; \"hexagono\" é a laje tech de seis lados. O construtor monta cada uma com primitivas do Roblox, sem mesh e sem union em tempo de execução.",
+          "type": "string",
+          "enum": ["bloco", "placa", "disco", "anel", "tabuas", "hexagono"]
+        },
+        "material": {
+          "description": "Material nativo do Roblox aplicado ao degrau. Vidro para gelo e gelatina, neon para o arcade. Ausente = o construtor escolhe pelas palavras do id, como sempre fez.",
+          "type": "string",
+          "enum": ["SmoothPlastic", "Plastic", "Glass", "Neon", "Slate", "Wood", "WoodPlanks", "Ice", "Sand", "Grass", "Metal"]
+        },
+        "transparencia": {
+          "description": "Transparência do degrau, de 0 a 0.6. Vidro e gelatina pedem um pouco; acima disso o jogador perde a leitura de onde pisar.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.6
+        }
       },
       "allOf": [
         {

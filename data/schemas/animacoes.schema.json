@@ -18,7 +18,7 @@
     "animacao": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "nome", "direcao", "pesoVisual", "duracaoBase", "aceitaDeltaVariavel"],
+      "required": ["id", "nome", "direcao", "pesoVisual", "duracaoBase", "aceitaDeltaVariavel", "ativa"],
       "properties": {
         "id": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
         "nome": { "type": "string", "minLength": 1, "maxLength": 40 },
@@ -35,7 +35,11 @@
           "exclusiveMinimum": 0,
           "maximum": 3.5
         },
-        "aceitaDeltaVariavel": { "type": "boolean" }
+        "aceitaDeltaVariavel": { "type": "boolean" },
+        "ativa": {
+          "description": "Animação aposentada vira ativa:false e NÃO é apagada, como o presente do catálogo: preset antigo pode referenciar e o jogo continua tocando. O que muda é o painel, que para de oferecer.",
+          "type": "boolean"
+        }
       }
     }
   }

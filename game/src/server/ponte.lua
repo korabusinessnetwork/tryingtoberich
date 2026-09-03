@@ -53,6 +53,9 @@ local configuracao = nil
 local rodando = false
 local emExecucao = false
 local estaOnline = false
+-- A live da TikTok esta conectada? Vem na resposta de POST /jogo/estado, que e
+-- o unico canal periodico ponte -> jogo que ja existia.
+local liveConectada = false
 local avisouHttpDesligado = false
 
 local aoEvento = nil
@@ -148,9 +151,40 @@ end
 	o que fazer: a mesma resposta "não é 200" significa coisas diferentes em
 	rotas diferentes (204 é sucesso em /jogo/eventos, erro em todo o resto).
 ]]
+--[[
+	Carrega a config na primeira vez que alguém precisa dela.
+
+	Sob demanda, e não só no `Ponte.iniciar`, por uma razão concreta: a ordem de
+	`Sessao.iniciar` é buscar o mapa -> construir a torre -> ligar o laço de
+	eventos, e essa ordem está certa (evento chegando antes da torre existir não
+	tem onde ser aplicado). Só que quem preenchia a config era o ÚLTIMO passo,
+	então o PRIMEIRO sempre falhava com "ponte não configurada" — em qualquer
+	máquina, com a KoraConfig perfeitamente montada.
+
+	Carregar aqui também faz a config ser reencontrada quando ela chega depois,
+	que é o caso do Rojo sincronizando com o jogo já rodando.
+]]
+local function garantirConfiguracao()
+	if configuracao then
+		return true, nil
+	end
+
+	local carregada, erro = Configuracao.carregar()
+	if not carregada then
+		return false, erro
+	end
+
+	configuracao = carregada
+	return true, nil
+end
+
 local function requisitar(metodo, caminho, corpoTabela)
-	if not configuracao then
-		return nil, nil, "ponte não configurada"
+	-- O erro sobe INTEIRO: antes virava "ponte não configurada" e a explicação
+	-- de `Configuracao.carregar` — qual Folder ou StringValue falta — era jogada
+	-- fora justamente na linha que o streamer ia ler.
+	local temConfig, erroConfig = garantirConfiguracao()
+	if not temConfig then
+		return nil, nil, erroConfig
 	end
 
 	local opcoes = {
@@ -243,15 +277,30 @@ local function cicloEventos()
 					que já saiu é diferente de reiniciar antes dele, e o cursor
 					único é o que preserva essa ordem.
 
-					Só `reiniciar` existe hoje, e tipo desconhecido é ignorado
-					em silêncio de propósito — uma ponte mais nova falando com
-					um jogo mais velho não pode derrubar o laço.
+					O TRANSPORTE não escolhe comando. Ele repassa tudo que tem
+					um `tipo` de texto, e quem decide o que fazer é a sessão,
+					que ignora o que não conhece.
+
+					Isto aqui filtrava por `comando.tipo == "reiniciar"`, e o
+					comentário dizia "só reiniciar existe hoje". Passaram a
+					existir mais quatro — zerar-placar, recarregar-mapa, vitoria
+					e derrota — e cada um foi tratado na sessão sem que ninguém
+					lembrasse desta linha. Os três botões do painel e o vínculo
+					de placar por presente saíam da ponte, chegavam no jogo e
+					morriam aqui, sem erro, sem aviso, sem nada na tela.
+
+					Tipo desconhecido continua ignorado em silêncio de propósito
+					— uma ponte mais nova falando com um jogo mais velho não
+					pode derrubar o laço — só que agora quem ignora é a sessão.
 				]]
 				if type(corpo.comandos) == "table" then
 					for _, comando in ipairs(corpo.comandos) do
-						if type(comando) == "table" and comando.tipo == "reiniciar" then
+						if type(comando) == "table" and type(comando.tipo) == "string" then
 							entregou = true
-							chamarComSeguranca(aoComando, comando.tipo)
+							-- `quantidade` vai junto: um donate de placar pode
+							-- valer N rodadas (R4). Repassar só o tipo faria
+							-- seis derrotas chegarem como uma, em silêncio.
+							chamarComSeguranca(aoComando, comando.tipo, comando.quantidade)
 						end
 					end
 				end
@@ -314,12 +363,11 @@ function Ponte.iniciar(opcoes)
 		return nil, "ponte já está rodando"
 	end
 
-	local configCarregada, erroConfig = Configuracao.carregar()
-	if not configCarregada then
+	local temConfig, erroConfig = garantirConfiguracao()
+	if not temConfig then
 		return nil, erroConfig
 	end
 
-	configuracao = configCarregada
 	aoEvento = opcoes.aoEvento
 	aoConexao = opcoes.aoConexao
 	aoCombateAnulado = opcoes.aoCombateAnulado
@@ -457,9 +505,43 @@ function Ponte.enviarEstado(estado)
 		-- Fire-and-forget de verdade: o resultado não volta para quem
 		-- chamou, e um erro aqui não deve mexer no online() do long-poll,
 		-- que é o sinal que realmente importa para a latência do jogo.
-		requisitar("POST", "/jogo/estado", estado)
+		local statusCode, corpo = requisitar("POST", "/jogo/estado", estado)
+		-- A resposta traz o estado da LIVE. Continua fire-and-forget: ninguém
+		-- espera por isto, e uma falha aqui só deixa o valor como estava.
+		if statusCode == 200 and type(corpo) == "table" then
+			liveConectada = corpo.live == true
+		end
 		enviandoEstado = false
 	end)
+end
+
+--[[ Os nicks que o streamer curou no painel. Lista curta, sem cache: ela muda
+	quando ele acrescenta alguém, e uma galeria desatualizada seria pior que
+	uma chamada a mais numa tela que não é caminho crítico. ]]
+function Ponte.buscarGaleria()
+	local statusCode, corpo, erro = requisitar("GET", "/jogo/galeria")
+	if erro or statusCode ~= 200 or type(corpo) ~= "table" then
+		return nil, erro or mensagemDeErro(corpo, statusCode)
+	end
+	return corpo.nicks or {}
+end
+
+--[[ A skin que a pessoa está usando agora, para vestir como base. ]]
+function Ponte.buscarSkin(nick)
+	local statusCode, corpo, erro = requisitar("GET", "/jogo/skin?nick=" .. tostring(nick))
+	if erro or statusCode ~= 200 then
+		return nil, erro or mensagemDeErro(corpo, statusCode)
+	end
+	return corpo
+end
+
+--[[ Há plateia do outro lado?
+
+	É o que tranca o vestiário (ADR-011). NÃO é o mesmo que "sessão rodando":
+	no Studio a sessão roda sem live nenhuma, e bloquear o vestiário ali é
+	proibir por causa de uma plateia que não existe. ]]
+function Ponte.liveConectada()
+	return liveConectada
 end
 
 return Ponte

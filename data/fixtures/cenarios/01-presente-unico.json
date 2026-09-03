@@ -8,7 +8,7 @@
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 0, "slot": 5, "animacaoId": "sub_cometa", "delta": 40, "intensidade": 3 }
+      { "emMs": 0, "slot": 5, "animacaoId": "sub_shuriken_vento", "delta": 40, "intensidade": 3 }
     ],
     "naoMapeados": [],
     "descartados": []

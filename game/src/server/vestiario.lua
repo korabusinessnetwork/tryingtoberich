@@ -20,11 +20,15 @@ local Eventos = require(Compartilhado.eventos)
 local Tipos = require(Compartilhado.tipos)
 
 local Ponte = require(script.Parent.ponte)
+local Personagem = require(script.Parent.personagem)
 
 local Vestiario = {}
 
 local BUSCA_MIN = 2
 local sessaoRodando = function()
+
+--[[ Avisado depois de um save bem-sucedido, para a sessão reler o look. ]]
+local aoSalvarLook = nil
 	return false
 end
 
@@ -171,6 +175,15 @@ local function tratarSalvar(jogador, pedido)
 	task.spawn(function()
 		local ok, erro = Ponte.salvarLook(lookId, look)
 		if ok then
+			-- A sessão guarda uma cópia do look e a usa em todo respawn. Sem
+			-- avisar, ela continua vestindo o look de antes — que foi como a
+			-- aura sobreviveu a todas as tentativas de tirá-la.
+			if aoSalvarLook then
+				local avisou, erroAviso = pcall(aoSalvarLook)
+				if not avisou then
+					warn("[Vestiario] a sessão não recarregou o look: " .. tostring(erroAviso))
+				end
+			end
 			remoto:FireClient(jogador, { ok = true, lookId = lookId })
 		else
 			remoto:FireClient(jogador, { ok = false, erro = tostring(erro) })
@@ -190,6 +203,52 @@ function Vestiario.iniciar(opcoes)
 	if type(opcoes.sessaoAtiva) == "function" then
 		sessaoRodando = opcoes.sessaoAtiva
 	end
+	if type(opcoes.aoSalvar) == "function" then
+		aoSalvarLook = opcoes.aoSalvar
+	end
+
+	--[[ A galeria: lista de nicks, ou vestir a skin de um deles.
+	
+		Duas ações no mesmo remoto porque são a mesma tela e o mesmo passo do
+		fluxo — separar em dois eventos só multiplicaria a fiação. ]]
+	Eventos.obter(Eventos.VESTIARIO_GALERIA).OnServerEvent:Connect(function(jogador, pedido)
+		local remoto = Eventos.obter(Eventos.VESTIARIO_GALERIA)
+
+		if recusarSeAoVivo(remoto, jogador, { erro = "Vestiário indisponível com a live no ar." }) then
+			return
+		end
+
+		if type(pedido) ~= "table" then
+			remoto:FireClient(jogador, { erro = "pedido inválido" })
+			return
+		end
+
+		if pedido.acao == "listar" then
+			local nicks, erro = Ponte.buscarGaleria()
+			remoto:FireClient(jogador, { acao = "listar", nicks = nicks, erro = erro })
+			return
+		end
+
+		if pedido.acao == "vestir" and type(pedido.nick) == "string" then
+			local skin, erro = Ponte.buscarSkin(pedido.nick)
+			if not skin then
+				remoto:FireClient(jogador, { acao = "vestir", ok = false, erro = erro or "não achei essa skin" })
+				return
+			end
+
+			local ok, erroAplicar = Personagem.aplicarSkin(jogador, skin)
+			remoto:FireClient(jogador, {
+				acao = "vestir",
+				ok = ok,
+				erro = erroAplicar,
+				nick = skin.nick,
+				pecas = #(skin.assets or {}),
+			})
+			return
+		end
+
+		remoto:FireClient(jogador, { erro = "ação desconhecida" })
+	end)
 
 	Eventos.obter(Eventos.VESTIARIO_BUSCAR).OnServerEvent:Connect(tratarBusca)
 	Eventos.obter(Eventos.VESTIARIO_EQUIPAR).OnServerEvent:Connect(tratarEquipar)

@@ -33,6 +33,33 @@
         }
       }
     },
+    "animacaoDeVitoria": {
+      "description": "A animação que toca quando a rodada termina em vitória. Não move o boneco — vitória não tem delta — mas o momento merece o mesmo espetáculo de um presente grande. Ausente ou nula = nenhuma.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/animacaoId" }, { "type": "null" }]
+    },
+    "animacaoDeDerrota": {
+      "description": "A animação que toca quando a rodada termina em derrota — portal quebrado ou donate de derrota. Ausente ou nula = nenhuma.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/animacaoId" }, { "type": "null" }]
+    },
+    "portal": {
+      "description": "O portal do primeiro andar. Volta ao pé da torre depois de ter saído e ele se ergue: a partir dali a derrota deixa de ser automática e passa a ser DISPUTADA — só presente negativo o quebra, e enquanto ele estiver de pé dá para escapar subindo. Ausente = 2000 de vida, o padrão.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vida": {
+          "description": "Quanto ANDAR de empurrão para baixo o portal aguenta antes de quebrar. A unidade é a mesma do delta: um presente de -20 tira 20. Com a torre de 1000, 2000 é o equivalente a duas torres inteiras de queda.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        }
+      }
+    },
+    "placar": {
+      "description": "Presentes que mexem no PLACAR em vez de animar. Lista separada dos 6 slots de propósito (ADR-007): presente de vitória não pode custar um slot de subida, e as duas coisas crescem sem competir. Um presente não pode estar aqui E nos slots — ver a regra cruzada em bridge/src/dominio/regras.mjs.",
+      "type": "array",
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/vinculoDePlacar" }
+    },
     "slots": {
       "description": "No máximo 6. Slot vazio simplesmente não aparece: preset com menos de 6 preenchidos é válido (R1.3).",
       "type": "array",
@@ -49,6 +76,19 @@
     }
   },
   "$defs": {
+    "vinculoDePlacar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presenteId", "efeito"],
+      "properties": {
+        "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
+        "efeito": {
+          "description": "O que o presente faz ao placar. Encerra a rodada inteira: conta ponto, joga o streamer de volta ao pé da torre (ou ao topo) e dispara a contagem. \"derrota\" QUEBRA o portal na hora, sem precisar gastar a vida dele — é o atalho que o donate compra. Rajada vale N rodadas, cobradas uma a uma.",
+          "type": "string",
+          "enum": ["vitoria", "derrota"]
+        }
+      }
+    },
     "slot": {
       "description": "Um presente ligado a uma animação, com delta e intensidade. O vínculo é escolha explícita do streamer: o valor em moedas nunca decide nada (R3, ADR-007).",
       "type": "object",

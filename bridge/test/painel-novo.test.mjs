@@ -32,6 +32,14 @@ let nucleo;
 /** O acervo de verdade é restaurado no fim: o teste ESCREVE nele. */
 let acervoOriginal;
 
+/**
+ * A configuração também. Ativar um preset PERSISTE `presetAtivo`, e o preset
+ * que este arquivo ativa é o `teste-apagavel`, que o `after` apaga: sem
+ * restaurar, a ponte subiria apontando para um preset que não existe mais e o
+ * jogo entraria num mundo vazio, com `sem_mapa` e nada explicando.
+ */
+let configuracaoOriginal;
+
 const escutar = (app) =>
   new Promise((resolve) => {
     const servidor = app.listen(0, "127.0.0.1", () => resolve(servidor));
@@ -42,6 +50,7 @@ const json = { "content-type": "application/json" };
 
 before(async () => {
   acervoOriginal = await readFile(caminhoDeDados("acervo.json"), "utf8");
+  configuracaoOriginal = await readFile(caminhoDeDados("configuracao.json"), "utf8");
   nucleo = new Nucleo({ config });
   await nucleo.carregarAnimacoesNaMemoria();
   servidorDoJogo = await escutar(criarAppDoJogo(nucleo, { token: TOKEN }));
@@ -59,6 +68,7 @@ after(async () => {
   // repositório é um teste que ninguém roda duas vezes.
   const { escreverJsonAtomico } = await import("../src/repos/arquivo.mjs");
   await escreverJsonAtomico(caminhoDeDados("acervo.json"), JSON.parse(acervoOriginal));
+  await escreverJsonAtomico(caminhoDeDados("configuracao.json"), JSON.parse(configuracaoOriginal));
 });
 
 /* ---------------------------------------------------------------- */
@@ -109,7 +119,11 @@ test("o reinício chega ao jogo como COMANDO, não como presente", async () => {
   const corpo = await (await pendente).json();
   assert.equal(corpo.comandos.length, 1);
   assert.equal(corpo.comandos[0].tipo, "reiniciar");
-  assert.deepEqual(Object.keys(corpo.comandos[0]).sort(), ["emitidoEm", "id", "tipo"]);
+  // Lista fechada de propósito: campo interno da ponte que vaze para o jogo é
+  // acoplamento silencioso. `quantidade` entrou porque um donate de placar pode
+  // valer N rodadas (R4) — e o reinício do painel vale sempre 1.
+  assert.deepEqual(Object.keys(corpo.comandos[0]).sort(), ["emitidoEm", "id", "quantidade", "tipo"]);
+  assert.equal(corpo.comandos[0].quantidade, 1, "ordem do painel nunca vale mais de uma rodada");
   assert.deepEqual(corpo.eventos, [], "comando não é evento: ele não pode entrar na lista que move o boneco");
 });
 
@@ -280,9 +294,14 @@ test("a vitória não sobrevive ao fim da sessão", async () => {
 
   // Sem sessão de verdade aberta, o stop responde o contrato de erro — o que
   // interessa aqui é o começo de uma sessão nova, que é o outro caminho.
-  await fetch(`${basePainel}/api/sessao/start`, {
+  const inicio = await fetch(`${basePainel}/api/sessao/start`, {
     method: "POST", headers: json, body: JSON.stringify({ presetId: "escalada-padrao", cenario: "01-presente-unico" }),
   });
+  // O start é PREMISSA deste teste, não o assunto dele. Sem esta linha, o
+  // preset da semente apagado pelo painel — coisa que o streamer faz sem
+  // pensar — vinha reclamar aqui como "a vitória sobreviveu à sessão", que é
+  // uma pista falsa cara de seguir. `npm run semear` reinstala o preset.
+  assert.equal(inicio.status, 200, `o preset da semente precisa existir: ${await inicio.clone().text()}`);
 
   const depois = await (await fetch(`${basePainel}/api/sessao`)).json();
   assert.equal(depois.estado.vitoria, false, "sessão nova começa sem a vitória da anterior");
@@ -290,4 +309,84 @@ test("a vitória não sobrevive ao fim da sessão", async () => {
   const resumo = await (await fetch(`${basePainel}/api/sessao/stop`, { method: "POST" })).json();
   assert.ok(resumo.resumo, "e o stop devolve o resumo que o painel mostra (F5.5)");
   assert.equal((await (await fetch(`${basePainel}/api/sessao`)).json()).estado.vitoria, false);
+});
+
+test("trocar o mapa do preset ativo manda o jogo reerguer a torre, sem segundo clique", async () => {
+  // O buraco que este teste tranca: o painel gravava o preset com o mapa novo,
+  // `/jogo/mapa` passava a servir o mapa novo na hora — e o jogo, que pede o
+  // mapa UMA vez ao subir a sessão, continuava com a torre antiga de pé. Do
+  // lado da ponte estava tudo certo, e na tela nada tinha mudado.
+  //
+  // O Roblox pendurado no long-poll é o ponto: não basta o comando existir, ele
+  // tem que sair no envelope, em `comandos`, que é onde o jogo procura.
+  // Timeout do long-poll responde 204 sem corpo: é o "nada aconteceu" do
+  // contrato, e é exatamente o que o segundo caso espera ver.
+  const pendurar = () =>
+    fetch(`${base}/jogo/eventos?desde=${nucleo.longpoll.cursor}`, { headers: comToken })
+      .then((r) => (r.status === 204 ? {} : r.json()));
+
+  const corpo = { nome: "Mapa que troca", modalidade: "escalada", slots: [], mapaId: "mapa-um" };
+  await fetch(`${basePainel}/api/presets/teste-apagavel`, { method: "PUT", headers: json, body: JSON.stringify(corpo) });
+
+  // Ativa: o comando só faz sentido para o preset que está NO AR.
+  await fetch(`${basePainel}/api/sessao/preset`, {
+    method: "POST", headers: json, body: JSON.stringify({ presetId: "teste-apagavel" }),
+  });
+
+  const esperando = pendurar();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await fetch(`${basePainel}/api/presets/teste-apagavel`, {
+    method: "PUT", headers: json, body: JSON.stringify({ ...corpo, mapaId: "mapa-dois" }),
+  });
+
+  const envelope = await esperando;
+  assert.deepEqual(
+    (envelope.comandos ?? []).map((c) => c.tipo),
+    ["recarregar-mapa"],
+    "trocar de mapa tem que sair pelo canal de comando (ADR-013)",
+  );
+
+  // Salvar de novo sem mexer no mapa não manda nada: reerguer a torre a cada
+  // Salvar derrubaria a corrida por causa de uma vírgula em outro slot.
+  const segundo = pendurar();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await fetch(`${basePainel}/api/presets/teste-apagavel`, {
+    method: "PUT", headers: json, body: JSON.stringify({ ...corpo, mapaId: "mapa-dois", nome: "Outro nome" }),
+  });
+  assert.deepEqual((await segundo).comandos ?? [], [], "mesmo mapa, nenhum comando");
+});
+
+test("apagar mapa recusa o que qualquer preset ainda usa, não só o ativo", async () => {
+  //[[ Apagar o mapa de um preset GUARDADO deixaria uma bomba armada: o
+  // streamer troca de preset no meio da live e o jogo entra num mundo vazio,
+  // com `sem_mapa` e nada explicando. A guarda olha todos os presets, e a
+  // mensagem diz QUAIS seguram o mapa — sem isso ele fica tentando de novo. ]]
+  const { salvarMapa } = await import("../src/repos/mapas.mjs");
+  const modelo = (await (await fetch(`${basePainel}/api/mapas`)).json()).mapas[0];
+  assert.ok(modelo, "o teste precisa de ao menos um mapa no disco");
+
+  await salvarMapa({ ...modelo, mapaId: "mapa-so-do-teste", nome: "Só do teste" });
+
+  const solto = await fetch(`${basePainel}/api/mapas/mapa-so-do-teste`, { method: "DELETE" });
+  assert.equal(solto.status, 200, "mapa que ninguém usa tem que sair");
+
+  // E o que está preso a um preset resiste.
+  await salvarMapa({ ...modelo, mapaId: "mapa-preso", nome: "Preso" });
+  await fetch(`${basePainel}/api/presets/teste-apagavel`, {
+    method: "PUT", headers: json,
+    body: JSON.stringify({ nome: "Segura o mapa", modalidade: "escalada", slots: [], mapaId: "mapa-preso" }),
+  });
+
+  const preso = await fetch(`${basePainel}/api/mapas/mapa-preso`, { method: "DELETE" });
+  const corpo = await preso.json();
+  assert.equal(preso.status, 409);
+  assert.equal(corpo.erro, "mapa_em_uso");
+  assert.match(corpo.mensagem, /teste-apagavel/, "a mensagem tem que dizer QUEM segura o mapa");
+
+  // Solta e apaga, para o teste não deixar lixo.
+  await fetch(`${basePainel}/api/presets/teste-apagavel`, {
+    method: "PUT", headers: json,
+    body: JSON.stringify({ nome: "Segura o mapa", modalidade: "escalada", slots: [] }),
+  });
+  await fetch(`${basePainel}/api/mapas/mapa-preso`, { method: "DELETE" });
 });

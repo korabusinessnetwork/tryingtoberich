@@ -7,12 +7,16 @@ import { AvisoDeVitoria } from "./components/AvisoDeVitoria.jsx";
 import { BarraDeSessao } from "./components/BarraDeSessao.jsx";
 import { BotaoAbrirJogo } from "./components/BotaoAbrirJogo.jsx";
 import { ContaDaLive } from "./components/ContaDaLive.jsx";
+import { ControleDaPartida } from "./components/ControleDaPartida.jsx";
+import { EditorDePlacar } from "./components/EditorDePlacar.jsx";
 import { EditorDePreset } from "./components/EditorDePreset.jsx";
-import { GeradorDeMapa } from "./components/GeradorDeMapa.jsx";
+import { GaleriaDeSkins } from "./components/GaleriaDeSkins.jsx";
+import { SeletorDeMundo } from "./components/SeletorDeMundo.jsx";
 import { GerenciadorDePresets } from "./components/GerenciadorDePresets.jsx";
 import { HistoricoDeSessoes } from "./components/HistoricoDeSessoes.jsx";
 import { MonitorAoVivo } from "./components/MonitorAoVivo.jsx";
 import { NavegacaoDePaginas } from "./components/NavegacaoDePaginas.jsx";
+import { PainelDeOverlay } from "./components/PainelDeOverlay.jsx";
 import { PainelDeAcervo } from "./components/PainelDeAcervo.jsx";
 import { PainelDeLogs } from "./components/PainelDeLogs.jsx";
 import { ResumoDaLive } from "./components/ResumoDaLive.jsx";
@@ -50,7 +54,6 @@ export function App() {
   const [preset, definirPreset] = useState(null);
   const [salvando, definirSalvando] = useState(false);
   const [iniciando, definirIniciando] = useState(false);
-  const [gerando, definirGerando] = useState(false);
   const [erroDeMapa, definirErroDeMapa] = useState(null);
   const [prontidao, definirProntidao] = useState(null);
   const [disparando, definirDisparando] = useState(false);
@@ -69,6 +72,15 @@ export function App() {
   const [acervo, definirAcervo] = useState(null);
   const [salvandoAcervo, definirSalvandoAcervo] = useState(false);
   const [erroDeAcervo, definirErroDeAcervo] = useState(null);
+  const [montandoMundo, definirMontandoMundo] = useState(false);
+  const [recadoDoMundo, definirRecadoDoMundo] = useState(null);
+  const [publicandoAcervo, definirPublicandoAcervo] = useState(false);
+  const [relatorioDoAcervo, definirRelatorioDoAcervo] = useState(null);
+  const [skinEspiada, definirSkinEspiada] = useState(null);
+  const [espiandoSkin, definirEspiandoSkin] = useState(false);
+  const [salvandoGaleria, definirSalvandoGaleria] = useState(false);
+  const [comandandoPartida, definirComandandoPartida] = useState(false);
+  const [recadoDaPartida, definirRecadoDaPartida] = useState(null);
   const [abrindoJogo, definirAbrindoJogo] = useState(false);
   const [studio, definirStudio] = useState(null);
   const [erroDoStudio, definirErroDoStudio] = useState(null);
@@ -135,6 +147,38 @@ export function App() {
     });
   }, []);
 
+  //[[ Os presentes de placar vivem numa lista propria, fora dos 6 slots.
+  //
+  // Tres funcoes e nao uma: acrescentar, trocar o efeito e remover sao acoes
+  // diferentes na tela, e juntar as tres num "mudar" generico obrigaria o
+  // componente a saber quando passar null — que e regra de dominio vazando
+  // para o desenho. ]]
+  const adicionarAoPlacar = useCallback((presenteId) => {
+    definirPreset((atual) => {
+      if (!atual) return atual;
+      const placar = atual.placar ?? [];
+      if (placar.some((v) => v.presenteId === presenteId)) return atual;
+      return { ...atual, placar: [...placar, { presenteId, efeito: "vitoria" }] };
+    });
+  }, []);
+
+  const mudarEfeitoDoPlacar = useCallback((presenteId, efeito) => {
+    definirPreset((atual) => {
+      if (!atual) return atual;
+      return {
+        ...atual,
+        placar: (atual.placar ?? []).map((v) => (v.presenteId === presenteId ? { ...v, efeito } : v)),
+      };
+    });
+  }, []);
+
+  const removerDoPlacar = useCallback((presenteId) => {
+    definirPreset((atual) => {
+      if (!atual) return atual;
+      return { ...atual, placar: (atual.placar ?? []).filter((v) => v.presenteId !== presenteId) };
+    });
+  }, []);
+
   const limparSlot = useCallback((posicao) => {
     definirPreset((atual) =>
       atual ? { ...atual, slots: (atual.slots ?? []).filter((s) => s.posicao !== posicao) } : atual,
@@ -151,6 +195,48 @@ export function App() {
     }
     definirSalvando(false);
   }, [preset, executar]);
+
+  //[[ Escolher o mapa SALVA na hora. Não é rascunho.
+  //
+  // O resto do editor é rascunho de verdade: mexer num slot e desistir é
+  // normal, e por isso existe o botão Salvar. Mapa não — escolher um mapa é uma
+  // ordem com efeito imediato, e a ponte responde a ela mandando o jogo reerguer
+  // a torre.
+  //
+  // Enquanto isto exigia um segundo clique, "botei pra usar" não botava nada: o
+  // preset em disco continuava no mapa antigo, o jogo continuava certo em servir
+  // o mapa antigo, e a tela ficava mostrando o mapa novo escolhido. Tudo
+  // coerente, e o mundo sem mudar.
+  //
+  // Recebe o id em vez de ler o estado: `preset` aqui seria o de antes da
+  // troca, e salvaria o mapa velho por cima do novo. ]]
+  //[[ Montar o mundo com as peças escolhidas na galeria.
+  //
+  // Entra no ar na hora: montar e não usar não é um gesto que exista. A ponte
+  // grava sempre no MESMO arquivo — cada clique criando um mapa novo encheria a
+  // lista de descartes em minutos, que foi o que aconteceu com o gerador por
+  // texto. ]]
+  const montarMundo = useCallback(async (escolhas) => {
+    definirMontandoMundo(true);
+    definirErroDeMapa(null);
+    const resultado = await executar(() => api.montarMundo(escolhas), {
+      aoFalhar: (falha) => definirErroDeMapa(falha?.message ?? "Não consegui montar o mundo."),
+    });
+    if (resultado) {
+      definirDados((d) => ({
+        ...d,
+        mapas: [...d.mapas.filter((m) => m.mapaId !== resultado.mapa.mapaId), resultado.mapa],
+      }));
+      definirPreset((atual) => (atual ? { ...atual, mapaId: resultado.mapa.mapaId } : atual));
+      definirProntidao(resultado.prontidao);
+      // A HORA é o que faz montar duas vezes o mesmo mundo ainda dar sinal: o
+      // nome e as peças seriam idênticos, e a tela pareceria não ter reagido.
+      definirRecadoDoMundo(
+        `Mundo montado às ${new Date().toLocaleTimeString("pt-BR")}. A torre está sendo reerguida.`,
+      );
+    }
+    definirMontandoMundo(false);
+  }, [executar]);
 
   /**
    * Cria um preset vazio. É o mesmo PUT do salvar: o repositório grava o
@@ -282,7 +368,7 @@ export function App() {
     definirReiniciando(false);
   }, [executar]);
 
-  /** F2.4 — coleta o catálogo de verdade da live, no lugar da semente. */
+  /** F2.4 — os presentes de verdade da TikTok: da sala se houver live, do painel público se não. */
   const atualizarCatalogo = useCallback(async () => {
     definirAtualizandoCatalogo(true);
     const catalogo = await executar(() => api.atualizarCatalogo());
@@ -324,20 +410,6 @@ export function App() {
     definirSalvandoAcervo(false);
   }, [executar, preset]);
 
-  const gerarMapa = useCallback(async (descricao) => {
-    definirGerando(true);
-    definirErroDeMapa(null);
-    const resultado = await executar(() => api.gerarMapa(descricao), {
-      aoFalhar: (falha) => definirErroDeMapa(falha?.message ?? "A geração falhou."),
-    });
-    if (resultado) {
-      definirDados((d) => ({ ...d, mapas: [...d.mapas.filter((m) => m.mapaId !== resultado.mapa.mapaId), resultado.mapa] }));
-      definirPreset((atual) => (atual ? { ...atual, mapaId: resultado.mapa.mapaId } : atual));
-      definirProntidao(resultado.prontidao);
-    }
-    definirGerando(false);
-  }, [executar]);
-
   const testarPresentes = useCallback(async (presentes) => {
     definirDisparando(true);
     await executar(() => api.testarPresentes(presentes));
@@ -365,6 +437,69 @@ export function App() {
     // (tira arroba, aceita URL colada), e a tela tem que mostrar o que valeu.
     if (salva) definirDados((d) => ({ ...d, configuracao: salva }));
     definirSalvandoConta(false);
+  }, [executar]);
+
+  //[[ As tres ordens da partida.
+  //
+  // Uma funcao so, parametrizada: elas diferem apenas na chamada e no texto, e
+  // tres blocos iguais divergiriam na primeira mudanca. O `jogoOnline` da
+  // resposta e o que impede o botao de parecer que funcionou quando o comando
+  // foi descartado pelo long-poll. ]]
+  const comandarPartida = useCallback(async (acao, rotulo) => {
+    definirComandandoPartida(true);
+    definirRecadoDaPartida(null);
+
+    const resultado = await executar(acao);
+    if (resultado) {
+      definirRecadoDaPartida(
+        resultado.jogoOnline
+          ? `${rotulo}: ordem enviada ao jogo.`
+          : `${rotulo}: o Roblox está fora, a ordem foi descartada.`,
+      );
+    }
+    definirComandandoPartida(false);
+  }, [executar]);
+
+  //[[ Encher o acervo é o que destrava a variedade dos mapas.
+  //
+  // Com um céu e uma textura aprovados, todo mapa gerado sai igual — e lê como
+  // defeito do gerador. A ponte desenha o que falta, sobe e anota o assetId; a
+  // moderação continua sendo do Roblox, então o item entra em `em-moderacao` e
+  // só depois vira aprovado. Recarrega o acervo no fim para a lista da tela
+  // mostrar o número novo. ]]
+  const publicarAcervo = useCallback(async () => {
+    definirPublicandoAcervo(true);
+    definirErroDeAcervo(null);
+    const resultado = await executar(() => api.publicarAcervo(), {
+      aoFalhar: (falha) => definirErroDeAcervo(falha?.message ?? "Não consegui publicar o acervo."),
+    });
+    if (resultado) {
+      definirRelatorioDoAcervo(resultado.relatorio);
+      // Relê pelo mesmo caminho de sempre: a lista da tela precisa mostrar o
+      // número novo, e duas formas de carregar o acervo divergiriam.
+      await carregarAcervo();
+    }
+    definirPublicandoAcervo(false);
+  }, [executar, carregarAcervo]);
+
+  const espiarSkin = useCallback(async (nick) => {
+    definirEspiandoSkin(true);
+    definirSkinEspiada(null);
+    const skin = await executar(() => api.espiarSkin(nick));
+    if (skin) definirSkinEspiada(skin);
+    definirEspiandoSkin(false);
+  }, [executar]);
+
+  //[[ A galeria vai INTEIRA para a ponte, não em diff.
+  //
+  // Ela é um conjunto pequeno e a ponte já normaliza (tira arroba, remove
+  // duplicata). Mandar a lista toda deixa a ponte ser dona da normalização, em
+  // vez de a tela ter que adivinhar como ficou. ]]
+  const salvarGaleria = useCallback(async (nicks) => {
+    definirSalvandoGaleria(true);
+    const salva = await executar(() => api.salvarGaleria(nicks));
+    if (salva) definirDados((d) => ({ ...d, configuracao: salva }));
+    definirSalvandoGaleria(false);
   }, [executar]);
 
   const abrirNoStudio = useCallback(async () => {
@@ -507,6 +642,7 @@ export function App() {
           { id: "aovivo", rotulo: "Ao vivo" },
           { id: "configurar", rotulo: "Configurar" },
           { id: "jogo", rotulo: "Jogo" },
+          { id: "overlay", rotulo: "Overlay" },
           { id: "historico", rotulo: "Histórico" },
           { id: "log", rotulo: "Log", contador: naoVistos },
         ]}
@@ -548,6 +684,21 @@ export function App() {
             aoSalvar={salvarPreset}
             aoEditarPresente={(posicao) => definirEditando({ posicao, tipo: "presente" })}
             aoEditarAnimacao={(posicao) => definirEditando({ posicao, tipo: "animacao" })}
+          />
+
+          <EditorDePlacar
+            animacoes={dados.animacoes}
+            aoEscolherAnimacao={(campo) => definirEditando({ tipo: "animacaoDeRodada", campo })}
+            aoLimparAnimacao={(campo) =>
+              definirPreset((atual) => (atual ? { ...atual, [campo]: null } : atual))}
+            aoMudarPortal={(vida) =>
+              definirPreset((atual) => (atual ? { ...atual, portal: { ...atual.portal, vida } } : atual))}
+            preset={preset}
+            catalogo={dados.catalogo}
+            presenteIdsEmSlot={new Set((preset?.slots ?? []).map((s) => String(s.presenteId)))}
+            aoAdicionar={adicionarAoPlacar}
+            aoMudar={mudarEfeitoDoPlacar}
+            aoRemover={removerDoPlacar}
           />
 
           <MonitorAoVivo
@@ -610,14 +761,14 @@ export function App() {
               travado={aoVivo}
             />
 
-            <GeradorDeMapa
-              mapas={dados.mapas}
-              mapaId={preset?.mapaId ?? null}
-              gerando={gerando}
+            <SeletorDeMundo
+              acervo={acervo}
+              mapa={mapaEscolhido}
+              montando={montandoMundo}
               erro={erroDeMapa}
-              aoGerar={gerarMapa}
-              aoEscolher={(mapaId) => definirPreset((atual) => (atual ? { ...atual, mapaId } : atual))}
-              travado={aoVivo}
+              recado={recadoDoMundo}
+              jogoOnline={jogoOnline}
+              aoMontar={montarMundo}
             />
           </section>
 
@@ -630,7 +781,10 @@ export function App() {
               acervo={acervo}
               salvando={salvandoAcervo}
               erro={erroDeAcervo}
+              publicando={publicandoAcervo}
+              relatorio={relatorioDoAcervo}
               aoAnotar={anotarAcervo}
+              aoPublicar={publicarAcervo}
             />
           </aside>
         </div>
@@ -646,6 +800,29 @@ export function App() {
             resultado={studio}
             erro={erroDoStudio}
             aoAbrir={abrirNoStudio}
+          />
+
+          <GaleriaDeSkins
+            nicks={dados.configuracao?.galeriaDeSkins ?? []}
+            espiada={skinEspiada}
+            espiando={espiandoSkin}
+            salvando={salvandoGaleria}
+            aoEspiar={espiarSkin}
+            aoAdicionar={(nick) => {
+              salvarGaleria([...(dados.configuracao?.galeriaDeSkins ?? []), nick]);
+              definirSkinEspiada(null);
+            }}
+            aoRemover={(nick) =>
+              salvarGaleria((dados.configuracao?.galeriaDeSkins ?? []).filter((n) => n !== nick))}
+          />
+
+          <ControleDaPartida
+            jogoOnline={jogoOnline}
+            ocupado={comandandoPartida}
+            ultimoRecado={recadoDaPartida}
+            aoReiniciar={() => comandarPartida(() => api.reiniciarCorrida(), "Reiniciar")}
+            aoZerarPlacar={() => comandarPartida(() => api.zerarPlacar(), "Zerar placar")}
+            aoRecarregarMapa={() => comandarPartida(() => api.recarregarMapa(), "Recarregar mapa")}
           />
 
           <TestadorDeAnimacao
@@ -683,6 +860,17 @@ export function App() {
         </div>
       ) : null}
 
+      {/*[[ Só existe um overlay hoje, o das cutscenes.
+
+          Ele já funcionava; o que faltava era um lugar que dissesse a URL — ela
+          vivia num comentário do servidor. A aba nasce com um só e com o
+          desenho pronto para os próximos: cada overlay é um cartão. ]]*/}
+      {pagina === "overlay" ? (
+        <div className="app-pagina">
+          <PainelDeOverlay />
+        </div>
+      ) : null}
+
       {pagina === "log" ? (
         <div className="app-pagina">
           <PainelDeLogs
@@ -711,13 +899,27 @@ export function App() {
         aoFechar={() => definirEditando(null)}
       />
 
+      {/*[[ O MESMO seletor serve slot e fim de rodada.
+
+          `editando.campo` diz onde a escolha vai cair: num slot dos seis, ou no
+          `animacaoDeVitoria`/`animacaoDeDerrota` do preset. Um segundo modal
+          divergiria do primeiro no primeiro ajuste de filtro. ]]*/}
       <SeletorDeAnimacao
-        aberto={editando?.tipo === "animacao"}
+        aberto={editando?.tipo === "animacao" || editando?.tipo === "animacaoDeRodada"}
         animacoes={dados.animacoes}
-        animacaoIdAtual={slotEditado?.animacaoId ?? null}
-        deltaDoSlot={slotEditado?.delta ?? null}
+        animacaoIdAtual={
+          editando?.tipo === "animacaoDeRodada"
+            ? preset?.[editando.campo] ?? null
+            : slotEditado?.animacaoId ?? null
+        }
+        deltaDoSlot={editando?.tipo === "animacaoDeRodada" ? null : slotEditado?.delta ?? null}
         aoEscolher={(animacaoId) => {
-          mudarSlot(editando.posicao, { animacaoId });
+          if (editando?.tipo === "animacaoDeRodada") {
+            const campo = editando.campo;
+            definirPreset((atual) => (atual ? { ...atual, [campo]: animacaoId } : atual));
+          } else {
+            mudarSlot(editando.posicao, { animacaoId });
+          }
           definirEditando(null);
         }}
         aoFechar={() => definirEditando(null)}

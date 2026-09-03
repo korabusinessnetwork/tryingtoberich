@@ -19,6 +19,12 @@
       "description": "O preset que a ponte serve ao jogo. Persistido porque o Roblox pede GET /jogo/mapa na ENTRADA, e antes disto a ponte esquecia o preset a cada reinício: o jogo caía num mundo vazio sem erro nenhum na tela.",
       "oneOf": [{ "$ref": "comuns.schema.json#/$defs/identificador" }, { "type": "null" }]
     },
+    "galeriaDeSkins": {
+      "description": "Nicks do Roblox cujas skins o streamer usa como base no vestiário. Curada no PAINEL, que é superfície local: o jogo só lê. Escrever isto pela superfície pública seria deixar o túnel alterar configuração do streamer.",
+      "type": "array",
+      "maxItems": 30,
+      "items": { "type": "string", "minLength": 3, "maxLength": 20, "pattern": "^[A-Za-z0-9_]+$" }
+    },
     "atualizadoEm": {
       "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
     }

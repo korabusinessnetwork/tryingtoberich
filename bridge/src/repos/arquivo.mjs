@@ -8,6 +8,7 @@
  * Quem chama fala em verbo de domínio (`salvarPreset`), nunca em caminho.
  */
 
+import { createReadStream } from "node:fs";
 import { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -143,4 +144,42 @@ export async function apagar(caminho) {
 export async function lerTodosOsJson(dir) {
   const nomes = await listarJson(dir);
   return Object.fromEntries(await Promise.all(nomes.map(async (nome) => [nome, await lerJson(path.join(dir, nome))])));
+}
+
+/**
+ * Lê um arquivo cru, sem interpretar.
+ *
+ * Imagem do acervo não é JSON e não tem schema: é o PNG que o streamer pôs em
+ * disco. Passa por aqui pelo mesmo motivo que todo o resto (ADR-003) — acesso a
+ * arquivo mora num diretório só.
+ */
+export async function lerBinario(caminho) {
+  return readFile(caminho);
+}
+
+/**
+ * Abre um arquivo grande para servir por HTTP, em pedaços.
+ *
+ * Vídeo não cabe em memória e o navegador o pede por faixa (`Range`), então
+ * quem serve precisa de um stream e do tamanho. Mora aqui pelo ADR-003: o
+ * `createReadStream` é acesso a arquivo como qualquer outro, e concentrar isso
+ * num diretório só é o que permite trocar disco por outra coisa na Fase 3 sem
+ * caçar `fs` espalhado pela ponte.
+ *
+ * Devolve `null` quando o arquivo não existe — quem chama responde 404.
+ */
+export async function abrirParaStream(caminho) {
+  let tamanho;
+  try {
+    tamanho = (await stat(caminho)).size;
+  } catch {
+    return null;
+  }
+
+  return {
+    tamanho,
+    /** `inicio` e `fim` são inclusivos, como no cabeçalho Range. */
+    trecho: (inicio, fim) => createReadStream(caminho, { start: inicio, end: fim }),
+    inteiro: () => createReadStream(caminho),
+  };
 }

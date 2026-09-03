@@ -128,9 +128,16 @@ test("estado do jogo fora da faixa é descartado, não corrige o estado", async 
       body: JSON.stringify(corpo),
     });
 
-  assert.equal((await enviar({ plataformaReferencia: 184, plataformaMaxima: 191, emAnimacao: false })).status, 204);
-  assert.equal((await enviar({ plataformaReferencia: -5, plataformaMaxima: 191, emAnimacao: false })).status, 204);
-  assert.equal((await enviar({ nada: "a ver" })).status, 204, "sempre 204: o jogo nunca espera a ponte");
+  // Sempre 200, inclusive quando o corpo é descartado: o jogo nunca espera a
+  // ponte, e a resposta existe só para devolver o estado da live — que é o que
+  // tranca o vestiário (ADR-011). Descartar o estado recebido e ainda assim
+  // responder é de propósito: são duas coisas independentes.
+  const valido = await enviar({ plataformaReferencia: 184, plataformaMaxima: 191, emAnimacao: false });
+  assert.equal(valido.status, 200);
+  assert.equal(typeof (await valido.json()).live, "boolean", "o jogo não tem outro jeito de saber se há plateia");
+
+  assert.equal((await enviar({ plataformaReferencia: -5, plataformaMaxima: 191, emAnimacao: false })).status, 200);
+  assert.equal((await enviar({ nada: "a ver" })).status, 200);
 });
 
 test("o vestiário não abre com a sessão rodando (ADR-011)", async () => {
@@ -149,10 +156,16 @@ test("/api responde em localhost, sem token", async () => {
   assert.deepEqual(corpo.modalidades, [{ id: "escalada", nome: "Escalada", disponivel: true }]);
 });
 
-test("/api/animacoes serve as 20 da biblioteca", async () => {
+test("/api/animacoes serve a biblioteca inteira, metade de cada direção", async () => {
   const corpo = await (await fetch(`${basePainel}/api/animacoes`)).json();
-  assert.equal(corpo.animacoes.length, 20);
-  assert.equal(corpo.animacoes.filter((a) => a.direcao === "subida").length, 10);
+  // Sem número fixo: a biblioteca cresce quando entra animação nova (ver
+  // test/jogo.test.mjs). O que a rota promete é servir TODAS e não perder
+  // direção pelo caminho.
+  const subidas = corpo.animacoes.filter((a) => a.direcao === "subida").length;
+  const descidas = corpo.animacoes.filter((a) => a.direcao === "descida").length;
+  assert.ok(corpo.animacoes.length >= 20, "a biblioteca encolheu");
+  assert.equal(subidas + descidas, corpo.animacoes.length, "animação sem direção conhecida");
+  assert.equal(subidas, descidas, "o painel precisa do mesmo número dos dois lados");
 });
 
 test("/api/cenarios lista as fixtures, para o painel oferecer o modo sem live", async () => {

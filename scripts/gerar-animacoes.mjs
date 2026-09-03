@@ -24,8 +24,9 @@ import { criarValidador } from "../bridge/src/repos/schemas.mjs";
 
 const DOC = path.join(RAIZ, "docs", "03_REGRAS_DE_NEGOCIO", "biblioteca-animacoes.md");
 
-/** `| \`sub_pulo\` | Pulo | 1 | 0,4s | não | Trail curto | */
-const LINHA = /^\|\s*`([a-z_]+)`\s*\|\s*([^|]+?)\s*\|\s*(\d)\s*\|\s*([\d,.]+)\s*s\s*\|\s*(sim|não)\s*\|/;
+/** `| \`sub_pulo\` | Pulo | 1 | 0,4s | não | não | Trail curto | */
+const LINHA =
+  /^\|\s*`([a-z_]+)`\s*\|\s*([^|]+?)\s*\|\s*(\d)\s*\|\s*([\d,.]+)\s*s\s*\|\s*(sim|não)\s*\|\s*(sim|não)\s*\|/;
 const SECAO = /^##\s+(Subida|Descida)\b/;
 
 export function extrairAnimacoes(markdown) {
@@ -42,7 +43,7 @@ export function extrairAnimacoes(markdown) {
     const campos = LINHA.exec(linha);
     if (!campos || !direcao) continue;
 
-    const [, id, nome, peso, duracao, deltaVariavel] = campos;
+    const [, id, nome, peso, duracao, deltaVariavel, ativa] = campos;
     animacoes.push({
       id,
       nome,
@@ -50,6 +51,10 @@ export function extrairAnimacoes(markdown) {
       pesoVisual: Number.parseInt(peso, 10),
       duracaoBase: Number.parseFloat(duracao.replace(",", ".")),
       aceitaDeltaVariavel: deltaVariavel === "sim",
+      // Animação aposentada NÃO some da biblioteca. É a mesma regra do presente
+      // do catálogo (ver catalogo-presentes.schema.json): preset antigo pode
+      // referenciar, e o jogo continua tocando. Quem para de oferecer é o painel.
+      ativa: ativa === "sim",
     });
   }
 
@@ -81,7 +86,11 @@ async function principal() {
 
   if (!silencioso) {
     const subida = animacoes.filter((a) => a.direcao === "subida").length;
-    console.log(`data/animacoes.json gerado: ${animacoes.length} animações (${subida} de subida, ${animacoes.length - subida} de descida).`);
+    const ativas = animacoes.filter((a) => a.ativa).length;
+    console.log(
+      `data/animacoes.json gerado: ${animacoes.length} animações ` +
+        `(${subida} de subida, ${animacoes.length - subida} de descida; ${ativas} ativas no painel).`,
+    );
   }
 }
 
@@ -96,7 +105,7 @@ function montarIndiceLuau(animacoes) {
   const linhas = animacoes.map((a) =>
     `\t{ id = "${a.id}", nome = "${a.nome}", direcao = "${a.direcao}", ` +
     `pesoVisual = ${a.pesoVisual}, duracaoBase = ${a.duracaoBase}, ` +
-    `aceitaDeltaVariavel = ${a.aceitaDeltaVariavel} },`,
+    `aceitaDeltaVariavel = ${a.aceitaDeltaVariavel}, ativa = ${a.ativa} },`,
   );
 
   return `--!strict

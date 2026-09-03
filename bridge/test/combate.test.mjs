@@ -193,7 +193,7 @@ test("o presente de teste do painel entra pelo mesmo caminho de um de verdade", 
 
     assert.ok(entregues.length >= 1, "saiu pelo long-poll, como um presente de verdade sairia");
     const evento = entregues[0].eventos.at(-1);
-    assert.equal(evento.animacaoId, "sub_cometa", "casou com o slot 5");
+    assert.equal(evento.animacaoId, "sub_shuriken_vento", "casou com o slot 5");
     assert.equal(evento.delta, 40);
   } finally {
     const resumo = await nucleo.encerrarSessao().catch(() => null);

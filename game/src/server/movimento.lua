@@ -37,6 +37,14 @@ local DURACAO_CURTA = 0.25
 local FOLGA_WATCHDOG = 1
 -- Peso visual 4 ou 5 afasta a câmera.
 local PESO_CAMERA = 4
+-- A torre é uma espiral quadrada (ADR-009): a reta entre dois degraus corta o
+-- miolo dela e o boneco sobe pelo vazio. O passo 3 do ADR-005 é "ao longo do
+-- caminho", e o caminho vira uma CORRENTE de Tweens — o mesmo recurso que
+-- efeitos.lua usa para girar peça sem loop de render.
+local MAX_TRECHOS = 24
+-- Trecho mais curto que isto não desenha degrau nenhum: dura menos de dois
+-- frames e o Tween mal sai do lugar antes de o seguinte começar.
+local MIN_TRECHO = 0.03
 local ZERO = Vector3.new(0, 0, 0)
 
 -- Chave fraca: personagem destruído no respawn não segura o estado dele.
@@ -218,6 +226,40 @@ function Movimento.restaurar(personagem)
 	finalizar(personagem, "manual")
 end
 
+--[[
+	Toca uma animação SEM mover o boneco.
+
+	Serve à vitória e à derrota: elas não têm delta — ninguém sobe nem desce por
+	ter chegado ao topo — mas merecem o mesmo espetáculo que um presente grande.
+	O `contexto` é o mesmo que a animação recebe no movimento; o que muda é que
+	origem e destino são o lugar onde o boneco já está.
+
+	Não toma o controle do personagem e não suspende nada: é efeito visual puro,
+	e a rodada logo em seguida vai teleportá-lo de qualquer jeito.
+]]
+function Movimento.tocarSolta(personagem, animacaoId, opcoes)
+	if not personagem or type(animacaoId) ~= "string" or animacaoId == "" then
+		return false
+	end
+
+	local raiz = personagem:FindFirstChild("HumanoidRootPart")
+	if not raiz then
+		return false
+	end
+
+	opcoes = opcoes or {}
+	tocarAnimacao(personagem, animacaoId, {
+		delta = opcoes.delta or 0,
+		intensidade = opcoes.intensidade or Tipos.INTENSIDADE_MAX or 5,
+		plataformaOrigem = opcoes.plataforma or 0,
+		plataformaDestino = opcoes.plataforma or 0,
+		presenteNome = opcoes.presenteNome,
+		posicaoOrigem = raiz.Position,
+		posicaoDestino = raiz.Position,
+	})
+	return true
+end
+
 function Movimento.emAnimacao(personagem)
 	local estado = estados[personagem]
 	return estado ~= nil and estado.ativo == true
@@ -247,7 +289,69 @@ local function tocarAnimacao(personagem, animacaoId, contexto)
 end
 
 --[[
+	Quantos trechos a corrente aguenta sem que o mais curto suma.
+
+	Os pontos são equidistantes no caminho e a curva do ADR-005 vive no TEMPO de
+	cada trecho, então o mais curto é sempre o de uma das pontas e mede
+	`duracao * (1 - sqrt(1 - 1/n))`. Exigir que ele passe de MIN_TRECHO fecha em
+	`n <= 1 / (m * (2 - m))`, com `m = MIN_TRECHO / duracao` — e é por isso que o
+	efeito curto do ADR-012, de 0,25s, tece 4 trechos e a Fênix tece 24.
+]]
+local function trechosPossiveis(duracao)
+	if not Tipos.ehNumero(duracao) or duracao <= MIN_TRECHO * 2 then
+		return 1
+	end
+	local m = MIN_TRECHO / duracao
+	local n = math.floor(1 / (m * (2 - m)))
+	if n < 1 then
+		return 1
+	end
+	if n > MAX_TRECHOS then
+		return MAX_TRECHOS
+	end
+	return n
+end
+
+--[[
+	Reduz o caminho a no máximo `n` pontos, com passo constante e mantendo o
+	ÚLTIMO — ele é o destino, e é o que a ponte prometeu a quem pagou.
+]]
+local function amostrar(caminho, n)
+	local total = #caminho
+	if total <= n then
+		return caminho
+	end
+	local pontos = {}
+	for i = 1, n do
+		pontos[i] = caminho[math.floor(((total * i) / n) + 0.5)]
+	end
+	return pontos
+end
+
+--[[
+	O instante, em fração da duração, em que o boneco alcança a fração `p` do
+	caminho. É a INVERSA da curva do ADR-005: a pergunta aqui é "quando ele chega
+	neste degrau", não "onde ele está neste instante".
+
+	  Quad Out (subida, desacelera no fim):  p = 1-(1-x)^2  ->  x = 1-sqrt(1-p)
+	  Quad In  (descida, acelera):           p = x^2        ->  x = sqrt(p)
+
+	Com isso cada trecho toca em Linear e a curva inteira continua a mesma de
+	antes: o que mudou foi o TRAÇADO, não o ritmo.
+]]
+local function instanteDe(p, subindo)
+	if subindo then
+		return 1 - math.sqrt(1 - p)
+	end
+	return math.sqrt(p)
+end
+
+--[[
 	Aplica um presente: tomada de controle temporária até `posicaoDestino`.
+
+	`opcoes.caminho` é a lista de pontos por onde passar, na ordem da viagem
+	(`Plataformas.caminhoEntre`). Opcional: sem ela o boneco vai reto, que é o
+	certo para uma chamada avulsa e errado para a espiral da torre.
 
 	`aoTerminar` é chamado exatamente uma vez por chamada que devolveu ok, depois
 	de o controle voltar — inclusive quando o fim veio do watchdog, da morte do
@@ -339,23 +443,70 @@ function Movimento.aplicar(personagem, opcoes)
 		finalizar(personagem, "watchdog")
 	end)
 
-	-- Passo 3. A curva vem da direção do movimento e não do módulo da animação:
-	-- carregar o módulo antes de tocar o Tween poria um `require` no caminho
-	-- crítico. Subida desacelera no fim, descida acelera — é o que lê como
-	-- lançamento e como queda.
-	local info = TweenInfo.new(
-		duracao,
-		Enum.EasingStyle.Quad,
-		subindo and Enum.EasingDirection.Out or Enum.EasingDirection.In
-	)
-	local tween = TweenService:Create(raiz, info, { CFrame = estado.destino })
-	estado.tween = tween
-	table.insert(estado.conexoes, tween.Completed:Connect(function()
-		if estados[personagem] == estado and estado.geracao == geracao then
-			finalizar(personagem, "tween")
-		end
-	end))
-	tween:Play()
+	-- Passo 3, e o "ao longo do caminho" do ADR-005 ao pé da letra. A curva vem
+	-- da direção do movimento e não do módulo da animação: carregar o módulo
+	-- antes de tocar o Tween poria um `require` no caminho crítico. Subida
+	-- desacelera no fim, descida acelera — é o que lê como lançamento e como
+	-- queda.
+	--
+	-- Sem `caminho` — chamada avulsa, mapa ainda não iniciado, destino colado na
+	-- origem — sobra a reta de sempre, que é um caminho de um ponto só.
+	local giro = raiz.CFrame - raiz.CFrame.Position
+	local pontos = { opcoes.posicaoDestino }
+	if type(opcoes.caminho) == "table" and #opcoes.caminho > 1 then
+		pontos = amostrar(opcoes.caminho, trechosPossiveis(duracao))
+		-- O último ponto já é o destino por construção. Sobrescrever é barato e
+		-- fecha a porta para um caminho torto entregar delta diferente do que a
+		-- ponte prometeu: quem manda no destino é `posicaoDestino`, sozinho.
+		pontos[#pontos] = opcoes.posicaoDestino
+	end
+
+	local trechos = #pontos
+	local tocados = 0
+	local decorrido = 0
+
+	-- Com um trecho só, a curva é a do Tween e nada muda em relação a antes.
+	-- Com vários, ela passa a viver na DURAÇÃO de cada trecho (ver instanteDe) e
+	-- o trecho em si toca reto — encadear Quad por trecho daria um solavanco a
+	-- cada degrau.
+	local estilo = Enum.EasingStyle.Linear
+	local direcao = Enum.EasingDirection.InOut
+	if trechos == 1 then
+		estilo = Enum.EasingStyle.Quad
+		direcao = subindo and Enum.EasingDirection.Out or Enum.EasingDirection.In
+	end
+
+	local function tocarTrecho()
+		tocados = tocados + 1
+		local fim = instanteDe(tocados / trechos, subindo) * duracao
+		local trecho = math.max(fim - decorrido, MIN_TRECHO)
+		decorrido = fim
+
+		local tween = TweenService:Create(
+			raiz,
+			TweenInfo.new(trecho, estilo, direcao),
+			{ CFrame = CFrame.new(pontos[tocados]) * giro }
+		)
+		estado.tween = tween
+		table.insert(estado.conexoes, tween.Completed:Connect(function(situacao)
+			-- `Cancel` também dispara o Completed. Emendar o trecho seguinte a
+			-- partir dali ressuscitaria um ciclo que outro presente substituiu.
+			if situacao ~= Enum.PlaybackState.Completed then
+				return
+			end
+			if estados[personagem] ~= estado or estado.geracao ~= geracao then
+				return
+			end
+			if tocados < trechos then
+				tocarTrecho()
+			else
+				finalizar(personagem, "tween")
+			end
+		end))
+		tween:Play()
+	end
+
+	tocarTrecho()
 
 	-- O personagem pode morrer ou sumir no meio do Tween. Sem isto o estado
 	-- ficaria ativo até o watchdog, e quem espera o `aoTerminar` ficaria preso.
@@ -380,6 +531,12 @@ function Movimento.aplicar(personagem, opcoes)
 			plataformaDestino = destino,
 			nomeDoador = opcoes.nomeDoador,
 			presenteNome = opcoes.presenteNome,
+			-- A torre é uma escada em espiral quadrada: o boneco vai para a
+			-- FRENTE na diagonal, não reto para cima. Sem o destino aqui, a
+			-- animação só teria o eixo Y do mundo para se orientar e o efeito
+			-- sairia torto do corpo. Ver Efeitos.eixoDoMovimento.
+			posicaoOrigem = raiz.Position,
+			posicaoDestino = opcoes.posicaoDestino,
 		})
 
 		if Efeitos and Indice.pesoVisual(animacaoId) >= PESO_CAMERA then

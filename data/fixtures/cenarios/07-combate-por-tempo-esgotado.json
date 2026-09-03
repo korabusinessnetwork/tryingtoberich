@@ -1,7 +1,7 @@
 {
   "cenario": "07-combate-por-tempo-esgotado",
   "regra": "ADR-012",
-  "descricao": "Combate aberto durante uma animação longa. Nada espera mais que o teto de 2s: passado o teto, o líquido é aplicado com efeito curto, sem animação completa, mesmo com o des_buraco_negro (2,4s) ainda tocando. Efeito curto não toma o controle do boneco, então pode acontecer por cima.",
+  "descricao": "Combate aberto durante uma animação longa. Nada espera mais que o teto de 2s: passado o teto, o líquido é aplicado com efeito curto, sem animação completa, mesmo com o des_meteoro_igneo (2,2s) ainda tocando. Efeito curto não toma o controle do boneco, então pode acontecer por cima.",
   "presetId": "escalada-padrao",
   "combateMaxMs": 2000,
   "entrada": [
@@ -11,8 +11,8 @@
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 0,    "slot": 6, "animacaoId": "des_buraco_negro", "delta": -60, "intensidade": 5, "efeitoCurto": false },
-      { "emMs": 2100, "slot": 5, "animacaoId": "sub_cometa",       "delta": 52,  "intensidade": 3, "efeitoCurto": true }
+      { "emMs": 0,    "slot": 6, "animacaoId": "des_meteoro_igneo", "delta": -60, "intensidade": 5, "efeitoCurto": false },
+      { "emMs": 2100, "slot": 5, "animacaoId": "sub_shuriken_vento",       "delta": 52,  "intensidade": 3, "efeitoCurto": true }
     ],
     "disputa": { "participantes": 2, "somaSubida": 52, "somaDescida": 0, "liquido": 52, "contestado": false },
     "naoMapeados": [],

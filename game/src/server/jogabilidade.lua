@@ -69,23 +69,45 @@ function Jogabilidade.alcanceDoPulo(jumpHeight)
 end
 
 --[[
-	Raio do disco a partir da parte construída. O construtor cria Block com
-	Size = (raio*2, espessura, raio*2), então metade da largura é o raio.
-	Cai em 0 quando a parte não veio: sem raio conhecido, a conta do vão fica
-	conservadora (vão maior) em vez de otimista, que é o lado seguro de errar.
+	Meia-extensão horizontal do degrau, no sentido que interessa para o vão.
+
+	O número certo é o RAIO com que o construtor montou a peça, e por isso ele
+	vem pronto em `entrada.raio`. Deduzir do `Size` do primeiro pedaço só
+	funcionava enquanto todo degrau era um bloco só: com as formas do acervo o
+	primeiro pedaço deixou de representar o degrau inteiro.
+
+	  disco    -> é um Cylinder, e o Cylinder do Roblox nasce DEITADO no eixo X:
+	              Size.X é a espessura (2), não o diâmetro. Medido assim, um
+	              disco de raio 7,5 valia 1.
+	  tábuas   -> o primeiro pedaço é UMA tábua, um quinto do degrau.
+	  hexágono -> o primeiro pedaço é um dos três blocos cruzados, mais estreito
+	              que a peça montada.
+
+	O estrago era mudo no código e barulhento na tela: o vão saía inflado, a
+	torre inteira era reprovada como intransponível e a sessão não subia. E ela
+	era perfeitamente jogável — todas as formas ocupam a MESMA pegada de raio
+	`raio`. É isso que faz a forma ser escolha estética e não de dificuldade,
+	a mesma decisão que pôs chão invisível embaixo da rosquinha.
+
+	O `Size` fica de reserva, para entrada montada à mão que não traz o raio: a
+	MENOR das duas dimensões, que erra para menos e deixa a conta conservadora.
 ]]
 function Jogabilidade.raioDe(entrada)
-	local parte = entrada and entrada.parte
+	if type(entrada) == "table" and Tipos.ehNumero(entrada.raio) and entrada.raio > 0 then
+		return entrada.raio
+	end
+
+	local parte = type(entrada) == "table" and entrada.parte or nil
 	if not parte or typeof(parte) ~= "Instance" then
 		return 0
 	end
-	local ok, largura = pcall(function()
-		return parte.Size.X
+	local ok, largura, fundo = pcall(function()
+		return parte.Size.X, parte.Size.Z
 	end)
-	if not ok or not Tipos.ehNumero(largura) then
+	if not ok or not Tipos.ehNumero(largura) or not Tipos.ehNumero(fundo) then
 		return 0
 	end
-	return largura / 2
+	return math.min(largura, fundo) / 2
 end
 
 --[[
@@ -119,13 +141,108 @@ function Jogabilidade.verificarSpec(mapa)
 		))
 	end
 
+	--[[
+		O que o jogador atravessa é o VÃO entre as bordas, não a distância entre
+		os centros — exatamente como `verificarConstruido` mede logo abaixo.
+
+		Esta checagem comparava `variacaoHorizontal` (centro a centro) direto com
+		o alcance, ignorando os dois raios. As duas funções deste MESMO arquivo
+		discordavam entre si: a de baixo aprovava a torre construída e a de cima
+		reprovava o spec que a gerou. Na prática travava o mapa em passos bem
+		menores do que o pulo do Roblox alcança.
+	]]
 	if not Tipos.ehNumero(p.variacaoHorizontal) or p.variacaoHorizontal < 0 then
 		table.insert(problemas, "variacaoHorizontal inválido")
-	elseif p.variacaoHorizontal > distanciaHorizontalMax then
-		table.insert(problemas, string.format(
-			"variacaoHorizontal %.2f passa do alcance horizontal do pulo (%.2f, jumpHeight %.2f)",
-			p.variacaoHorizontal, distanciaHorizontalMax, mapa.jumpHeight
-		))
+	elseif Tipos.ehNumero(p.raioBase) then
+		-- Dois piores casos OPOSTOS: o vão maior vem dos discos MENORES, e a
+		-- sobreposição vem dos MAIORES. variacaoRaio sorteia para os dois lados
+		-- na construção, então o spec tem que cobrir as duas pontas.
+		local variacao = Tipos.ehNumero(p.variacaoRaio) and p.variacaoRaio or 0
+		local raioMaximo = p.raioBase * (1 + variacao)
+		local raioMinimo = p.raioBase * (1 - variacao)
+		local vao = p.variacaoHorizontal - (2 * raioMinimo)
+
+		--[[ Dois formatos, duas regras OPOSTAS. Tem que ser a MESMA bifurcação
+			de `regras.mjs` na ponte: as duas já discordaram antes, e o efeito
+			foi a torre construída ser reprovada com o spec aprovado.
+
+			disco: existe vão, e ele não pode passar do alcance do pulo.
+			laje:  NÃO pode existir vão — as lajes se encostam e o jogador sobe
+			       quase andando. Aqui "plataformas se cobrem" é o objetivo,
+			       não o defeito. ]]
+		local formato = p.formato or "disco"
+
+		if formato == "laje" then
+			--[[ A laje TILA: fundo exatamente igual ao passo.
+
+				Pedir só "sem vão" deixava passar a torre que enterra: fundo 24
+				com passo 20 sobrepõe 4 studs, e nessa faixa a folga vertical é
+				`espacamentoVertical - espessura` = 1 stud. O boneco de 5 studs
+				fica DENTRO da laje de cima e a física o expulsa.
+
+				Sobreposição e vão são o mesmo eixo: só um valor serve nos dois
+				sentidos. Por isso `variacaoRaio` também tem que ser zero —
+				sorteando o fundo, uma ponta abre buraco e a outra enterra. ]]
+			if variacao ~= 0 then
+				table.insert(problemas, string.format(
+					"variacaoRaio %.2f no formato laje: tem que ser 0, senão uma ponta abre buraco e a outra enterra",
+					variacao
+				))
+			end
+
+			--[[ Sem BURACO. Sobreposição, sim — e é ela que dá a inclinação.
+
+				Avançar menos que o tamanho do degrau levanta a rampa, e é
+				seguro porque a subida é igual à espessura: cada degrau assenta
+				no anterior sem fresta. Avançar MAIS abre buraco. ]]
+			local tamanho = 2 * p.raioBase
+			if p.variacaoHorizontal > tamanho + 0.01 then
+				table.insert(problemas, string.format(
+					"avanço de %.2f com degrau de %.2f: abre buraco de %.2f no caminho",
+					p.variacaoHorizontal, tamanho, p.variacaoHorizontal - tamanho
+				))
+			end
+			if p.variacaoHorizontal <= 0 then
+				table.insert(problemas, "avanço zero na passarela: os degraus ficariam empilhados no mesmo lugar")
+			end
+
+			--[[ SEM PULO: o degrau apoia no anterior, não flutua acima dele.
+
+				Subida maior que a espessura deixa o degrau seguinte solto no ar,
+				com uma fresta por baixo — foi assim que a primeira versão
+				prendeu o boneco. Igual à espessura, um degrau encosta no outro e
+				o Roblox sobe andando. ]]
+			if Tipos.ehNumero(p.espacamentoVertical) and p.espacamentoVertical > Tipos.ESPESSURA_DO_DEGRAU then
+				table.insert(problemas, string.format(
+					"subida de %.2f na passarela: o máximo é %.2f, a espessura do degrau — acima disso o jogador teria que pular",
+					p.espacamentoVertical, Tipos.ESPESSURA_DO_DEGRAU
+				))
+			end
+		else
+			if Tipos.ehNumero(p.espacamentoVertical) and p.espacamentoVertical < 3 then
+				table.insert(problemas, string.format(
+					"subida de %.2f no formato disco: o mínimo é 3, senão não é escada de pular, é rampa",
+					p.espacamentoVertical
+				))
+			end
+
+			if vao > distanciaHorizontalMax then
+				table.insert(problemas, string.format(
+					"vão de %.2f entre as bordas passa do alcance horizontal do pulo (%.2f, jumpHeight %.2f, passo %.2f, raio mínimo %.2f)",
+					vao, distanciaHorizontalMax, mapa.jumpHeight, p.variacaoHorizontal, raioMinimo
+				))
+			end
+
+			-- E o passo tem que superar o raio, senão cada disco cobre o
+			-- anterior inteiro: a torre vira coluna maciça e o personagem
+			-- nasce dentro dela.
+			if raioMaximo >= p.variacaoHorizontal then
+				table.insert(problemas, string.format(
+					"plataformas se cobrem: raio máximo %.2f é maior que o passo %.2f, e a torre viraria coluna",
+					raioMaximo, p.variacaoHorizontal
+				))
+			end
+		end
 	end
 
 	return #problemas == 0, problemas

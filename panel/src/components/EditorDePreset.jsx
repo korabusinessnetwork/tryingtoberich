@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { presentesRepetidos, slotsDoPreset } from "../lib/regras.js";
+import { listaDePresentes, presentesRepetidos, slotsDoPreset } from "../lib/regras.js";
 import { CartaoDeSlot } from "./CartaoDeSlot.jsx";
 import "./EditorDePreset.css";
 
@@ -19,13 +19,6 @@ import "./EditorDePreset.css";
  *   aoEditarPresente(posicao) / aoEditarAnimacao(posicao)  abrem os modais
  *   aoSalvar()                            com `salvando` controlando o botão
  */
-
-/** `api.catalogo()` devolve o envelope inteiro; aceitar os dois formatos evita
- *  que a fiação da tela decida o desenho do componente. */
-function listaDePresentes(catalogo) {
-  if (Array.isArray(catalogo)) return catalogo;
-  return catalogo?.presentes ?? [];
-}
 
 function listaDeAnimacoes(animacoes) {
   if (Array.isArray(animacoes)) return animacoes;

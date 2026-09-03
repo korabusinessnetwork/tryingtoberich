@@ -50,7 +50,7 @@ exemplo é schema quebrado.
 ```
 
 Regras: `slots` tem no máximo 6 itens, `posicao` de 1 a 6 e única,
-`presenteId` único dentro do preset, `delta` entre -200 e 200 e diferente de 0,
+`presenteId` único dentro do preset, `delta` inteiro diferente de 0 (sem teto),
 `intensidade` entre 1 e 5.
 
 O preset apenas **referencia** um look. A composição vive em `data/looks/`,
@@ -93,7 +93,7 @@ migração de todos os arquivos. Ver ADR-003.
   "nome": "Torre Vulcânica",
   "geradoPor": "gemini",
   "promptOriginal": "torre vulcânica ao entardecer, plataformas de rocha",
-  "totalPlataformas": 250,
+  "totalPlataformas": 5000,
   "jumpHeight": 7.2,
   "skyboxAssetId": "skybox_entardecer_vulcanico",
   "paleta": { "primaria": "#C4462A", "secundaria": "#2B1B18", "destaque": "#F5A623" },
@@ -109,8 +109,8 @@ migração de todos os arquivos. Ver ADR-003.
     { "tipo": "fumaca", "densidade": 0.4, "aCadaNPlataformas": 10 }
   ],
   "marcos": [
-    { "plataforma": 50, "tipo": "checkpoint_visual" },
-    { "plataforma": 250, "tipo": "topo" }
+    { "plataforma": 250, "tipo": "checkpoint_visual" },
+    { "plataforma": 5000, "tipo": "topo" }
   ]
 }
 ```
@@ -180,8 +180,13 @@ para montar o seletor. Nunca editado à mão.
 
 ```json
 { "id": "sub_cometa", "nome": "Cometa", "direcao": "subida",
-  "pesoVisual": 3, "duracaoBase": 1.6, "aceitaDeltaVariavel": true }
+  "pesoVisual": 3, "duracaoBase": 1.6, "aceitaDeltaVariavel": true, "ativa": false }
 ```
+
+`ativa` segue a mesma regra do `ativo` do presente no catálogo: animação
+aposentada **não é apagada**. Preset antigo continua apontando para ela e o jogo
+continua tocando — o que muda é o painel, que para de oferecer no seletor e no
+testador. Apagar quebraria preset salvo e sessão no histórico.
 
 ## Sessão (efêmero)
 

@@ -1,0 +1,64 @@
+/* Controle da partida. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.partida {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.partida-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+  flex-wrap: wrap;
+}
+
+.partida-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.partida-recado {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+.partida-acoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+}
+
+/* A dica fica DENTRO do botão, não num tooltip: as três ordens são parecidas
+   o bastante para se confundirem, e o streamer clica com pressa. */
+.partida-botao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: var(--alvo-minimo);
+  padding: 8px 12px;
+  text-align: left;
+  background: var(--painel-fundo);
+}
+
+.partida-botao-rotulo {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.partida-botao-dica {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}

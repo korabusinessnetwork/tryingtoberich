@@ -11,29 +11,43 @@
       "description": "Última plataforma que o personagem ENCOSTOU, por colisão real. Nunca por altura nem por proximidade. Ver R9.2.",
       "type": "integer",
       "minimum": 0,
-      "maximum": 400
+      "maximum": 5000
     },
     "plataformaMaxima": {
       "description": "Só estatística. Nunca é usada como destino. Ver R9.4.",
       "type": "integer",
       "minimum": 0,
-      "maximum": 400
+      "maximum": 5000
     },
     "emAnimacao": { "type": "boolean" },
     "quedasNaturais": { "type": "integer", "minimum": 0 },
     "totalPlataformas": {
-      "description": "Tamanho do mapa construído. Vem do jogo e não do spec porque quem constrói a torre é ele: é contra ESTE número que o painel mostra o progresso e que a vitória do R6 é lida.",
+      "description": "Tamanho do mapa construído. Vem do jogo e não do spec porque quem constrói a torre é ele: é contra ESTE número que o painel mostra o progresso e que a vitória do R6 é lida. O teto acompanha o de mapa.schema.json e é conferido por teste: quando os dois desencostaram, TODO estado do jogo passou a ser recusado na entrada da ponte e o painel congelou no último número válido, com um aviso no log que ninguém lê durante a live.",
       "type": "integer",
       "minimum": 0,
-      "maximum": 400
+      "maximum": 5000
     },
     "sessaoAtiva": {
       "description": "O jogo tem sessão de pé. Existe para o vestiário se trancar (ADR-011) e viaja no mesmo objeto que vai para os clientes.",
       "type": "boolean"
     },
-    "vitoria": {
-      "description": "R6 — o boneco chegou ao topo. NÃO reinicia sozinho: o streamer decide no painel, e é o comando `reiniciar` do long-poll que zera a corrida (ADR-013).",
+    "aoVivo": {
+      "description": "Sessão rodando E live conectada. NÃO é o mesmo que sessaoAtiva: no Studio a sessão roda sem live nenhuma. É este campo que tranca o vestiário (ADR-011).",
       "type": "boolean"
+    },
+    "vitoria": {
+      "description": "R6 — o boneco chegou ao topo. Encerra a rodada, conta uma vitória e dispara a contagem regressiva que reinicia sozinha.",
+      "type": "boolean"
+    },
+    "vitorias": {
+      "description": "Placar da SESSÃO, não do streamer: zera quando a sessão acaba. Histórico entre sessões é assunto do painel.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "derrotas": {
+      "description": "Derrota é voltar ao primeiro andar DEPOIS de ter saído dele. Simétrica da vitória: um extremo do tabuleiro em cada ponta.",
+      "type": "integer",
+      "minimum": 0
     },
     "enviadoEm": { "type": "integer", "minimum": 0 }
   }

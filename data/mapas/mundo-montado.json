@@ -1,0 +1,425 @@
+{
+  "mapaId": "mundo-montado",
+  "streamerId": "local",
+  "nome": "Céu Aurora com Cyber",
+  "geradoPor": "manual",
+  "totalPlataformas": 5000,
+  "jumpHeight": 7,
+  "skyboxAssetId": "skybox_aurora",
+  "paleta": {
+    "primaria": "#7d7d7d",
+    "secundaria": "#4b4b4b",
+    "destaque": "#1f7a63"
+  },
+  "plataformas": {
+    "formato": "disco",
+    "raioBase": 7.5,
+    "variacaoRaio": 0.1,
+    "espacamentoVertical": 4,
+    "variacaoHorizontal": 16,
+    "materialAssetId": "textura_cyber"
+  },
+  "props": [],
+  "marcos": [
+    {
+      "plataforma": 50,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 100,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 150,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 200,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 300,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 350,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 400,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 450,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 550,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 600,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 650,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 700,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 800,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 850,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 900,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 950,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1050,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1100,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1150,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1200,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1300,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1350,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1400,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1450,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1550,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1600,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1650,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1700,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1800,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1850,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1900,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1950,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2050,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2100,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2150,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2200,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2300,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2350,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2400,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2450,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2550,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2600,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2650,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2700,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2800,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2850,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2900,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2950,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3050,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3100,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3150,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3200,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3300,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3350,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3400,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3450,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3550,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3600,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3650,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3700,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3800,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3850,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3900,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3950,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4050,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4100,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4150,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4200,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4300,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4350,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4400,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4450,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4550,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4600,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4650,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4700,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4800,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4850,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4900,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4950,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 5000,
+      "tipo": "topo"
+    }
+  ]
+}

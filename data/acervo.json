@@ -1,157 +1,289 @@
 {
-  "atualizadoEm": "2026-09-02T14:01:30.817590Z",
+  "atualizadoEm": "2026-09-03T04:26:27.497Z",
   "skybox": [
     {
-      "id": "skybox_entardecer_vulcanico",
-      "nome": "Entardecer vulcânico",
+      "id": "skybox_algodao",
+      "nome": "Céu Algodao",
       "tags": [
-        "vulcanico",
-        "entardecer",
-        "quente",
-        "laranja",
-        "dramatico"
+        "algodao"
       ],
-      "assetId": 135660972193972,
-      "status": "aprovado"
+      "assetId": 87597076196933,
+      "status": "aprovado",
+      "faces": {
+        "ft": 87597076196933,
+        "bk": 106801604597284,
+        "lf": 76178094900435,
+        "rt": 137535912227506,
+        "up": 109677792615558,
+        "dn": 116011712886399
+      }
     },
     {
-      "id": "skybox_noite_estrelada",
-      "nome": "Noite estrelada",
+      "id": "skybox_amanhecer",
+      "nome": "Céu Amanhecer",
       "tags": [
-        "noturno",
-        "estrelado",
-        "frio",
-        "azul",
-        "calmo"
+        "amanhecer"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 83575339258130,
+      "status": "aprovado",
+      "faces": {
+        "ft": 83575339258130,
+        "bk": 99487785810905,
+        "lf": 106172884954984,
+        "rt": 106081973504330,
+        "up": 128524990045144,
+        "dn": 137190684379734
+      }
     },
     {
-      "id": "skybox_ceu_limpo_dia",
-      "nome": "Céu limpo de dia",
+      "id": "skybox_apocaliptico",
+      "nome": "Céu Apocaliptico",
       "tags": [
-        "diurno",
-        "claro",
-        "azul",
-        "ameno"
+        "apocaliptico"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 76938776153766,
+      "status": "aprovado",
+      "faces": {
+        "ft": 76938776153766,
+        "bk": 130512212068122,
+        "lf": 115223039836154,
+        "rt": 138935257654282,
+        "up": 104952058979747,
+        "dn": 87757566219239
+      }
     },
     {
-      "id": "skybox_tempestade",
-      "nome": "Tempestade",
+      "id": "skybox_aurora",
+      "nome": "Céu Aurora",
       "tags": [
-        "tempestade",
-        "nublado",
-        "cinza",
-        "dramatico",
-        "chuva"
+        "aurora"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 108659504834075,
+      "status": "aprovado",
+      "faces": {
+        "ft": 108659504834075,
+        "bk": 77461912123805,
+        "lf": 76955590615562,
+        "rt": 107289227594854,
+        "up": 72509901006373,
+        "dn": 99032896344055
+      }
     },
     {
-      "id": "skybox_aurora_polar",
-      "nome": "Aurora polar",
+      "id": "skybox_cyber",
+      "nome": "Céu Cyber",
       "tags": [
-        "gelo",
-        "aurora",
-        "frio",
-        "verde",
-        "noturno"
+        "cyber"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 118056608940612,
+      "status": "aprovado",
+      "faces": {
+        "ft": 118056608940612,
+        "bk": 103434465392020,
+        "lf": 114457458103710,
+        "rt": 115693376821281,
+        "up": 114770140034987,
+        "dn": 89065743582982
+      }
     },
     {
-      "id": "skybox_deserto_meio_dia",
-      "nome": "Deserto ao meio-dia",
+      "id": "skybox_dia",
+      "nome": "Céu Dia",
       "tags": [
-        "deserto",
-        "arido",
-        "quente",
-        "amarelo",
-        "diurno"
+        "dia"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 80828917910298,
+      "status": "aprovado",
+      "faces": {
+        "ft": 80828917910298,
+        "bk": 90715719952995,
+        "lf": 81061652101209,
+        "rt": 129385980523226,
+        "up": 116838858881607,
+        "dn": 128070511996592
+      }
+    },
+    {
+      "id": "skybox_nebulosa",
+      "nome": "Céu Nebulosa",
+      "tags": [
+        "nebulosa"
+      ],
+      "assetId": 140155574391346,
+      "status": "aprovado",
+      "faces": {
+        "ft": 140155574391346,
+        "bk": 96212773858916,
+        "lf": 105546410270418,
+        "rt": 106137906597133,
+        "up": 97118137981084,
+        "dn": 79917492266622
+      }
+    },
+    {
+      "id": "skybox_noite",
+      "nome": "Céu Noite",
+      "tags": [
+        "noite"
+      ],
+      "assetId": 139818653447007,
+      "status": "aprovado",
+      "faces": {
+        "ft": 139818653447007,
+        "bk": 90093732605233,
+        "lf": 99659301273203,
+        "rt": 81300346981891,
+        "up": 106853880549291,
+        "dn": 98293074235551
+      }
+    },
+    {
+      "id": "skybox_por_do_sol",
+      "nome": "Céu Por do sol",
+      "tags": [
+        "por-do-sol"
+      ],
+      "assetId": 104640629863396,
+      "status": "aprovado",
+      "faces": {
+        "ft": 104640629863396,
+        "bk": 120065740314784,
+        "lf": 84806619920245,
+        "rt": 107721235933150,
+        "up": 85923395690061,
+        "dn": 130420985729634
+      }
+    },
+    {
+      "id": "skybox_submarino",
+      "nome": "Céu Submarino",
+      "tags": [
+        "submarino"
+      ],
+      "assetId": 132209483131495,
+      "status": "aprovado",
+      "faces": {
+        "ft": 132209483131495,
+        "bk": 135554911356704,
+        "lf": 118783560007012,
+        "rt": 96467199122244,
+        "up": 127455508845100,
+        "dn": 114132333563969
+      }
     }
   ],
   "texturas": [
     {
-      "id": "textura_rocha_vulcanica",
-      "nome": "Rocha vulcânica",
+      "id": "textura_arcade",
+      "nome": "Arcade",
       "tags": [
-        "rocha",
-        "vulcanico",
-        "escuro",
-        "aspero",
-        "quente"
+        "arcade"
       ],
-      "assetId": 83250464918775,
-      "status": "aprovado"
+      "assetId": 84800827931852,
+      "status": "aprovado",
+      "forma": "placa",
+      "material": "SmoothPlastic"
+    },
+    {
+      "id": "textura_cyber",
+      "nome": "Cyber",
+      "tags": [
+        "cyber"
+      ],
+      "assetId": 76805674590469,
+      "status": "aprovado",
+      "forma": "hexagono",
+      "material": "Neon"
+    },
+    {
+      "id": "textura_gelatina",
+      "nome": "Gelatina",
+      "tags": [
+        "gelatina"
+      ],
+      "assetId": 95161122579350,
+      "status": "aprovado",
+      "forma": "bloco",
+      "material": "Glass",
+      "transparencia": 0.25
     },
     {
       "id": "textura_gelo",
       "nome": "Gelo",
       "tags": [
-        "gelo",
-        "liso",
-        "frio",
-        "claro"
+        "gelo"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 72460792907349,
+      "status": "aprovado",
+      "forma": "placa",
+      "material": "Glass",
+      "transparencia": 0.2
     },
     {
-      "id": "textura_metal_industrial",
-      "nome": "Metal industrial",
+      "id": "textura_grama",
+      "nome": "Grama",
       "tags": [
-        "metal",
-        "industrial",
-        "cinza",
-        "urbano"
+        "grama"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 77861318850029,
+      "status": "aprovado",
+      "forma": "disco",
+      "material": "Grass"
     },
     {
-      "id": "textura_madeira_velha",
-      "nome": "Madeira velha",
+      "id": "textura_lava",
+      "nome": "Lava",
       "tags": [
-        "madeira",
-        "rustico",
-        "marrom",
-        "floresta"
+        "lava"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 99506751411005,
+      "status": "aprovado",
+      "forma": "hexagono",
+      "material": "Slate"
     },
     {
-      "id": "textura_pedra_musgo",
-      "nome": "Pedra com musgo",
+      "id": "textura_madeira",
+      "nome": "Madeira",
       "tags": [
-        "pedra",
-        "floresta",
-        "verde",
-        "umido"
+        "madeira"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 137527662271382,
+      "status": "aprovado",
+      "forma": "tabuas",
+      "material": "WoodPlanks"
     },
     {
-      "id": "textura_areia_compacta",
-      "nome": "Areia compacta",
+      "id": "textura_melancia",
+      "nome": "Melancia",
       "tags": [
-        "areia",
-        "deserto",
-        "claro",
-        "arido"
+        "melancia"
       ],
-      "assetId": null,
-      "status": "pendente-upload"
+      "assetId": 95856314502545,
+      "status": "aprovado",
+      "forma": "disco",
+      "material": "SmoothPlastic"
+    },
+    {
+      "id": "textura_rosquinha",
+      "nome": "Rosquinha",
+      "tags": [
+        "rosquinha"
+      ],
+      "assetId": 94255166810716,
+      "status": "aprovado",
+      "forma": "anel",
+      "material": "SmoothPlastic"
+    },
+    {
+      "id": "textura_waffle",
+      "nome": "Waffle",
+      "tags": [
+        "waffle"
+      ],
+      "assetId": 137663458684168,
+      "status": "aprovado",
+      "forma": "bloco",
+      "material": "SmoothPlastic"
     }
   ],
   "props": [

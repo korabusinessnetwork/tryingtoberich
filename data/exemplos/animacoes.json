@@ -1,10 +1,13 @@
 {
   "geradoEm": "2026-09-01T13:00:00Z",
   "animacoes": [
-    { "id": "sub_pulo",         "nome": "Pulo",              "direcao": "subida",  "pesoVisual": 1, "duracaoBase": 0.4, "aceitaDeltaVariavel": false },
-    { "id": "sub_cometa",       "nome": "Cometa",            "direcao": "subida",  "pesoVisual": 3, "duracaoBase": 1.6, "aceitaDeltaVariavel": true },
-    { "id": "sub_fenix",        "nome": "Ascensão da Fênix", "direcao": "subida",  "pesoVisual": 5, "duracaoBase": 3.0, "aceitaDeltaVariavel": true },
-    { "id": "des_tropeco",      "nome": "Tropeço",           "direcao": "descida", "pesoVisual": 1, "duracaoBase": 0.4, "aceitaDeltaVariavel": false },
-    { "id": "des_buraco_negro", "nome": "Buraco Negro",      "direcao": "descida", "pesoVisual": 4, "duracaoBase": 2.4, "aceitaDeltaVariavel": true }
+    { "id": "sub_shuriken_vento", "nome": "Shuriken de Vento", "direcao": "subida",  "pesoVisual": 4, "duracaoBase": 2.0, "aceitaDeltaVariavel": true, "ativa": true },
+    { "id": "sub_jato_propulsor", "nome": "Jato Propulsor",    "direcao": "subida",  "pesoVisual": 3, "duracaoBase": 1.8, "aceitaDeltaVariavel": true, "ativa": true },
+    { "id": "sub_lanca_raios",    "nome": "Lança de Raios",    "direcao": "subida",  "pesoVisual": 4, "duracaoBase": 1.2, "aceitaDeltaVariavel": true, "ativa": true },
+    { "id": "des_meteoro_igneo",  "nome": "Meteoro Ígneo",     "direcao": "descida", "pesoVisual": 5, "duracaoBase": 2.2, "aceitaDeltaVariavel": true, "ativa": true },
+    { "id": "des_punho_impacto",  "nome": "Punho de Impacto",  "direcao": "descida", "pesoVisual": 4, "duracaoBase": 1.4, "aceitaDeltaVariavel": true, "ativa": true },
+    { "id": "des_braco_elastico", "nome": "Braço Elástico",    "direcao": "descida", "pesoVisual": 3, "duracaoBase": 1.6, "aceitaDeltaVariavel": true, "ativa": true },
+    { "id": "sub_cometa",         "nome": "Cometa",            "direcao": "subida",  "pesoVisual": 3, "duracaoBase": 1.6, "aceitaDeltaVariavel": true, "ativa": false },
+    { "id": "des_buraco_negro",   "nome": "Buraco Negro",      "direcao": "descida", "pesoVisual": 4, "duracaoBase": 2.4, "aceitaDeltaVariavel": true, "ativa": false }
   ]
 }

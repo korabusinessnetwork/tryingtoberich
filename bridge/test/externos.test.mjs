@@ -52,10 +52,25 @@ const respondendo = (...textos) => {
 /* ---------------------------------------------------------------- */
 
 test("o prompt injeta as três listas do acervo, com id e tags", () => {
-  const prompt = montarPrompt("torre vulcânica ao entardecer", acervoOferecivel(acervoAprovado));
-  assert.match(prompt, /skybox_entardecer_vulcanico: vulcanico/);
-  assert.match(prompt, /textura_rocha_vulcanica: rocha/);
-  assert.match(prompt, /fumaca: vulcanico/);
+  //[[ Os ids saem do acervo REAL, não de uma lista escrita aqui.
+  //
+  // A versão anterior citava `skybox_entardecer_vulcanico` e
+  // `textura_rocha_vulcanica` pelo nome, e quebrou no dia em que o dono trocou
+  // o acervo inteiro pelo pacote de arte dele. O que o teste protege é o
+  // FORMATO da injeção — "id: tags" — e que a descrição do streamer chegue
+  // junto; quais peças existem é assunto do acervo. ]]
+  const oferecivel = acervoOferecivel(acervoAprovado);
+  const prompt = montarPrompt("torre vulcânica ao entardecer", oferecivel);
+
+  for (const lista of [oferecivel.skybox, oferecivel.texturas, oferecivel.props]) {
+    assert.ok(lista.length > 0, "o acervo de teste precisa ter peça de cada tipo");
+    const peca = lista[0];
+    assert.ok(
+      prompt.includes(`${peca.id}: ${peca.tags.join(", ")}`),
+      `o prompt não injetou "${peca.id}" com as tags dele`,
+    );
+  }
+
   assert.match(prompt, /torre vulcânica ao entardecer/);
 });
 
@@ -78,9 +93,12 @@ test("spec com asset inventado é rejeitado (ADR-004)", async () => {
 });
 
 test("spec intransponível é rejeitado, não arredondado (ADR-009)", async () => {
+  // O valor que viola é DERIVADO do jumpHeight do mapa, não fixo: o teto é
+  // jumpHeight × 0,7, e um número cravado aqui deixa de violar no dia em que o
+  // exemplo ganha um pulo maior — foi exatamente o que aconteceu.
   const intransponivel = {
     ...mapaBom,
-    plataformas: { ...mapaBom.plataformas, espacamentoVertical: 6 },
+    plataformas: { ...mapaBom.plataformas, espacamentoVertical: mapaBom.jumpHeight * 0.7 + 1 },
   };
   const { problemas } = await validarSpec(JSON.stringify(intransponivel), acervoAprovado, { validar });
   assert.match(problemas.join(" "), /espacamentoVertical/);
@@ -96,7 +114,7 @@ test("gerar mapa: acerta de primeira e devolve o spec", async () => {
 });
 
 test("gerar mapa: erra, recebe o motivo no prompt e acerta na retentativa", async () => {
-  const ruim = JSON.stringify({ ...mapaBom, plataformas: { ...mapaBom.plataformas, espacamentoVertical: 8 } });
+  const ruim = JSON.stringify({ ...mapaBom, plataformas: { ...mapaBom.plataformas, espacamentoVertical: mapaBom.jumpHeight * 0.7 + 1 } });
   const { chamar, chamadas } = respondendo(ruim, JSON.stringify(mapaBom));
   const cliente = new ClienteGemini({ chave: "chave-de-teste", chamar });
 
@@ -107,7 +125,7 @@ test("gerar mapa: erra, recebe o motivo no prompt e acerta na retentativa", asyn
 });
 
 test("gerar mapa: errou duas vezes, erro claro e nenhum campo chutado", async () => {
-  const ruim = JSON.stringify({ ...mapaBom, plataformas: { ...mapaBom.plataformas, espacamentoVertical: 8 } });
+  const ruim = JSON.stringify({ ...mapaBom, plataformas: { ...mapaBom.plataformas, espacamentoVertical: mapaBom.jumpHeight * 0.7 + 1 } });
   const { chamar, chamadas } = respondendo(ruim, ruim, JSON.stringify(mapaBom));
   const cliente = new ClienteGemini({ chave: "chave-de-teste", chamar });
 
@@ -193,4 +211,39 @@ test("thumbnail que ainda não ficou pronta não vira ícone quebrado", async ()
     buscarNaRede: async () => respostaJson({ data: [{ state: "Pending", imageUrl: null }] }),
   });
   assert.equal(await cliente.iconeDoItem(999999999), null);
+});
+
+test("a busca do vestiário pede item GRATUITO na requisição, não filtra depois", async () => {
+  // Regressão de um bug que deixou o vestiário inútil sem erro nenhum: hoje
+  // quase todo acessório do catálogo custa Robux, então pedir os 30 mais
+  // relevantes e filtrar por preço zero DEPOIS devolvia lista vazia — "chapeu"
+  // dava 0 item. Com MaxPrice=0 na URL, voltam 30.
+  let urlVista = null;
+  const buscarNaRede = async (url) => {
+    urlVista = url;
+    return { ok: true, json: async () => ({ data: [] }) };
+  };
+
+  const cliente = new ClienteRoblox({ buscarNaRede });
+  await cliente.buscarItensGratuitos("chapeu");
+
+  const parametros = new URL(urlVista).searchParams;
+  assert.equal(parametros.get("MaxPrice"), "0", "sem isto a busca volta só com item pago");
+  assert.equal(parametros.get("Keyword"), "chapeu");
+
+  // O Limit tem que ser um dos aceitos pela API: 10, 28 ou 30. Qualquer outro
+  // devolve 400 e a busca inteira falha em silêncio.
+  assert.ok(["10", "28", "30"].includes(parametros.get("Limit")), `Limit ${parametros.get("Limit")} não é aceito pela API`);
+});
+
+test("item pago que escape do filtro da origem ainda é barrado em memória", async () => {
+  // A API é pública e não contratada: um dia pode ignorar MaxPrice sem avisar.
+  // Look montado com item pago é look que o streamer não consegue vestir.
+  const buscarNaRede = async () => ({
+    ok: true,
+    json: async () => ({ data: [{ id: 1, name: "Grátis", price: 0 }, { id: 2, name: "Pago", price: 95 }] }),
+  });
+
+  const itens = await new ClienteRoblox({ buscarNaRede }).buscarItensGratuitos("x");
+  assert.deepEqual(itens.map((i) => i.nome), ["Grátis"]);
 });

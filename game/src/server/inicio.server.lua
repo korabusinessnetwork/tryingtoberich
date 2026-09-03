@@ -13,14 +13,35 @@
 -- `Sessao.iniciar` devolve erro em vez de lançar, e por isso este arquivo é
 -- curto.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local Sessao = require(script.Parent.sessao)
 local Vestiario = require(script.Parent.vestiario)
+local Eventos = require(ReplicatedStorage:WaitForChild("KoraCompartilhado").eventos)
 
 Vestiario.iniciar({
 	-- Função, não booleano: o estado muda durante a vida do servidor, e
 	-- capturar o valor agora travaria o vestiário no que era verdade na subida.
+	--[[
+		Tranca o vestiário quando há PLATEIA, não quando há sessão.
+
+		O ADR-011 dizia "enquanto houver sessão rodando", mas a razão que ele dá
+		é outra: "streamer parado num menu é a tela estática que o ADR-009
+		evita". Sem live conectada não há ninguém para entediar — e a regra
+		literal tornava o vestiário inacessível em TODO teste no Studio, que é
+		justamente quando ele mais serve, para montar o look antes da estreia.
+	]]
 	sessaoAtiva = function()
-		return Sessao.estado().sessaoAtiva
+		return Sessao.estado().aoVivo
+	end,
+
+	--[[ Look salvo passa a valer na hora.
+
+		A sessão guarda uma cópia do look e a usa em todo respawn. Sem este
+		aviso ela continuava vestindo o look de antes: o streamer tirava a aura
+		no vestiário, morria, e ela voltava — com o disco certo o tempo todo. ]]
+	aoSalvar = function()
+		Sessao.recarregarLook()
 	end,
 })
 
@@ -85,6 +106,21 @@ if not subiu then
 		end
 	end)
 end
+
+--[[
+	O ajuste de geometria vindo do painel de afinação (ajustes.client.lua).
+
+	Fica aqui, junto do vestiário, porque é a mesma natureza: ferramenta do
+	streamer, não do espectador. E responde SEMPRE — inclusive na recusa — para
+	o painel poder mostrar o motivo em vez de parecer que o botão não funcionou.
+]]
+Eventos.obter(Eventos.AJUSTAR_MAPA).OnServerEvent:Connect(function(jogador, ajustes)
+	local ok, problemas = Sessao.ajustarGeometria(ajustes)
+	Eventos.obter(Eventos.AJUSTAR_MAPA):FireClient(jogador, {
+		ok = ok,
+		problemas = problemas,
+	})
+end)
 
 game:BindToClose(function()
 	-- Fecha o long-poll e destrava o vestiário antes do lugar morrer.

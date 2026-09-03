@@ -58,11 +58,27 @@ local FOLGA_DE_POUSO = 0.5
 local ALTURA_MINIMA_DE_POUSO = 3
 
 local ESPACAMENTO_PADRAO = 5
+
+-- Teto de pontos que `caminhoEntre` devolve. A torre tem milhares de degraus e
+-- um presente pode empurrar centenas de uma vez; amostrar é o que impede o
+-- movimento de virar uma corrente de Tweens mais curtos que um frame. Quem
+-- aperta mais este número, por duração, é o movimento.lua.
+local MAX_PONTOS_DO_CAMINHO = 24
 local ESPERA_DO_PERSONAGEM = 10
 
 -- Mapa
 local totalPlataformas = 0
 local espacamentoVertical = ESPACAMENTO_PADRAO
+
+--[[ Quanto recuar do CENTRO do degrau para achar chão de verdade.
+
+	Na passarela os degraus se sobrepõem muito: com degrau de 20 e avanço de 2,
+	o degrau 1 fica enterrado embaixo dos nove seguintes, e só a faixa de trás
+	dele fica exposta. Pousar no centro põe o boneco DENTRO da rampa — foi assim
+	que ele nasceu para fora da plataforma.
+
+	Zero na escada, onde o degrau é livre e o centro é o melhor lugar. ]]
+local recuoDePouso = 0
 local porIndice = {}
 local ordenadas = {}
 
@@ -179,9 +195,30 @@ local function reposicionar(motivo, contarComoQueda)
 		return false
 	end
 
+	--[[ Sem checkpoint, cai no PÉ da torre — nunca em lugar nenhum.
+
+		A referência começa em 0, e não existe plataforma 0: `posicaoDePouso(0)`
+		devolvia nada, este `return false` saía, e o boneco continuava caindo
+		para sempre. Do lado de fora parecia que o checkpoint "não pegava".
+
+		A referência agora nasce em 1 (`Sessao.subirMapa`), então o caso ficou
+		raro — mas raro não é nunca: mapa recarregado no meio de uma queda, ou
+		índice que sumiu, chegam aqui do mesmo jeito. Cair no primeiro degrau é
+		pior que o checkpoint certo e MUITO melhor que cair no vazio. ]]
 	local destino = Plataformas.posicaoDePouso(plataformaReferencia)
+	if not destino and #ordenadas > 0 then
+		local pe = ordenadas[1].indice
+		warn(string.format(
+			"[Kora][plataformas] sem checkpoint em %s; caindo no pé da torre (%s)",
+			tostring(plataformaReferencia), tostring(pe)
+		))
+		destino = Plataformas.posicaoDePouso(pe)
+		if destino then
+			plataformaReferencia = pe
+		end
+	end
 	if not destino then
-		warn("[Kora][plataformas] sem plataforma para o checkpoint " .. tostring(plataformaReferencia))
+		warn("[Kora][plataformas] torre sem plataforma nenhuma: não há para onde voltar")
 		tempoCaindo = 0
 		return false
 	end
@@ -288,7 +325,16 @@ function Plataformas.iniciar(mapa, plataformas)
 					posicao = bruta.parte.Position
 				end
 				if posicao then
-					local entrada = { indice = bruta.indice, parte = bruta.parte, posicao = posicao }
+					local entrada = {
+						indice = bruta.indice,
+						parte = bruta.parte,
+						-- Todos os pedaços do degrau, para o `Touched`.
+						partes = bruta.partes,
+						-- Deslocamento do centro até onde dá para ficar de pé.
+						-- No anel o centro é o FURO, e pousar ali é cair.
+						pouso = bruta.pouso,
+						posicao = posicao,
+					}
 					porIndice[entrada.indice] = entrada
 					ordenadas[#ordenadas + 1] = entrada
 					if entrada.indice > maior then
@@ -309,7 +355,18 @@ function Plataformas.iniciar(mapa, plataformas)
 	end
 
 	espacamentoVertical = ESPACAMENTO_PADRAO
+	recuoDePouso = 0
 	local bloco = spec.plataformas
+	--[[ A faixa exposta do degrau, na passarela.
+
+		O degrau tem `2 * raioBase` de tamanho e avança `variacaoHorizontal`; o
+		que sobra descoberto é a faixa de trás, com a largura do avanço. O meio
+		dela fica a (tamanho - avanço) / 2 atrás do centro, e é ali que há chão. ]]
+	if type(bloco) == "table" and bloco.formato == "laje"
+		and Tipos.ehNumero(bloco.raioBase) and Tipos.ehNumero(bloco.variacaoHorizontal) then
+		recuoDePouso = math.max(0, (2 * bloco.raioBase - bloco.variacaoHorizontal) / 2)
+	end
+
 	if type(bloco) == "table" and Tipos.ehNumero(bloco.espacamentoVertical) and bloco.espacamentoVertical > 0 then
 		espacamentoVertical = bloco.espacamentoVertical
 	elseif #ordenadas >= 2 then
@@ -390,10 +447,21 @@ function Plataformas.acompanhar(personagem)
 	-- O handler anota o índice e sai. Quem trabalha é o Heartbeat, uma vez por
 	-- frame, com o último toque anotado — que é a definição de "última
 	-- plataforma que encostou" (R9.2).
+	--[[ TODOS os pedaços do degrau contam, não só o principal.
+
+		Um degrau pode ser vários Parts: a rosquinha é um anel de 16 segmentos,
+		a madeira são 5 tábuas. Ligar `Touched` só no primeiro faria o jogador
+		pisar no anel e a referência não andar — e, pior, o detector de queda
+		acharia que ele saiu da plataforma. ]]
 	for i = 1, #ordenadas do
-		local parte = ordenadas[i].parte
-		if parte then
-			local indice = ordenadas[i].indice
+		local entrada = ordenadas[i]
+		local pedacos = entrada.partes
+		if type(pedacos) ~= "table" or #pedacos == 0 then
+			pedacos = entrada.parte and { entrada.parte } or {}
+		end
+
+		for _, parte in ipairs(pedacos) do
+			local indice = entrada.indice
 			registrar(parte.Touched:Connect(function(outra)
 				if partesDoPersonagem[outra] then
 					toquePendente = indice
@@ -433,6 +501,24 @@ end
 
 function Plataformas.referencia()
 	return plataformaReferencia
+end
+
+--[[ O PÉ da torre: a menor plataforma que o construtor entregou.
+
+	Não é `PLATAFORMA_MIN`. Aquele é o piso do CONTRATO — 0 quer dizer "abaixo
+	da torre" e existe para o delta negativo ter onde parar. Plataforma 0 não
+	existe no mundo, e mandar o boneco para lá é mandá-lo para lugar nenhum. ]]
+function Plataformas.primeira()
+	if #ordenadas == 0 then
+		return Tipos.PLATAFORMA_INICIAL
+	end
+	local menor = ordenadas[1].indice
+	for i = 2, #ordenadas do
+		if ordenadas[i].indice < menor then
+			menor = ordenadas[i].indice
+		end
+	end
+	return menor
 end
 
 function Plataformas.maxima()
@@ -562,7 +648,167 @@ function Plataformas.posicaoDePouso(indice)
 		altura = math.max(altura, humanoidAtual.HipHeight + (raizAtual.Size.Y * 0.5))
 	end
 
-	return Vector3.new(entrada.posicao.X, topo + altura + FOLGA_DE_POUSO, entrada.posicao.Z)
+	--[[ Dois deslocamentos, por motivos diferentes.
+
+		`recuoDePouso` é da PASSARELA: os degraus se sobrepõem e o centro do
+		primeiro fica enterrado sob os seguintes.
+
+		`entrada.pouso` é da FORMA: a rosquinha tem furo no meio, e o centro
+		dela não é chão nenhum. Vem do construtor, que é quem sabe o desenho. ]]
+	local desvio = entrada.pouso
+	if typeof(desvio) ~= "Vector3" then
+		desvio = Vector3.new(0, 0, 0)
+	end
+
+	return Vector3.new(
+		entrada.posicao.X - recuoDePouso + desvio.X,
+		topo + altura + FOLGA_DE_POUSO,
+		entrada.posicao.Z + desvio.Z
+	)
+end
+
+--[[ Quanto o pouso recua do centro do degrau. Zero na escada. ]]
+function Plataformas.recuoDePouso()
+	return recuoDePouso
+end
+
+--[[
+	Os pontos de pouso ENTRE duas plataformas, na ordem da viagem, terminando
+	sempre no destino. `nil` quando não há viagem (mesma plataforma) ou quando o
+	mapa ainda não foi iniciado.
+
+	Existe porque a torre é uma espiral quadrada (ADR-009): a reta de um degrau
+	ao outro corta o miolo da torre, e um presente de +100 leva o boneco pelo
+	vazio em vez de pela escada. O passo 3 do ADR-005 é "ao longo do caminho" —
+	este é o caminho.
+
+	Amostra os degraus em passo constante, com teto em `MAX_PONTOS_DO_CAMINHO`:
+	um delta de 180 não pode virar 180 trechos de 12ms, que dura menos que um
+	frame e não desenha degrau nenhum. O destino entra SEMPRE, porque é o único
+	ponto que o contrato com quem pagou exige.
+
+	Devolve posição de POUSO e não o centro da parte: o boneco tem que rasar o
+	tampo de cada degrau, não atravessar por dentro dele.
+]]
+function Plataformas.caminhoEntre(origem, destino, maxPontos)
+	if not Tipos.ehNumero(origem) or not Tipos.ehNumero(destino) then
+		return nil
+	end
+
+	local de = Tipos.limitarPlataforma(math.floor(origem), totalPlataformas)
+	local ate = Tipos.limitarPlataforma(math.floor(destino), totalPlataformas)
+	local degraus = math.abs(ate - de)
+	if degraus == 0 then
+		return nil
+	end
+
+	local teto = MAX_PONTOS_DO_CAMINHO
+	if Tipos.ehNumero(maxPontos) and maxPontos >= 1 then
+		teto = math.min(teto, math.floor(maxPontos))
+	end
+
+	local sentido = 1
+	if ate < de then
+		sentido = -1
+	end
+
+	local trechos = math.min(degraus, teto)
+	local caminho = {}
+	for i = 1, trechos do
+		-- Arredonda a fração do percurso em vez de somar um passo fracionário:
+		-- o acumulado erraria o último degrau por resto e o destino sairia uma
+		-- plataforma fora do que a ponte prometeu.
+		local indice = de + sentido * math.floor(((degraus * i) / trechos) + 0.5)
+		local ponto = Plataformas.posicaoDePouso(indice)
+		if ponto then
+			caminho[#caminho + 1] = ponto
+		end
+	end
+
+	if #caminho == 0 then
+		return nil
+	end
+	return caminho
+end
+
+--[[
+	O centro da face de CIMA da plataforma — onde cenário se apoia.
+
+	`posicaoDePouso` responde outra pergunta (onde o boneco CABE em pé) e por
+	isso soma a folga do rig. Apoiar uma peça naquela altura a deixa flutuando
+	três studs acima do chão, que foi como o portal nasceu.
+]]
+function Plataformas.topoDe(indice)
+	local entrada = entradaDe(indice)
+	if not entrada then
+		return nil
+	end
+
+	local topo = entrada.posicao.Y
+	if entrada.parte then
+		topo = topo + (entrada.parte.Size.Y * 0.5)
+	end
+	return Vector3.new(entrada.posicao.X, topo, entrada.posicao.Z)
+end
+
+--[[
+	Quanto a caixa da parte alcança numa direção: a soma das projeções dos três
+	meio-lados. Fórmula geral de propósito — a laje é girada para acompanhar a
+	volta, e meia largura só serviria para degrau alinhado aos eixos.
+]]
+local function alcanceDaParte(parte, direcao)
+	if not parte then
+		return 0
+	end
+	local cf = parte.CFrame
+	local tamanho = parte.Size
+	return math.abs(direcao:Dot(cf.RightVector)) * tamanho.X * 0.5
+		+ math.abs(direcao:Dot(cf.UpVector)) * tamanho.Y * 0.5
+		+ math.abs(direcao:Dot(cf.LookVector)) * tamanho.Z * 0.5
+end
+
+--[[
+	A beirada da plataforma voltada para o FIM do mapa:
+
+	  { frente = <direção horizontal unitária>,
+	    meiaExtensao = <studs do centro até a borda, no sentido da frente>,
+	    meiaLargura = <studs do centro até a borda, de través> }
+
+	Serve para apoiar cenário na borda em vez do meio — o portal usa isso para
+	ficar atravessado no caminho em vez de nascer em cima do respawn, e para
+	saber até onde pode crescer sem deixar os pilares no ar.
+
+	A direção sai da diferença até a plataforma SEGUINTE, não da orientação da
+	parte: no formato "disco" a parte não é girada e não tem frente nenhuma, e
+	"para onde a torre vai" é literalmente onde está o próximo degrau. Sem
+	seguinte (última plataforma, mapa de uma só) cai em +Z, a frente padrão do
+	construtor.
+]]
+function Plataformas.beiradaDe(indice)
+	local entrada = entradaDe(indice)
+	if not entrada then
+		return nil
+	end
+
+	local frente = Vector3.new(0, 0, 1)
+	local seguinte = entradaDe(entrada.indice + 1)
+	if seguinte then
+		local delta = seguinte.posicao - entrada.posicao
+		local plana = Vector3.new(delta.X, 0, delta.Z)
+		if plana.Magnitude > 1e-3 then
+			frente = plana.Unit
+		end
+	end
+
+	-- De través é a frente girada 90 graus no plano do chão. A plataforma pode
+	-- ser bem mais larga que funda (a laje é 2,2x), então são dois números.
+	local lado = Vector3.new(-frente.Z, 0, frente.X)
+
+	return {
+		frente = frente,
+		meiaExtensao = alcanceDaParte(entrada.parte, frente),
+		meiaLargura = alcanceDaParte(entrada.parte, lado),
+	}
 end
 
 --[[

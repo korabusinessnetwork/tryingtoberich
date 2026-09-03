@@ -79,8 +79,8 @@ test("o combate atravessa a ponte e sai pelo long-poll do jeito que o Roblox lê
   assert.deepEqual(
     colhidos.map((e) => ({ animacaoId: e.animacaoId, delta: e.delta, intensidade: e.intensidade, efeitoCurto: e.efeitoCurto })),
     [
-      { animacaoId: "sub_cometa", delta: 40, intensidade: 3, efeitoCurto: false },
-      { animacaoId: "des_buraco_negro", delta: -49, intensidade: 5, efeitoCurto: false },
+      { animacaoId: "sub_shuriken_vento", delta: 40, intensidade: 3, efeitoCurto: false },
+      { animacaoId: "des_meteoro_igneo", delta: -49, intensidade: 5, efeitoCurto: false },
     ],
     "o Galaxy dispara na hora; os cinco seguintes brigam e a descida vence por 49",
   );
@@ -112,7 +112,7 @@ test("o painel acompanha a mesma sessão pelo SSE", async () => {
     assert.equal(naoMapeado.dados.contagem, 1, "o painel mostra o que o streamer está deixando na mesa");
 
     const presente = recebidos.find((r) => r.evento === "presente");
-    assert.equal(presente.dados.animacaoId, "sub_cometa");
+    assert.equal(presente.dados.animacaoId, "sub_shuriken_vento");
     assert.equal(typeof presente.dados.latenciaMs, "number", "disparo imediato tem latência medida");
     assert.ok(presente.dados.latenciaMs < 1000, `latência da ponte foi ${presente.dados.latenciaMs}ms`);
 

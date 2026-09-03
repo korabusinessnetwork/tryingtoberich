@@ -1,8 +1,9 @@
 /** Acervo pré-aprovado. Só o que está aprovado pode ser oferecido ao Gemini (ADR-004). */
 
 import { ErroDeDominio } from "../erros.mjs";
-import { caminhoDeDados, escreverJsonAtomico, lerJsonOuPadrao } from "./arquivo.mjs";
+import { caminhoDeDados, escreverJsonAtomico, existe, lerBinario, lerJsonOuPadrao } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
+import { texturasDoMapa } from "../dominio/regras.mjs";
 
 const VAZIO = { skybox: [], texturas: [], props: [] };
 
@@ -105,6 +106,79 @@ export function resolverAssetsDoMapa(mapa, acervo) {
 
   return {
     skybox: achar(acervo?.skybox, mapa?.skyboxAssetId),
-    textura: achar(acervo?.texturas, mapa?.plataformas?.materialAssetId),
+    //[[ `textura` continua sendo UMA, para o jogo que só sabe pintar uma.
+    // `texturas` é a lista revezada, e é ela que o construtor usa quando existe.
+    // Manter as duas evita quebrar mapa antigo e jogo antigo no mesmo dia. ]]
+    //[[ O céu de SEIS faces, quando a peça tem.
+    //
+    // Uma imagem só nas seis faces não tem horizonte — e horizonte é metade do
+    // que faz um céu parecer céu. Com as faces separadas o jogo monta a caixa
+    // de verdade. `skybox` continua sendo uma imagem única, para o mapa antigo
+    // e para a peça que só tem uma. ]]
+    skyboxFaces: (() => {
+      const item = (acervo?.skybox ?? []).find((i) => i.id === mapa?.skyboxAssetId);
+      if (!item || item.status !== "aprovado" || !item.faces) return null;
+      return item.faces;
+    })(),
+    textura: achar(acervo?.texturas, texturasDoMapa(mapa)[0]),
+    texturas: texturasDoMapa(mapa)
+      .map((id) => achar(acervo?.texturas, id))
+      .filter((assetId) => Number.isInteger(assetId)),
+    //[[ O ESTILO de cada textura, na mesma ordem da lista acima.
+    //
+    // Uma rosquinha redonda com furo no meio não é a mesma coisa que um
+    // quadrado com a foto de uma rosquinha, e a diferença é o que faz a peça
+    // temática valer. A forma é da PEÇA, não do mapa: mora no acervo, ao lado
+    // da imagem que ela veste.
+    //
+    // Lista paralela e não objeto embutido em `texturas` porque `texturas` é o
+    // contrato que o construtor já lê há tempo, e mudar a forma dela quebraria
+    // o mapa antigo sem ganho nenhum. ]]
+    estilos: texturasDoMapa(mapa)
+      .map((id) => (acervo?.texturas ?? []).find((i) => i.id === id))
+      .filter((item) => item && item.status === "aprovado" && Number.isInteger(item.assetId))
+      .map((item) => ({
+        forma: item.forma ?? "bloco",
+        material: item.material ?? null,
+        transparencia: typeof item.transparencia === "number" ? item.transparencia : 0,
+      })),
   };
+}
+
+/** As seis faces de um `Sky`, nos nomes que o Roblox usa. */
+export const FACES_DO_CEU = Object.freeze(["ft", "bk", "lf", "rt", "up", "dn"]);
+
+/**
+ * A imagem que o STREAMER pôs em disco para uma peça, se houver.
+ *
+ * Mora aqui e não em quem usa porque acesso a arquivo é do repositório
+ * (ADR-003): trocar JSON por banco na Fase 3 tem que ser reescrever um
+ * diretório só. Devolve `null` quando não há arquivo — e aí quem chama desenha.
+ *
+ * Céu vem como `{ faces: { ft, bk, ... } }` e exige as SEIS: meio céu no ar
+ * seria pior que nenhum. Textura vem como `{ png }`.
+ */
+export async function imagemDaPeca(colecao, id) {
+  const pasta = caminhoDeDados("acervo-imagens", id);
+
+  if (colecao === "skybox") {
+    const faces = {};
+    for (const face of FACES_DO_CEU) {
+      const arquivo = caminhoDeDados("acervo-imagens", id, `${face}.png`);
+      if (!(await existe(arquivo))) return null;
+      faces[face] = await lerBinario(arquivo);
+    }
+    return { faces };
+  }
+
+  const unica = `${pasta}.png`;
+  return (await existe(unica)) ? { png: await lerBinario(unica) } : null;
+}
+
+/** A miniatura da peça: a face `ft` do céu, ou a imagem única da textura. */
+export async function miniaturaDaPeca(colecao, id) {
+  const arquivo = colecao === "skybox"
+    ? caminhoDeDados("acervo-imagens", id, "ft.png")
+    : `${caminhoDeDados("acervo-imagens", id)}.png`;
+  return (await existe(arquivo)) ? lerBinario(arquivo) : null;
 }

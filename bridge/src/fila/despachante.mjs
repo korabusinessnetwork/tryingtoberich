@@ -18,13 +18,21 @@
  */
 
 import { REGRAS } from "../config.mjs";
-import { casar, indexarSlots } from "../dominio/casamento.mjs";
+import { casar, indexarPlacar, indexarSlots } from "../dominio/casamento.mjs";
 import { resolverCombate } from "./combate.mjs";
 
 const semAcao = () => {};
 
+/**
+ * Teto de rodadas que UM presente pode valer. Espelha o `maximum` de
+ * `quantidade` em `evento-jogo.schema.json` — passar disso faria o jogo
+ * recusar o comando inteiro no meio da live.
+ */
+const TETO_DE_RODADAS_POR_PRESENTE = 50;
+
 export class Despachante {
   #indice = new Map();
+  #placar = new Map();
   #animacoes = new Map();
   #combate = null;
   #naoMapeados = new Map();
@@ -38,6 +46,7 @@ export class Despachante {
     aoAnular = semAcao,
     aoDescartar = semAcao,
     aoNaoMapeado = semAcao,
+    aoComando = semAcao,
     combateMaxMs = REGRAS.COMBATE_MAX_MS,
   } = {}) {
     this.combateMaxMs = combateMaxMs;
@@ -46,10 +55,12 @@ export class Despachante {
     this.aoAnular = aoAnular;
     this.aoDescartar = aoDescartar;
     this.aoNaoMapeado = aoNaoMapeado;
+    this.aoComando = aoComando;
   }
 
   definirPreset(preset) {
     this.#indice = indexarSlots(preset);
+    this.#placar = indexarPlacar(preset);
   }
 
   definirAnimacoes(animacoes) {
@@ -108,6 +119,27 @@ export class Despachante {
 
   /** Caminho quente. Devolve o que aconteceu com o evento, para o painel e para o teste. */
   receber(evento, agora = Date.now()) {
+    //[[ Presente de PLACAR sai antes de qualquer outra coisa.
+    //
+    // Antes do cooldown e antes do combate de propósito: ele não anima o
+    // boneco, não disputa canal e não tem delta para somar com ninguém. Encerrar
+    // a rodada é o efeito inteiro, e segurá-lo num combate atrasaria o momento
+    // mais alto da live pelo tempo de uma animação que nem vai tocar. ]]
+    const efeito = this.#placar.get(evento.presenteId);
+    if (efeito) {
+      //[[ A RAJADA conta (R4). Um donate de derrota mandado 6 vezes vale 6.
+      //
+      // Antes as repetições eram jogadas fora aqui: mandar o presente uma vez
+      // ou seis fazia exatamente a mesma coisa, e quem gastou seis via o mesmo
+      // resultado de quem gastou um. O jogo cobra uma rodada por vez, cada uma
+      // com sua queda — o teto do contrato existe para uma rajada gigante não
+      // sequestrar a live por horas. ]]
+      const quantidade = Math.min(TETO_DE_RODADAS_POR_PRESENTE, Math.max(1, evento.repeticoes ?? 1));
+      const comando = { ...this.emitirComando(efeito, agora), quantidade };
+      this.aoComando(comando);
+      return { tipo: "placar", efeito, quantidade, presenteNome: evento.presenteNome ?? evento.presenteId };
+    }
+
     const disparo = casar(evento, this.#indice);
 
     if (!disparo) {

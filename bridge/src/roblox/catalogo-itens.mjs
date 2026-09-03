@@ -6,8 +6,15 @@
  * que o conector da TikTok: se cair, o vestiário para de buscar item novo e
  * nada mais é afetado. Ver ADR-011 e 07_APIS seção C.
  *
- * Só item de **preço zero** entra no resultado, e o filtro é aplicado na
- * origem: senão o streamer monta um look que não consegue vestir.
+ * Só item de **preço zero** entra no resultado, e o filtro vai na REQUISIÇÃO
+ * (`MaxPrice=0`), não depois. A diferença não é otimização, é a feature
+ * funcionar: hoje quase todo acessório do catálogo custa Robux, então pedir os
+ * 30 mais relevantes e filtrar depois devolvia lista VAZIA para quase toda
+ * busca — "chapeu" dava zero item. Pedindo já filtrado, voltam 30 gratuitos.
+ *
+ * O filtro em memória continua logo abaixo, de propósito: a API é pública e não
+ * contratada, e um dia pode ignorar o parâmetro sem avisar. Look montado com
+ * item pago é look que o streamer não consegue vestir.
  */
 
 import { log } from "../log.mjs";
@@ -40,6 +47,9 @@ export class ClienteRoblox {
     url.searchParams.set("Category", String(CATEGORIA_ACESSORIOS));
     url.searchParams.set("Keyword", termo);
     url.searchParams.set("Limit", String(limite));
+    // O que faz a busca devolver algo: sem isto vêm os mais relevantes, que são
+    // pagos, e o filtro de gratuito abaixo esvazia a lista inteira.
+    url.searchParams.set("MaxPrice", "0");
 
     let itens = [];
     try {

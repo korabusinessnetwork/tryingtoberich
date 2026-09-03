@@ -42,6 +42,77 @@ ConstrutorMapa.PASTA = "KoraTorre"
 -- menos seguro para pousar.
 local ESPESSURA_DISCO = 2
 
+
+
+--[[
+	A escada QUADRADA.
+
+	As plataformas seguiam um ângulo sorteado por plataforma, o que não produz
+	escada nenhuma: com desvio médio bem menor que o diâmetro do disco, elas se
+	empilham e a torre vira uma coluna maciça. Sem vão não há salto — e o
+	personagem nasce DENTRO da pilha, que o Roblox resolve empurrando para cima
+	até achar espaço (foi o "spawn no andar 500").
+
+	Agora cada degrau AVANÇA uma distância fixa pelo perímetro de um quadrado, e
+	sobe um degrau. O caminho é reto na maior parte do tempo e vira 90 graus nos
+	quatro cantos — dá para correr em linha reta e enxergar vários degraus à
+	frente, coisa que a curva contínua não permitia.
+
+	O tamanho do quadrado sai do resto: perímetro = degraus por volta × passo, e
+	meio-lado = perímetro / 8. Com 24 degraus e passo 18 dá meio-lado 54, ou seja
+	um quadrado de 108 studs de lado.
+
+	E os degraus caem EXATAMENTE nos cantos, sempre: meio-lado = 24 × passo / 8
+	= 3 × passo, então o lado mede 6 × passo e cabem 6 degraus inteiros nele,
+	qualquer que seja o passo. Nenhum degrau fica atravessado numa quina, e a
+	distância entre vizinhos é o passo cheio em todo o percurso.
+
+	Se um dia os degraus por volta deixarem de ser múltiplos de 4, alguns cairão
+	no meio de uma quina. A distância em linha reta ali é MENOR que o passo (é a
+	corda de um ângulo reto, não o caminho), o que só encolhe o vão — a checagem
+	de alcance continua válida sem caso especial.
+]]
+local DEGRAUS_POR_VOLTA = 24
+
+--[[
+	Onde cai um degrau, dada a distância percorrida no perímetro.
+
+	Percorre os quatro lados na ordem, começando no canto (+meioLado, -meioLado)
+	e girando. Devolve (x, z); a altura é de quem chama.
+]]
+local function pontoNoQuadrado(distancia, meioLado)
+	local lado = 2 * meioLado
+	local d = distancia % (4 * lado)
+
+	if d < lado then
+		return meioLado, -meioLado + d
+	elseif d < 2 * lado then
+		return meioLado - (d - lado), meioLado
+	elseif d < 3 * lado then
+		return -meioLado, meioLado - (d - 2 * lado)
+	end
+	return -meioLado + (d - 3 * lado), -meioLado
+end
+
+--[[
+	Onde cai um degrau da PASSARELA: em linha reta, subindo.
+
+	Uma rampa só, indo embora num eixo, sem virar em canto nenhum e sem vaivém.
+	A altura vem de quem chama; aqui é só o avanço.
+
+	A inclinação NÃO está aqui — sai da razão entre `variacaoHorizontal` (o
+	avanço por degrau) e `espacamentoVertical` (a subida). Avanço igual à subida
+	dá 45 graus, que é a rampa apontando para o céu; avanço maior deita a rampa.
+	Deixar isso no spec é o que permite afinar a inclinação sem tocar em código.
+
+	Os degraus se SOBREPÕEM quando o avanço é menor que o tamanho deles, e isso
+	é seguro justamente aqui: a subida é igual à espessura, então um degrau
+	assenta em cima do anterior sem deixar fresta. Ver a regra em `regras.mjs`.
+]]
+local function pontoNaPassarela(distancia)
+	return distancia, 0
+end
+
 -- Altura acima do topo da plataforma 1 onde o personagem nasce. Espelha a
 -- folga de Plataformas.posicaoDePouso (ALTURA_MINIMA_DE_POUSO + FOLGA_DE_POUSO
 -- = 3 + 0,5 em plataformas.lua) para o primeiro spawn cair coerente com todo
@@ -102,6 +173,22 @@ local function urlDeAsset(assetId)
 		return nil
 	end
 	return "rbxassetid://" .. string.format("%d", assetId)
+end
+
+--[[ O id do acervo daquele degrau: um só, ou o da vez quando são vários.
+
+	`materialNativo` escolhe o Enum.Material pelas palavras do id, e com blocos
+	variados cada degrau tem o seu — madeira tem que soar como madeira mesmo
+	quando a textura não carregou. ]]
+local function idDaTextura(plataformas, indice)
+	local bruto = plataformas.materialAssetId
+	if type(bruto) == "table" then
+		if #bruto == 0 then
+			return nil
+		end
+		return bruto[((indice - 1) % #bruto) + 1]
+	end
+	return bruto
 end
 
 local function materialNativo(materialAssetId)
@@ -267,68 +354,305 @@ local function aplicarTextura(parte, url)
 	textura.Parent = parte
 end
 
+--[[
+	O número do degrau, FLUTUANDO acima dele.
+
+	Antes era uma `SurfaceGui` deitada na face de cima. Funcionava e lia mal:
+	visto de cima o número aparece de esguelha, some sob o boneco, e com a
+	rosquinha ou as tábuas ele cai em cima da emenda entre os pedaços. Pior — a
+	textura da peça é o assunto da plataforma, e o número pintado por cima
+	disputava com ela.
+
+	`BillboardGui` resolve os três: fica no ar acima do degrau, sempre virado
+	para a câmera venha ela de onde vier, e não encosta na arte.
+
+	A última recebe "FINAL" em vez do número: quem está subindo precisa
+	reconhecer o fim de longe, e "1000" não se distingue de "999" de relance.
+]]
+--[[ Até onde o número é desenhado, e o tamanho dele.
+
+	`ALCANCE` é render por proximidade: acima disso a `BillboardGui` não desenha
+	nada. Numa torre de mil degraus isso é a diferença entre desenhar uma dúzia
+	de números e desenhar a torre inteira em cima da tela.
+
+	O tamanho vai em STUDS, e é o detalhe que mais importa aqui. Em pixels
+	(`fromOffset`) a placa tem tamanho fixo na TELA: o degrau lá longe fica
+	minúsculo e o número dele continua enorme, e a torre vira uma parede de
+	números empilhados. Em studs ele encolhe junto com o mundo, como tudo o
+	mais. ]]
+local ALCANCE_DO_NUMERO = 110
+local LARGURA_DO_NUMERO = 4
+local ALTURA_DA_PLACA = 2
+local ALTURA_DO_NUMERO = 3.2
+
+local function escreverNumero(parte, indice, total, paleta)
+	local ehFinal = indice >= total
+
+	local placa = Instance.new("BillboardGui")
+	placa.Name = "NumeroDaPlataforma"
+	placa.Adornee = parte
+	-- Escala = studs. Ver a nota acima: em pixels o número não encolhe.
+	placa.Size = UDim2.fromScale(LARGURA_DO_NUMERO, ALTURA_DA_PLACA)
+	placa.StudsOffsetWorldSpace = Vector3.new(0, ALTURA_DO_NUMERO, 0)
+	placa.MaxDistance = ALCANCE_DO_NUMERO
+	-- Sempre visível: sem isto o número some atrás do próprio degrau quando a
+	-- câmera fica abaixo dele, que é metade do tempo numa torre.
+	placa.AlwaysOnTop = true
+	placa.LightInfluence = 0
+	placa.Parent = parte
+
+	local rotulo = Instance.new("TextLabel")
+	rotulo.Name = "Texto"
+	rotulo.BackgroundTransparency = 1
+	rotulo.Size = UDim2.fromScale(1, 1)
+	rotulo.Font = Enum.Font.GothamBlack
+	rotulo.TextScaled = true
+	rotulo.Text = ehFinal and "FINAL" or tostring(indice)
+	rotulo.TextColor3 = ehFinal and corSegura(paleta.destaque) or Color3.new(1, 1, 1)
+	rotulo.TextStrokeColor3 = Color3.new(0, 0, 0)
+	rotulo.TextStrokeTransparency = 0.15
+	rotulo.Parent = placa
+end
+
 --[[ Monta o céu em Lighting, ou tira o que estiver lá.
 
 	Sempre destrói antes: sem isso, trocar de mapa empilharia um Sky por troca em
 	Lighting, e o último a entrar venceria por acidente de ordem. ]]
-local function aplicarCeu(url)
+--[[
+	Monta o céu: seis faces distintas quando existem, uma imagem só quando não.
+
+	Céu de verdade tem HORIZONTE, e horizonte só existe com faces separadas —
+	uma imagem única nas seis põe a mesma linha no teto e no chão da caixa, e o
+	céu vira um cubo visível. Por muito tempo o acervo só guardava uma imagem
+	por céu, e as peças eram desenhadas sem horizonte justamente por causa
+	disso.
+
+	`faces` é `{ ft, bk, lf, rt, up, dn }` com um assetId em cada. Sem ela, cai
+	no comportamento antigo, que continua valendo para as peças de imagem única.
+]]
+local function aplicarCeu(url, faces)
 	local existente = Lighting:FindFirstChild(ConstrutorMapa.CEU)
 	if existente then
 		existente:Destroy()
 	end
 
-	if not url then
+	if not url and type(faces) ~= "table" then
 		return
 	end
 
 	local ceu = Instance.new("Sky")
 	ceu.Name = ConstrutorMapa.CEU
-	-- A MESMA imagem nas seis faces. Ver a nota 2 do cabeçalho.
-	ceu.SkyboxUp = url
-	ceu.SkyboxDn = url
-	ceu.SkyboxLf = url
-	ceu.SkyboxRt = url
-	ceu.SkyboxFt = url
-	ceu.SkyboxBk = url
+
+	local function faceOu(nome)
+		if type(faces) == "table" and Tipos.ehInteiro(faces[nome]) then
+			return urlDeAsset(faces[nome])
+		end
+		return url
+	end
+
+	ceu.SkyboxFt = faceOu("ft")
+	ceu.SkyboxBk = faceOu("bk")
+	ceu.SkyboxLf = faceOu("lf")
+	ceu.SkyboxRt = faceOu("rt")
+	ceu.SkyboxUp = faceOu("up")
+	ceu.SkyboxDn = faceOu("dn")
 	ceu.Parent = Lighting
 end
 
-local function construirPlataforma(indice, mapa, rng, pasta, urlDaTextura)
-	local p = mapa.plataformas
-	local y = (indice - 1) * p.espacamentoVertical
+--[[
+	As FORMAS do degrau, montadas com primitivas do Roblox.
 
-	local offsetX, offsetZ = 0, 0
-	if indice > 1 then
-		-- A plataforma 1 fica centrada no eixo: é onde o personagem nasce, e
-		-- um spawn "solto" por sorteio tornaria a posição inicial imprevisível
-		-- de mapa para mapa sem ganho nenhum.
-		local angulo = rng:NextNumber(0, 2 * math.pi)
-		local magnitude = rng:NextNumber(0, p.variacaoHorizontal)
-		offsetX = math.cos(angulo) * magnitude
-		offsetZ = math.sin(angulo) * magnitude
-	end
+	Uma rosquinha redonda com furo no meio não é a mesma coisa que um quadrado
+	com a foto de uma rosquinha — e é essa diferença que faz a peça temática
+	valer. Nada de mesh e nada de union em tempo de execução: mesh é asset que
+	precisa subir, e union de mil degraus derrubaria o carregamento.
 
-	local raio = math.max(1, p.raioBase * (1 + rng:NextNumber(-p.variacaoRaio, p.variacaoRaio)))
-	local posicao = Vector3.new(offsetX, y, offsetZ)
+	Cada função devolve `partes, pouso`:
+	  `partes` são todos os Parts que o jogador pode pisar — o rastreio liga
+	    `Touched` em cada um, senão só um pedaço do anel contaria como chão;
+	  `pouso` é o deslocamento do CENTRO até um lugar onde dá para ficar de pé.
+	    No anel o centro é o furo, e pousar ali é cair.
+]]
+local SEGMENTOS_DO_ANEL = 16
+local FURO_DO_ANEL = 0.42       -- fração do raio: 0,42 deixa a pista larga
+local LADOS_DO_HEXAGONO = 6
+local TABUAS = 5
+local FRESTA_DA_TABUA = 0.12
 
+local function novoPedaco(nome, tamanho, cframe)
 	local parte = Instance.new("Part")
-	parte.Name = "Plataforma" .. indice
+	parte.Name = nome
 	parte.Shape = Enum.PartType.Block
-	parte.Size = Vector3.new(raio * 2, ESPESSURA_DISCO, raio * 2)
-	parte.CFrame = CFrame.new(posicao)
+	parte.Size = tamanho
+	parte.CFrame = cframe
 	parte.Anchored = true
 	parte.CanCollide = true
 	parte.TopSurface = Enum.SurfaceType.Smooth
 	parte.BottomSurface = Enum.SurfaceType.Smooth
-	parte.Material = materialNativo(p.materialAssetId)
-	parte.Color = corDoEixo(mapa.paleta, (indice - 1) / math.max(1, mapa.totalPlataformas - 1))
-	-- Combinado com o módulo de rastreio de outro agente: índice como
-	-- atributo, não como IntValue filho.
-	parte:SetAttribute("KoraIndice", indice)
-	aplicarTextura(parte, urlDaTextura)
-	parte.Parent = pasta
+	return parte
+end
 
-	return { indice = indice, parte = parte, posicao = posicao }
+--[[ Monta a forma e devolve `partes, pouso`. `raio` é meia-largura do degrau. ]]
+local function montarForma(forma, raio, posicao)
+	local partes = {}
+
+	if forma == "disco" then
+		local parte = novoPedaco("Disco", Vector3.new(ESPESSURA_DISCO, raio * 2, raio * 2), CFrame.new(posicao))
+		parte.Shape = Enum.PartType.Cylinder
+		-- O Cylinder do Roblox nasce deitado no eixo X. Girar 90 graus em Z põe
+		-- a face circular para cima, que é onde se pisa.
+		parte.CFrame = CFrame.new(posicao) * CFrame.Angles(0, 0, math.rad(90))
+		table.insert(partes, parte)
+		return partes, Vector3.new(0, 0, 0)
+	end
+
+	if forma == "anel" then
+		--[[ Rosquinha: N pedaços em círculo, com furo no meio — e chão embaixo.
+
+			O furo é o desenho, não uma armadilha. Decisão do dono: "o que muda
+			é a foto". Uma peça que derruba o jogador mudaria a JOGABILIDADE, e
+			aí escolher a textura deixaria de ser escolha estética — a rosquinha
+			viraria a plataforma difícil, e ninguém a usaria por isso.
+
+			A base é invisível e sólida, do tamanho do degrau inteiro. O jogador
+			vê o furo e pisa no chão, e o respawn volta ao centro como em
+			qualquer outra forma. ]]
+		local base = novoPedaco("AnelBase", Vector3.new(raio * 2, ESPESSURA_DISCO, raio * 2), CFrame.new(posicao))
+		base.Transparency = 1
+		-- Sem sombra: uma peça invisível projetando sombra denunciaria o truque,
+		-- e o furo apareceria escuro por baixo.
+		base.CastShadow = false
+		table.insert(partes, base)
+
+		local raioMedio = raio * (1 + FURO_DO_ANEL) * 0.5
+		local largura = raio * (1 - FURO_DO_ANEL)
+		local corda = 2 * math.pi * raioMedio / SEGMENTOS_DO_ANEL
+
+		for i = 1, SEGMENTOS_DO_ANEL do
+			local angulo = (i - 1) * (2 * math.pi / SEGMENTOS_DO_ANEL)
+			local deslocamento = Vector3.new(math.cos(angulo) * raioMedio, 0, math.sin(angulo) * raioMedio)
+			-- Corda com folga: sem ela sobra vão entre um segmento e o outro.
+			local pedaco = novoPedaco(
+				"Anel" .. i,
+				Vector3.new(largura, ESPESSURA_DISCO, corda * 1.15),
+				CFrame.new(posicao + deslocamento) * CFrame.Angles(0, -angulo, 0)
+			)
+			table.insert(partes, pedaco)
+		end
+		-- Pouso no CENTRO como qualquer outra forma: a base invisível é chão.
+		return partes, Vector3.new(0, 0, 0)
+	end
+
+	if forma == "hexagono" then
+		-- Três blocos girados de 60 graus dão um hexágono cheio, sem furo e sem
+		-- as 6 emendas que 6 triângulos deixariam.
+		for i = 1, 3 do
+			local angulo = (i - 1) * math.rad(60)
+			table.insert(partes, novoPedaco(
+				"Hex" .. i,
+				Vector3.new(raio * 2, ESPESSURA_DISCO, raio * 1.16),
+				CFrame.new(posicao) * CFrame.Angles(0, angulo, 0)
+			))
+		end
+		return partes, Vector3.new(0, 0, 0)
+	end
+
+	if forma == "tabuas" then
+		-- Réguas paralelas com fresta: a fresta de verdade lê melhor que a
+		-- desenhada, e é o que o pacote pede para a madeira.
+		local largura = (raio * 2) / TABUAS
+		for i = 1, TABUAS do
+			local deslocamento = Vector3.new(-raio + largura * (i - 0.5), 0, 0)
+			table.insert(partes, novoPedaco(
+				"Tabua" .. i,
+				Vector3.new(largura - FRESTA_DA_TABUA, ESPESSURA_DISCO, raio * 2),
+				CFrame.new(posicao + deslocamento)
+			))
+		end
+		return partes, Vector3.new(0, 0, 0)
+	end
+
+	-- "placa" é o bloco chapado; "bloco" é o padrão de sempre.
+	local altura = (forma == "placa") and (ESPESSURA_DISCO * 0.5) or ESPESSURA_DISCO
+	table.insert(partes, novoPedaco("Degrau", Vector3.new(raio * 2, altura, raio * 2), CFrame.new(posicao)))
+	return partes, Vector3.new(0, 0, 0)
+end
+
+local function construirPlataforma(indice, mapa, rng, pasta, urls, estilos, meioLado)
+	local p = mapa.plataformas
+	local y = (indice - 1) * p.espacamentoVertical
+
+	-- Todos no perímetro, inclusive o primeiro. Antes ele ficava no eixo "para o
+	-- spawn ser previsível", mas o canto inicial é igualmente previsível — e
+	-- manter o degrau 1 fora do percurso faria o salto 1->2 ser o único
+	-- diferente de todos os outros.
+	local avanco = (indice - 1) * p.variacaoHorizontal
+	local offsetX, offsetZ = pontoNoQuadrado(avanco, meioLado)
+
+	local raio = math.max(1, p.raioBase * (1 + rng:NextNumber(-p.variacaoRaio, p.variacaoRaio)))
+
+	-- A passarela tem caminho próprio: vaivém subindo no lugar, sem caracol.
+	if p.formato == "laje" then
+		offsetX, offsetZ = pontoNaPassarela(avanco)
+	end
+
+	local posicao = Vector3.new(offsetX, y, offsetZ)
+
+	--[[ Uma textura por degrau, revezando, e a FORMA que ela pede.
+
+		`urls` e `estilos` andam juntos e na mesma ordem. Com uma textura só,
+		todo degrau recebe a mesma e nada muda em relação a antes. ]]
+	local vez = ((indice - 1) % #urls) + 1
+	local urlDaTextura = urls[vez]
+	local estilo = estilos[vez] or {}
+
+	local partes, pouso = montarForma(estilo.forma or "bloco", raio, posicao)
+
+	--[[ Com VÁRIAS texturas, o degrau NÃO é tingido.
+
+		A cor da paleta multiplica a textura, e é ela que dá o gradiente da
+		torre quando existe uma textura só. Com blocos variados isso destrói o
+		efeito inteiro: dez texturas diferentes, todas puxadas para o mesmo
+		verde, viram dez tons do mesmo bloco. Quem carrega a variedade passa a
+		ser a textura, então a cor sai da frente. ]]
+	local cor = Color3.new(1, 1, 1)
+	if #urls <= 1 then
+		cor = corDoEixo(mapa.paleta, (indice - 1) / math.max(1, mapa.totalPlataformas - 1))
+	end
+
+	local material = materialNativo(idDaTextura(p, indice))
+	if type(estilo.material) == "string" then
+		local ok, escolhido = pcall(function()
+			return Enum.Material[estilo.material]
+		end)
+		if ok and escolhido then
+			material = escolhido
+		end
+	end
+
+	for i, pedaco in ipairs(partes) do
+		pedaco.Name = "Plataforma" .. indice .. (i > 1 and ("_" .. i) or "")
+		pedaco.Color = cor
+		pedaco.Material = material
+		if type(estilo.transparencia) == "number" then
+			pedaco.Transparency = math.clamp(estilo.transparencia, 0, 0.6)
+		end
+		-- Combinado com o módulo de rastreio: índice como atributo, não como
+		-- IntValue filho. Vai em TODOS os pedaços: o jogador pisa em qualquer um.
+		pedaco:SetAttribute("KoraIndice", indice)
+		aplicarTextura(pedaco, urlDaTextura)
+		pedaco.Parent = pasta
+	end
+
+	local parte = partes[1]
+	escreverNumero(parte, indice, mapa.totalPlataformas, mapa.paleta)
+
+	--[[ `raio` vai junto, e não é enfeite: é a PEGADA do degrau, o número que a
+		checagem de jogabilidade usa para medir o vão. Enquanto todo degrau era um
+		bloco só, dava para deduzi-lo do `Size`; com as formas do acervo o primeiro
+		pedaço é uma tábua, ou um Cylinder deitado, e a dedução passou a devolver
+		raio 1 para um disco de 7,5. Ver Jogabilidade.raioDe. ]]
+	return { indice = indice, parte = parte, partes = partes, pouso = pouso, posicao = posicao, raio = raio }
 end
 
 --[[ Marco = plataforma visualmente distinta, legível de longe num vídeo
@@ -397,21 +721,49 @@ local function construirTudo(mapa)
 	-- Resolvido UMA vez, não por plataforma: são 250 iterações, e o assetId é o
 	-- mesmo em todas. `or {}` porque uma ponte antiga não manda o campo.
 	local resolvido = mapa.acervoResolvido or {}
-	local urlDaTextura = urlDeAsset(resolvido.textura)
+
+	--[[ A lista de texturas, sempre como lista.
+
+		A ponte manda `texturas` (a lista revezada) e `textura` (a primeira, para
+		quem só sabe pintar uma). Cair na segunda mantém mapa antigo funcionando
+		sem nenhuma migração. Nenhuma das duas: uma entrada vazia, e
+		`aplicarTextura` já ignora url nula — a torre sai com material nativo,
+		que é o que sempre aconteceu com acervo pendente. ]]
+	local urls = {}
+	if type(resolvido.texturas) == "table" then
+		for _, assetId in ipairs(resolvido.texturas) do
+			table.insert(urls, urlDeAsset(assetId))
+		end
+	end
+	if #urls == 0 then
+		urls = { urlDeAsset(resolvido.textura) }
+	end
+
+	--[[ O estilo de cada textura, na mesma ordem. Sem ele, tudo vira bloco —
+		que é como era antes de a forma existir. ]]
+	local estilos = {}
+	if type(resolvido.estilos) == "table" then
+		estilos = resolvido.estilos
+	end
+
+	-- Meio-lado do quadrado, DERIVADO do passo: perímetro = degraus por volta ×
+	-- passo, e o quadrado tem 8 meio-lados de perímetro. Assim mexer só na
+	-- distância entre degraus já redimensiona a torre inteira, coerente.
+	local meioLado = (DEGRAUS_POR_VOLTA * mapa.plataformas.variacaoHorizontal) / 8
 	local plataformas = {}
 	local plataformasPorIndice = {}
 
 	-- Loop único, síncrono, sem wait(): 250+ Instance.new de uma vez é
 	-- trabalho de servidor no carregamento do mapa, nunca por frame.
 	for indice = 1, total do
-		local registro = construirPlataforma(indice, mapa, rng, pasta, urlDaTextura)
+		local registro = construirPlataforma(indice, mapa, rng, pasta, urls, estilos, meioLado)
 		plataformas[indice] = registro
 		plataformasPorIndice[indice] = registro.parte
 	end
 
 	aplicarMarcos(mapa, plataformasPorIndice)
 	aplicarProps(mapa, plataformasPorIndice, total)
-	aplicarCeu(urlDeAsset(resolvido.skybox))
+	aplicarCeu(urlDeAsset(resolvido.skybox), resolvido.skyboxFaces)
 
 	pasta.Parent = Workspace
 
@@ -421,8 +773,30 @@ local function construirTudo(mapa)
 		return nil, "torre construída ficou intransponível: " .. table.concat(problemasConstruido, "; ")
 	end
 
+	--[[ O spawn recua para a faixa EXPOSTA do primeiro degrau.
+
+		Quando os degraus se sobrepõem, o primeiro fica enterrado embaixo dos
+		seguintes e o centro dele não é chão — é teto. Nascer ali põe o boneco
+		dentro da geometria, e o Roblox o empurra para fora. Com degraus que
+		apenas se encostam, o recuo é zero e nada muda. ]]
 	local primeira = plataformas[1].posicao
-	local spawn = Vector3.new(primeira.X, primeira.Y + (ESPESSURA_DISCO / 2) + FOLGA_DE_SPAWN, primeira.Z)
+	local recuo = 0
+	local bloco = mapa.plataformas
+	if bloco.formato == "laje" then
+		recuo = math.max(0, (2 * bloco.raioBase - bloco.variacaoHorizontal) / 2)
+	end
+	-- E a FORMA também desloca: no anel o centro é o furo, e nascer ali é cair
+	-- antes de dar o primeiro passo.
+	local daForma = plataformas[1].pouso
+	if typeof(daForma) ~= "Vector3" then
+		daForma = Vector3.new(0, 0, 0)
+	end
+
+	local spawn = Vector3.new(
+		primeira.X - recuo + daForma.X,
+		primeira.Y + (ESPESSURA_DISCO / 2) + FOLGA_DE_SPAWN,
+		primeira.Z + daForma.Z
+	)
 
 	return {
 		pasta = pasta,

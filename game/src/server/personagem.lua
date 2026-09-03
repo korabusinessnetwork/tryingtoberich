@@ -65,22 +65,60 @@ local function aplicarCoresCorpo(descricao, coresCorpo)
 	end
 end
 
--- SetAccessories espera uma lista de descrição, não só o id: cada entrada
--- carrega o AssetId mais o tipo, que aqui fica "Unknown" de propósito — o
--- look guarda só o id escolhido no vestiário, não a categoria do item.
+--[[ SetAccessories espera uma lista de descrição, não só o id: cada entrada
+	carrega o AssetId mais o tipo.
+
+	Aqui ia `Enum.AccessoryType.Unknown`, e o Roblox RECUSA a tabela inteira
+	com "Input table contained an invalid accessory type!" — o item era
+	descartado calado, e o vestiário parecia não fazer nada. `Unknown` é o
+	valor que a API DEVOLVE quando não sabe, não um valor que ela aceita.
+
+	`Hat` é o piso: acessório rígido carrega a própria Attachment no asset, e
+	é ela que decide onde a peça encosta. O tipo certo viria do catálogo, mas o
+	look guarda só o id — enquanto `itensCatalogo` não guardar a categoria,
+	este é o valor que faz a peça entrar em vez de sumir. ]]
 local function listaDeAcessorios(itens)
 	local lista = {}
 	for _, assetId in ipairs(itens) do
 		if Tipos.ehInteiro(assetId) and assetId > 0 then
+			--[[ SEM `Order`, e sem `IsLayered`.
+
+				O Roblox recusa a entrada com "IsLayered is required to be true
+				for entries where order is specified": ordem só existe para
+				roupa em CAMADA, que precisa saber o que fica por cima do quê.
+				Acessório rígido pendura numa Attachment e não tem empilhamento
+				nenhum — mandar ordem nele fazia a peça ser descartada calada,
+				que era o vestiário parecendo não fazer nada. ]]
 			table.insert(lista, {
 				AssetId = assetId,
-				AccessoryType = Enum.AccessoryType.Unknown,
-				IsLayered = false,
-				Order = #lista + 1,
+				AccessoryType = Enum.AccessoryType.Hat,
 			})
 		end
 	end
 	return lista
+end
+
+--[[
+	`ApplyDescription` exige o personagem DENTRO do DataModel.
+
+	Fora dele o Roblox recusa com "DataModel was not available", e foi
+	exatamente o que aconteceu: `CharacterAdded` dispara com o modelo ainda
+	sendo pendurado no workspace, as duas primeiras tentativas do ADR-010
+	morriam nisso, e só a terceira — a de cor de corpo pura, que roda uns
+	milissegundos depois — pegava o personagem já pronto. O look inteiro caía
+	para "só cor de corpo" sem que nada estivesse errado com os itens.
+
+	Espera limitada: meio segundo é folga de sobra para o parent acontecer, e
+	travar mais que isso no início da sessão seria pior que não vestir.
+]]
+local ESPERA_MAX_DO_DATAMODEL = 0.5
+
+local function esperarNoDataModel(personagem)
+	local limite = os.clock() + ESPERA_MAX_DO_DATAMODEL
+	while not personagem:IsDescendantOf(game) and os.clock() < limite do
+		task.wait()
+	end
+	return personagem:IsDescendantOf(game)
 end
 
 --[[
@@ -113,6 +151,152 @@ local function tentarAplicar(humanoid, coresCorpo, itens, roupaCustomizada)
 end
 
 --[[
+	Onde cada peça de uma skin de outro usuário entra no HumanoidDescription.
+
+	`SetAccessories` sozinho não serve: ele cobre acessório, e uma skin montada
+	traz TAMBÉM parte de corpo (torso, braços, pernas) e animação, que são
+	campos próprios. Peça de tipo desconhecido é ignorada em silêncio — a lista
+	de tipos do Roblox cresce, e um tipo novo não pode impedir o resto do look
+	de entrar.
+]]
+local CAMPO_POR_TIPO_DE_ASSET = {
+	Torso = "Torso", RightArm = "RightArm", LeftArm = "LeftArm",
+	RightLeg = "RightLeg", LeftLeg = "LeftLeg", Head = "Head",
+	Shirt = "Shirt", Pants = "Pants", TShirt = "GraphicTShirt", Face = "Face",
+	RunAnimation = "RunAnimation", WalkAnimation = "WalkAnimation",
+	IdleAnimation = "IdleAnimation", JumpAnimation = "JumpAnimation",
+	ClimbAnimation = "ClimbAnimation", FallAnimation = "FallAnimation",
+	SwimAnimation = "SwimAnimation",
+}
+
+--[[ Roupa em camada (ADR-011): entra por cima do corpo, não pendurada numa
+	Attachment. `IsLayered` errado põe a camisa flutuando ao lado da cabeça. ]]
+local ACESSORIO_EM_CAMADA = {
+	TShirt = true, Shirt = true, Pants = true, Jacket = true, Sweater = true,
+	Shorts = true, LeftShoe = true, RightShoe = true, DressSkirt = true,
+	Eyebrow = true, Eyelash = true,
+}
+
+--[[
+	"HairAccessory" -> Enum.AccessoryType.Hair. Devolve nil para o que não é
+	acessório nenhum.
+
+	O nome que a API do Roblox devolve é a categoria mais o sufixo "Accessory",
+	e o Enum tem a categoria pura — tirar o sufixo é a tradução inteira. Antes
+	isto mandava `Unknown` para TODO acessório, e o Roblox recusava a tabela
+	com "Input table contained an invalid accessory type!": a skin da galeria
+	chegava sem chapéu, sem cabelo e sem nada pendurado.
+]]
+local function tipoDeAcessorio(nome)
+	if type(nome) ~= "string" then
+		return nil, false
+	end
+
+	local puro = string.gsub(nome, "Accessory$", "")
+	local ok, tipo = pcall(function()
+		return Enum.AccessoryType[puro]
+	end)
+	if not ok or not tipo then
+		-- Categoria nova que este jogo ainda não conhece. Vira acessório
+		-- rígido comum em vez de sumir: a peça existe, só não sabemos o slot.
+		return string.find(nome, "Accessory") and Enum.AccessoryType.Hat or nil, false
+	end
+	return tipo, ACESSORIO_EM_CAMADA[puro] == true
+end
+
+--[[ As cores vêm como id da paleta BrickColor, não como Color3.
+
+	Converter dentro de pcall porque id inválido faz `BrickColor.new` estourar,
+	e uma cor estranha não pode derrubar a skin inteira. ]]
+local function corDaPaleta(id)
+	if not Tipos.ehInteiro(id) then
+		return nil
+	end
+	local ok, cor = pcall(function()
+		return BrickColor.new(id).Color
+	end)
+	if ok then
+		return cor
+	end
+	return nil
+end
+
+--[[
+	Personagem.aplicarSkin(jogador, skin) -> ok, erro
+
+	Veste o personagem com a skin de OUTRO usuário do Roblox, vinda da galeria
+	(GET /jogo/skin). É a base sobre a qual o streamer customiza depois: aplica
+	tudo o que a pessoa tem e deixa o vestiário mexer por cima.
+
+	Mesmo cuidado do `aplicarLook`: montar e aplicar vão juntos no MESMO pcall,
+	porque item despublicado faz os dois falharem e nenhum motivo pode derrubar
+	a sessão.
+]]
+function Personagem.aplicarSkin(jogador, skin)
+	if type(skin) ~= "table" or type(skin.assets) ~= "table" then
+		return false, "skin inválida"
+	end
+
+	local personagem = jogador and jogador.Character
+	local humanoid = personagem and personagem:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false, "personagem ainda não existe"
+	end
+	if not esperarNoDataModel(personagem) then
+		return false, "personagem ainda não está no mundo"
+	end
+
+	local ok, erro = pcall(function()
+		local descricao = Instance.new("HumanoidDescription")
+
+		local cores = skin.bodyColors
+		if type(cores) == "table" then
+			descricao.HeadColor = corDaPaleta(cores.headColorId) or descricao.HeadColor
+			descricao.TorsoColor = corDaPaleta(cores.torsoColorId) or descricao.TorsoColor
+			descricao.RightArmColor = corDaPaleta(cores.rightArmColorId) or descricao.RightArmColor
+			descricao.LeftArmColor = corDaPaleta(cores.leftArmColorId) or descricao.LeftArmColor
+			descricao.RightLegColor = corDaPaleta(cores.rightLegColorId) or descricao.RightLegColor
+			descricao.LeftLegColor = corDaPaleta(cores.leftLegColorId) or descricao.LeftLegColor
+		end
+
+		local acessorios = {}
+		for _, peca in ipairs(skin.assets) do
+			local campo = CAMPO_POR_TIPO_DE_ASSET[peca.tipo]
+			if campo then
+				descricao[campo] = peca.assetId
+			else
+				local tipo, ehCamada = tipoDeAcessorio(peca.tipo)
+				if tipo then
+					--[[ `Order` só acompanha roupa em CAMADA.
+
+						Ordem sem `IsLayered = true` faz o Roblox recusar a
+						entrada inteira. Rígido não empilha: ele pendura na
+						própria Attachment do asset, e a ordem não quer dizer
+						nada ali. ]]
+					local entrada = { AssetId = peca.assetId, AccessoryType = tipo }
+					if ehCamada then
+						entrada.IsLayered = true
+						entrada.Order = #acessorios + 1
+					end
+					table.insert(acessorios, entrada)
+				end
+			end
+		end
+
+		if #acessorios > 0 then
+			descricao:SetAccessories(acessorios, true)
+		end
+
+		humanoid:ApplyDescription(descricao)
+	end)
+
+	if not ok then
+		return false, "não consegui vestir a skin: " .. tostring(erro)
+	end
+	return true
+end
+
+--[[
 	Personagem.aplicarLook(jogador, look) -> ok, erro
 
 	Compõe por HumanoidDescription com item gratuito do catálogo (ADR-010):
@@ -134,6 +318,9 @@ function Personagem.aplicarLook(jogador, look)
 	local humanoid = personagem:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return false, "personagem sem Humanoid"
+	end
+	if not esperarNoDataModel(personagem) then
+		return false, "personagem ainda não está no mundo"
 	end
 
 	-- Tentativa 1: o que o streamer escolheu no vestiário.

@@ -1,0 +1,181 @@
+/* Presentes de placar. Estilo fora do JSX, para o white-label da Fase 3. */
+
+.placar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.placar-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.placar-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.placar-etiqueta {
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}
+
+.placar-explicacao,
+.placar-vazio {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+.placar-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.placar-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.placar-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.placar-efeitos {
+  display: flex;
+  gap: 4px;
+}
+
+.placar-efeito {
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--painel-fundo);
+}
+
+/* Verde e vermelho são os mesmos de subida e descida no jogo: o streamer já
+   aprendeu esse vocabulário no HUD, e um segundo custaria atenção à toa. */
+.placar-efeito-vitoria.placar-efeito-ativo {
+  border-color: var(--estado-ok);
+  color: var(--estado-ok);
+}
+
+.placar-efeito-derrota.placar-efeito-ativo {
+  border-color: var(--estado-erro);
+  color: var(--estado-erro);
+}
+
+.placar-remover {
+  min-height: var(--alvo-minimo);
+  min-width: var(--alvo-minimo);
+  font-size: 16px;
+  background: var(--painel-fundo);
+}
+
+.placar-adicionar {
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  font-size: 12px;
+  background: var(--painel-fundo);
+}
+
+/* A vida do portal, junto dos presentes que a gastam. O campo é pequeno porque
+   é um número só; a dica ao lado carrega a unidade, que é a parte que engana. */
+.placar-portal {
+  display: grid;
+  grid-template-columns: auto 90px;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+}
+
+.placar-portal-rotulo {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.placar-portal-campo {
+  min-height: var(--alvo-minimo);
+  padding: 0 8px;
+  font-size: 13px;
+  text-align: right;
+  background: var(--painel-superficie);
+}
+
+.placar-portal-dica {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+/* As animações de fim de rodada. Duas linhas iguais, uma por resultado. */
+.placar-animacoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.placar-animacao {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+}
+
+.placar-animacao-rotulo {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.placar-animacao-botao {
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  font-size: 12px;
+  text-align: left;
+  background: var(--painel-superficie);
+}
+
+.placar-animacao-limpar {
+  min-height: var(--alvo-minimo);
+  min-width: var(--alvo-minimo);
+  font-size: 16px;
+  background: var(--painel-superficie);
+}
+
+.placar-animacao-dica {
+  grid-column: 2 / -1;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}

@@ -42,11 +42,36 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
   return (
     <li className="acervo-item">
       <div className="acervo-item-topo">
+        {/*[[ A FOTO da peça, e não só o nome.
+
+            "textura_pedra_musgo" e "textura_areia_compacta" são dois nomes;
+            olhando, são duas coisas. Sem a imagem, escolher o que vai no mapa
+            era ler etiqueta e torcer — e as texturas são desenhadas em código,
+            então nem existe arquivo para abrir e conferir.
+
+            A ponte desenha sob demanda: mesma peça, mesma imagem, sempre. Não
+            há cache para invalidar quando as tags mudam. ]]*/}
+        <img
+          className="acervo-item-foto"
+          src={`/api/acervo/imagem/${colecao}/${encodeURIComponent(item.id)}`}
+          alt={`Prévia de ${item.nome}`}
+          loading="lazy"
+          width={56}
+          height={56}
+        />
         <span className="acervo-item-nome">{item.nome}</span>
         <span className={`pastilha ${classeDoStatus(item.status)}`}>{rotuloDoStatus(item.status)}</span>
       </div>
 
       <code className="acervo-item-id">{item.id}</code>
+
+      {item.tags?.length > 0 && (
+        <p className="acervo-item-tags">
+          {/* As tags não são enfeite: é delas que a imagem sai, e é por elas que
+              o Gemini casa a descrição do streamer com a peça. */}
+          {item.tags.join(" · ")}
+        </p>
+      )}
 
       <div className="acervo-item-controles">
         <label className="acervo-campo">
@@ -93,7 +118,7 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
   );
 }
 
-export function PainelDeAcervo({ acervo, salvando, erro, aoAnotar }) {
+export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, aoAnotar, aoPublicar }) {
   const colecoes = [
     { id: "skybox", rotulo: "Skybox", itens: acervo?.skybox ?? [] },
     { id: "texturas", rotulo: "Texturas de plataforma", itens: acervo?.texturas ?? [] },
@@ -115,10 +140,39 @@ export function PainelDeAcervo({ acervo, salvando, erro, aoAnotar }) {
       </header>
 
       <p className="acervo-recado">
-        O Gemini escolhe daqui e nunca inventa asset (ADR-004). Subir a imagem no Roblox e esperar a
-        moderação é trabalho manual; esta tela só anota o resultado. Item não aprovado não entra no
-        prompt, e mapa que depende dele <strong>não vai ao ar</strong>.
+        O Gemini escolhe daqui e nunca inventa asset (ADR-004). Item não aprovado não entra no
+        prompt, e mapa que depende dele <strong>não vai ao ar</strong>. Com um céu aprovado, todo
+        mapa gerado sai com o mesmo céu — não é o modelo repetindo, é ele escolhendo entre um.
       </p>
+
+      {/*[[ O botão que tira o acervo do papel.
+
+          Encher isto na mão eram doze idas ao site do Roblox: criar a arte,
+          subir, esperar, achar o número, colar aqui. Onze dos doze ficavam
+          para trás. A ponte desenha a imagem em código, sobe pelo Open Cloud
+          e anota o assetId; a moderação continua sendo do Roblox. ]]*/}
+      {aoPublicar && (
+        <div className="acervo-publicar">
+          <button type="button" className="acervo-publicar-botao" onClick={aoPublicar} disabled={publicando}>
+            {publicando ? "Desenhando e subindo…" : "Gerar e subir o que falta"}
+          </button>
+          <span className="acervo-publicar-dica">
+            Desenha as imagens que faltam, sobe no Roblox e anota o assetId. Não gasta Robux.
+            Precisa de <code>ROBLOX_API_KEY</code> no <code>.env</code>.
+          </span>
+        </div>
+      )}
+
+      {relatorio?.length > 0 && (
+        <ul className="acervo-relatorio">
+          {relatorio.map((linha) => (
+            <li className={`acervo-relatorio-linha acervo-relatorio-${linha.acao}`} key={`${linha.colecao}/${linha.id}`}>
+              <strong>{linha.id}</strong>{" "}
+              {linha.acao === "falhou" ? `não subiu: ${linha.motivo}` : `${linha.acao} · ${linha.status}`}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {erro && <p className="pastilha pastilha-erro">{erro}</p>}
 

@@ -38,7 +38,7 @@ export function normalizarUsuario(bruto) {
   return texto.trim();
 }
 
-const PADRAO = { streamerId: "local", usuarioTiktok: null, presetAtivo: null, atualizadoEm: null };
+const PADRAO = { streamerId: "local", usuarioTiktok: null, presetAtivo: null, galeriaDeSkins: [], atualizadoEm: null };
 
 /**
  * A configuração completa, com o `.env` entrando só onde o disco está vazio.
@@ -83,6 +83,16 @@ export async function salvarConfiguracao(mudancas = {}, semente = "") {
   }
 
   if ("presetAtivo" in mudancas) proxima.presetAtivo = mudancas.presetAtivo ?? null;
+
+  if ("galeriaDeSkins" in mudancas) {
+    // Normaliza aqui e não na tela: nick com arroba ou espaço é o que qualquer
+    // pessoa digita, e o schema recusa os dois. Duplicata sai porque a galeria
+    // é um conjunto — o mesmo nick duas vezes não acrescenta nada.
+    const nicks = Array.isArray(mudancas.galeriaDeSkins) ? mudancas.galeriaDeSkins : [];
+    proxima.galeriaDeSkins = [...new Set(
+      nicks.map((n) => String(n ?? "").trim().replace(/^@+/, "")).filter(Boolean),
+    )];
+  }
 
   const { validar } = await criarValidador();
   const problemas = validar("configuracao", proxima);

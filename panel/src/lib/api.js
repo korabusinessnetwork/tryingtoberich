@@ -99,8 +99,36 @@ export const api = {
   looks: () => chamar("/api/looks").then((r) => r.looks),
   mapas: () => chamar("/api/mapas").then((r) => r.mapas),
 
-  /** F4 — o painel manda o texto, a ponte fala com o Gemini. A chave nunca sai de lá. */
-  gerarMapa: (descricao) => chamar("/api/mapas/gerar", json("POST", { descricao })),
+  /**
+   * F4 — o painel manda o texto, a ponte fala com o Gemini. A chave nunca sai de lá.
+   *
+   * `formato` é a construção da torre (ADR-009): "disco" são degraus separados
+   * com vão para pular, "laje" é uma passarela de lajes encostadas.
+   */
+  gerarMapa: (descricao, formato = "disco") =>
+    chamar("/api/mapas/gerar", json("POST", { descricao, formato })),
+
+  /**
+   * Monta o mundo com as peças escolhidas na galeria, e põe no ar.
+   *
+   * Sem IA e sem espera: a geometria é conhecida (ADR-009) e o que o streamer
+   * escolhe são as peças. Grava sempre no mesmo mapa — montar é compor, não
+   * criar acervo.
+   */
+  montarMundo: (escolhas) => chamar("/api/mundo", json("POST", escolhas)),
+
+  /** Apaga um mapa gerado. 409 quando algum preset ainda o usa. */
+  apagarMapa: (mapaId) => chamar(`/api/mapas/${encodeURIComponent(mapaId)}`, { method: "DELETE" }),
+
+  /**
+   * Troca escada por passarela num mapa que já existe (ADR-009), sem regerar.
+   *
+   * A escolha de formato valia só para o PRÓXIMO mapa gerado, e do lado de quem
+   * clicava o botão não fazia nada. Converter é determinístico: não gasta
+   * chamada de IA e a torre se reergue sozinha quando é o mapa que está no ar.
+   */
+  converterFormatoDoMapa: (mapaId, formato) =>
+    chamar(`/api/mapas/${encodeURIComponent(mapaId)}/formato`, json("POST", { formato })),
 
   /**
    * ADR-004 — este mapa pode ir ao ar?
@@ -116,6 +144,13 @@ export const api = {
   anotarAcervo: (colecao, id, campos) =>
     chamar(`/api/acervo/${encodeURIComponent(colecao)}/${encodeURIComponent(id)}`, json("PUT", campos)),
 
+  /**
+   * Enche o acervo (ADR-004): a ponte desenha as imagens que faltam, sobe pelo
+   * Open Cloud do Roblox e anota o assetId. Demora — são doze itens e cada um
+   * espera a operação do Roblox terminar.
+   */
+  publicarAcervo: () => chamar("/api/acervo/publicar", { method: "POST" }),
+
   sessao: () => chamar("/api/sessao"),
   iniciarSessao: (presetId, cenario = null) => chamar("/api/sessao/start", json("POST", { presetId, cenario })),
   encerrarSessao: () => chamar("/api/sessao/stop", { method: "POST" }),
@@ -125,6 +160,12 @@ export const api = {
 
   /** R6 — o topo não reinicia sozinho. Este é o botão que o streamer decide apertar. */
   reiniciarCorrida: () => chamar("/api/sessao/reiniciar", { method: "POST" }),
+
+  /** Zera vitórias e derrotas SEM reiniciar a corrida: são coisas separadas. */
+  zerarPlacar: () => chamar("/api/sessao/zerar-placar", { method: "POST" }),
+
+  /** Reergue a torre com o mapa do preset ativo, sem parar a sessão. */
+  recarregarMapa: () => chamar("/api/sessao/recarregar-mapa", { method: "POST" }),
 
   /** F5 — as lives passadas, já reduzidas ao resumo. Nenhum dado de espectador sobrevive até aqui. */
   sessoes: () => chamar("/api/sessoes").then((r) => r.sessoes),
@@ -155,11 +196,26 @@ export const api = {
 
   salvarConfiguracao: (usuarioTiktok) => chamar("/api/configuracao", json("PUT", { usuarioTiktok })),
 
+  /** Espia a skin de um nick ANTES de acrescentar à galeria. Traz a miniatura. */
+  espiarSkin: (nick) => chamar(`/api/skin?nick=${encodeURIComponent(nick)}`),
+
+  /** A lista inteira, sempre: a galeria é um conjunto, não um diff. */
+  salvarGaleria: (nicks) => chamar("/api/galeria", json("PUT", { nicks })),
+
   /** Sobe o `rojo serve` e abre o Roblox Studio nesta máquina. */
   abrirNoStudio: () => chamar("/api/jogo/abrir-studio", { method: "POST" }),
 
   /** O que aconteceu antes do painel abrir. O que vem depois chega pelo SSE. */
   logs: (limite = 100) => chamar(`/api/logs?limite=${limite}`).then((r) => r.linhas),
+
+  /**
+   * O overlay do OBS: a URL para colar lá, e se as cutscenes estão no lugar.
+   *
+   * A URL vem da PONTE, não é montada aqui. O painel roda em :5173 e não sabe
+   * em que porta a ponte atende — montar no navegador daria uma URL que o OBS
+   * não alcança, e a fonte ficaria em branco sem dizer por quê.
+   */
+  overlay: () => chamar("/api/overlay"),
 
   urlDoFluxo: () => `${BASE}/api/sessao/stream`,
 };

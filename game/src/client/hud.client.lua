@@ -48,6 +48,9 @@ local TweenService = game:GetService("TweenService")
 local Compartilhado = game:GetService("ReplicatedStorage"):WaitForChild("KoraCompartilhado")
 local Eventos = require(Compartilhado.eventos)
 local Tokens = require(Compartilhado.tokens)
+-- A contagem regressiva vem daqui, a MESMA que o servidor usa para saber
+-- quando reiniciar. Ver Tipos.CONTAGEM_DE_RODADA.
+local Tipos = require(Compartilhado.tipos)
 
 local jogadorLocal = Players.LocalPlayer
 local playerGui = jogadorLocal:WaitForChild("PlayerGui")
@@ -180,6 +183,9 @@ end
 --------------------------------------------------------------------------
 
 local tela = Instance.new("ScreenGui")
+-- Sibling explicito: em Global o ZIndex vale para a tela inteira e filho pode
+-- sumir atras do proprio pai. Ver a nota em vestiario.client.lua.
+tela.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 tela.Name = "KoraHud"
 tela.ResetOnSpawn = false
 tela.IgnoreGuiInset = true
@@ -195,53 +201,325 @@ areaSegura.Position = UDim2.fromScale(0.5, 0.02)
 areaSegura.Size = UDim2.fromScale(0.94, 0.83)
 areaSegura.Parent = tela
 
--- ===== coluna direita: numero da plataforma =====
+-- ===== barra da meta: topo, centralizada =====
+--
+-- Overlay de meta, como o de inscritos numa live: uma barra que enche, com o
+-- numero DENTRO dela. Os dados moram no proprio elemento que os representa, e
+-- nao numa coluna ao lado — e uma leitura so, nao duas.
+--
+-- Topo e nao meio: o 02_DESIGN_SYSTEM reserva o centro da tela para o boneco e
+-- para o comentario que o TikTok sobrepoe. Centralizada na horizontal, colada
+-- no topo, ela nao disputa com nenhum dos dois.
 
 local painelPlataforma = Instance.new("Frame")
-painelPlataforma.Name = "PainelPlataforma"
+painelPlataforma.Name = "PainelMeta"
 painelPlataforma.BackgroundTransparency = 1
-painelPlataforma.AnchorPoint = Vector2.new(1, 0)
-painelPlataforma.Position = UDim2.fromScale(1, 0)
-painelPlataforma.Size = UDim2.fromScale(0.4, 0.32)
+painelPlataforma.AnchorPoint = Vector2.new(0.5, 0)
+painelPlataforma.Position = UDim2.fromScale(0.5, 0)
+painelPlataforma.Size = UDim2.fromScale(0.62, 0.09)
 painelPlataforma.Parent = areaSegura
 
 local escalaPlataforma = Instance.new("UIScale")
 escalaPlataforma.Parent = painelPlataforma
 
-local layoutPlataforma = Instance.new("UIListLayout")
-layoutPlataforma.FillDirection = Enum.FillDirection.Vertical
-layoutPlataforma.SortOrder = Enum.SortOrder.LayoutOrder
-layoutPlataforma.HorizontalAlignment = Enum.HorizontalAlignment.Right
-layoutPlataforma.VerticalAlignment = Enum.VerticalAlignment.Top
-layoutPlataforma.Parent = painelPlataforma
+-- Fundo escuro com contorno: o mapa e gerado e pode ter qualquer paleta, entao
+-- o HUD nunca depende do fundo para ser legivel.
+local trilhoMeta = Instance.new("Frame")
+trilhoMeta.Name = "TrilhoMeta"
+trilhoMeta.Size = UDim2.fromScale(1, 1)
+trilhoMeta.BackgroundColor3 = Tokens.hud.contorno
+trilhoMeta.BackgroundTransparency = 0.3
+trilhoMeta.BorderSizePixel = 0
+--[[ Recorta o preenchimento na propria forma arredondada.
 
-local rotuloAltura = criarRotulo(painelPlataforma, {
-	Name = "RotuloAltura",
-	LayoutOrder = 1,
-	Size = UDim2.fromScale(1, 0.18),
-	Font = Enum.Font.GothamBold,
-	TextXAlignment = Enum.TextXAlignment.Right,
-})
-rotuloAltura.Text = "ALTURA"
+	Sem isto o preenchimento desenha por cima da ponta do trilho e escapa do
+	arredondado — um risco verde solto na borda esquerda, que e como a barra
+	aparecia "quebrada" com pouco progresso. ]]
+trilhoMeta.ClipsDescendants = true
+trilhoMeta.Parent = painelPlataforma
 
--- O maior elemento da tela. Precisa ler sobre qualquer fundo de mapa, por
--- isso e o unico rotulo comum que leva sombra alem do contorno.
-local numeroGrande = criarRotulo(painelPlataforma, {
-	Name = "NumeroGrande",
-	LayoutOrder = 2,
-	Size = UDim2.fromScale(1, 0.6),
-	TextXAlignment = Enum.TextXAlignment.Right,
-}, true)
+local cantoTrilho = Instance.new("UICorner")
+cantoTrilho.CornerRadius = UDim.new(1, 0)
+cantoTrilho.Parent = trilhoMeta
+
+local contornoTrilho = Instance.new("UIStroke")
+contornoTrilho.Color = Tokens.hud.contorno
+contornoTrilho.Thickness = 3
+contornoTrilho.Parent = trilhoMeta
+
+-- Verde de SUBIDA, o mesmo do delta positivo: a barra enche quando se sobe, e
+-- reusar a cor evita ensinar um segundo vocabulario ao espectador.
+local preenchimentoMeta = Instance.new("Frame")
+preenchimentoMeta.Name = "Preenchimento"
+preenchimentoMeta.Size = UDim2.fromScale(0, 1)
+preenchimentoMeta.BackgroundColor3 = Tokens.hud.subida
+preenchimentoMeta.BorderSizePixel = 0
+preenchimentoMeta.ZIndex = 2
+preenchimentoMeta.Parent = trilhoMeta
+
+--[[ SEM UICorner proprio, de proposito.
+
+	Arredondar o preenchimento fazia dele uma pilula independente: com 1% de
+	progresso virava um risco fino e arredondado dos dois lados, solto dentro do
+	trilho. Quem arredonda e o PAI, pelo ClipsDescendants — assim a ponta
+	esquerda acompanha a curva do trilho e a direita fica reta, que e o desenho
+	certo de uma barra que enche. ]]
+
+--[[ O numero POR CIMA do preenchimento.
+
+	ZIndex acima da barra de proposito: quando ela passar por baixo do texto, o
+	numero continua legivel — e o contorno grosso garante isso tanto sobre o
+	verde quanto sobre o fundo escuro. Sem ele, o texto sumiria na metade da
+	subida, que e justamente quando ele mais importa. ]]
+local numeroGrande = Instance.new("TextLabel")
+numeroGrande.Name = "NumeroMeta"
+numeroGrande.BackgroundTransparency = 1
+numeroGrande.Size = UDim2.fromScale(1, 1)
+numeroGrande.Font = Enum.Font.GothamBlack
+numeroGrande.TextColor3 = Tokens.hud.texto
+numeroGrande.TextStrokeColor3 = Tokens.hud.contorno
+numeroGrande.TextStrokeTransparency = 0
+numeroGrande.TextScaled = true
+numeroGrande.RichText = false
+numeroGrande.TextXAlignment = Enum.TextXAlignment.Center
 numeroGrande.Text = "0"
+numeroGrande.ZIndex = 3
+numeroGrande.Parent = trilhoMeta
 
-local fracaoTotal, fracaoTotalSlot = criarRotulo(painelPlataforma, {
-	Name = "FracaoTotal",
-	LayoutOrder = 3,
-	Size = UDim2.fromScale(1, 0.22),
-	Font = Enum.Font.GothamBold,
-	TextXAlignment = Enum.TextXAlignment.Right,
-})
-fracaoTotalSlot.Visible = false
+local margemNumero = Instance.new("UIPadding")
+margemNumero.PaddingTop = UDim.new(0, 4)
+margemNumero.PaddingBottom = UDim.new(0, 4)
+margemNumero.Parent = numeroGrande
+
+--[[
+	O placar, logo abaixo da barra.
+
+	Vitorias e derrotas da SESSAO, nao do streamer: some quando a sessao acaba.
+	Fica colado na barra porque conta a mesma historia — quanto falta agora, e
+	como foram as tentativas anteriores.
+]]
+local placar = Instance.new("TextLabel")
+placar.Name = "Placar"
+placar.BackgroundTransparency = 1
+placar.AnchorPoint = Vector2.new(0.5, 0)
+placar.Position = UDim2.fromScale(0.5, 1.15)
+placar.Size = UDim2.fromScale(0.6, 0.55)
+placar.Font = Enum.Font.GothamBlack
+placar.TextColor3 = Tokens.hud.texto
+placar.TextStrokeColor3 = Tokens.hud.contorno
+placar.TextStrokeTransparency = 0
+placar.TextScaled = true
+placar.RichText = false
+placar.Text = "0 V   0 D"
+placar.Parent = painelPlataforma
+
+local function atualizarPlacar(vitorias, derrotas)
+	placar.Text = tostring(vitorias or 0) .. " V   " .. tostring(derrotas or 0) .. " D"
+end
+
+--[[
+	A barra do PORTAL, logo abaixo do placar.
+
+	Aparece so quando o portal esta de pe, e some quando ele quebra ou fecha. E
+	a peca que transforma a derrota em disputa: sem numero na tela, o publico ve
+	o boneco parado no chao e nao entende que ha uma briga acontecendo — nem
+	quanto falta para ganha-la.
+
+	Roxa, a cor do portal do Nether, e nao a de descida: ela nao mede queda,
+	mede quanto o portal ainda aguenta. Esvazia da direita para a esquerda,
+	como vida de chefe.
+]]
+local painelPortal = Instance.new("Frame")
+painelPortal.Name = "PainelPortal"
+painelPortal.BackgroundTransparency = 1
+painelPortal.AnchorPoint = Vector2.new(0.5, 0)
+painelPortal.Position = UDim2.fromScale(0.5, 1.85)
+painelPortal.Size = UDim2.fromScale(0.9, 0.5)
+painelPortal.Visible = false
+painelPortal.Parent = painelPlataforma
+
+local trilhoPortal = Instance.new("Frame")
+trilhoPortal.Name = "Trilho"
+trilhoPortal.Size = UDim2.fromScale(1, 1)
+trilhoPortal.BackgroundColor3 = Tokens.hud.contorno
+trilhoPortal.BackgroundTransparency = 0.3
+trilhoPortal.BorderSizePixel = 0
+-- Mesmo recorte da barra de meta: sem ele o preenchimento escapa do
+-- arredondado e a barra aparece "quebrada" nas pontas.
+trilhoPortal.ClipsDescendants = true
+trilhoPortal.Parent = painelPortal
+
+local cantoPortal = Instance.new("UICorner")
+cantoPortal.CornerRadius = UDim.new(1, 0)
+cantoPortal.Parent = trilhoPortal
+
+local contornoPortal = Instance.new("UIStroke")
+contornoPortal.Color = Tokens.hud.contorno
+contornoPortal.Thickness = 3
+contornoPortal.Parent = trilhoPortal
+
+local preenchimentoPortal = Instance.new("Frame")
+preenchimentoPortal.Name = "Preenchimento"
+preenchimentoPortal.Size = UDim2.fromScale(1, 1)
+preenchimentoPortal.BackgroundColor3 = Color3.fromRGB(126, 44, 214)
+preenchimentoPortal.BorderSizePixel = 0
+preenchimentoPortal.ZIndex = 2
+preenchimentoPortal.Parent = trilhoPortal
+
+local textoPortal = Instance.new("TextLabel")
+textoPortal.Name = "Texto"
+textoPortal.BackgroundTransparency = 1
+textoPortal.Size = UDim2.fromScale(1, 1)
+textoPortal.Font = Enum.Font.GothamBlack
+textoPortal.TextColor3 = Tokens.hud.texto
+textoPortal.TextStrokeColor3 = Tokens.hud.contorno
+textoPortal.TextStrokeTransparency = 0
+textoPortal.TextScaled = true
+textoPortal.RichText = false
+textoPortal.ZIndex = 3
+textoPortal.Text = "PORTAL"
+textoPortal.Parent = trilhoPortal
+
+local function atualizarPortal(dados)
+	if type(dados) ~= "table" or not dados.aberto then
+		painelPortal.Visible = false
+		return
+	end
+
+	local maxima = dados.vidaMaxima
+	if type(maxima) ~= "number" or maxima <= 0 then
+		maxima = 1
+	end
+	local vida = math.max(0, math.min(maxima, dados.vida or 0))
+
+	painelPortal.Visible = true
+	preenchimentoPortal.Size = UDim2.fromScale(vida / maxima, 1)
+	textoPortal.Text = "PORTAL  " .. tostring(math.floor(vida)) .. "/" .. tostring(math.floor(maxima))
+
+	-- Vermelho no fim: a cor avisa antes de o numero ser lido.
+	if vida / maxima <= 0.25 then
+		preenchimentoPortal.BackgroundColor3 = Color3.fromRGB(226, 58, 58)
+	else
+		preenchimentoPortal.BackgroundColor3 = Color3.fromRGB(126, 44, 214)
+	end
+end
+
+--[[
+	A contagem regressiva do fim de rodada.
+
+	Numero enorme no centro da tela, e a UNICA coisa que ocupa o centro em todo
+	o HUD: aqui o boneco nao esta subindo, entao o espaco esta livre — e a
+	excecao dura os 10 segundos da contagem, nao a partida inteira.
+
+	As duracoes vem de Tipos.CONTAGEM_DE_RODADA, o mesmo lugar de onde o
+	servidor tira o atraso do reinicio. Escrever os segundos de novo aqui faria
+	a torre reiniciar antes ou depois do numero sumir.
+]]
+local painelContagem = Instance.new("Frame")
+painelContagem.Name = "PainelContagem"
+painelContagem.BackgroundTransparency = 1
+painelContagem.AnchorPoint = Vector2.new(0.5, 0.5)
+painelContagem.Position = UDim2.fromScale(0.5, 0.5)
+painelContagem.Size = UDim2.fromScale(0.5, 0.4)
+painelContagem.Visible = false
+painelContagem.Parent = tela
+
+local escalaContagem = Instance.new("UIScale")
+escalaContagem.Parent = painelContagem
+
+local resultadoContagem = Instance.new("TextLabel")
+resultadoContagem.Name = "Resultado"
+resultadoContagem.BackgroundTransparency = 1
+resultadoContagem.Size = UDim2.fromScale(1, 0.25)
+resultadoContagem.Font = Enum.Font.GothamBlack
+resultadoContagem.TextColor3 = Tokens.hud.texto
+resultadoContagem.TextStrokeColor3 = Tokens.hud.contorno
+resultadoContagem.TextStrokeTransparency = 0
+resultadoContagem.TextScaled = true
+resultadoContagem.Text = ""
+resultadoContagem.Parent = painelContagem
+
+local numeroContagem = Instance.new("TextLabel")
+numeroContagem.Name = "Numero"
+numeroContagem.BackgroundTransparency = 1
+numeroContagem.Position = UDim2.fromScale(0, 0.25)
+numeroContagem.Size = UDim2.fromScale(1, 0.75)
+numeroContagem.Font = Enum.Font.GothamBlack
+numeroContagem.TextColor3 = Tokens.hud.texto
+numeroContagem.TextStrokeColor3 = Tokens.hud.contorno
+numeroContagem.TextStrokeTransparency = 0
+numeroContagem.TextScaled = true
+numeroContagem.Text = ""
+numeroContagem.Parent = painelContagem
+
+local contagemEmCurso = 0
+
+--[[ O streamer saiu da plataforma que disparou a contagem.
+
+	Some da tela na hora, sem esperar o "1": a contagem prometia um reinicio que
+	nao vai mais acontecer, e deixa-la correr seria mentir com numero grande no
+	meio da tela. O `contagemEmCurso` sobe para o laco que ainda esta rodando
+	desistir na proxima volta. ]]
+local function cancelarContagem()
+	contagemEmCurso = contagemEmCurso + 1
+	painelContagem.Visible = false
+	numeroContagem.Text = ""
+end
+
+local function rodarContagem(resultado)
+	contagemEmCurso = contagemEmCurso + 1
+	local minha = contagemEmCurso
+
+	resultadoContagem.Text = (resultado == "vitoria") and "TOPO!" or "CAIU!"
+	resultadoContagem.TextColor3 = (resultado == "vitoria") and Tokens.hud.subida or Tokens.hud.descida
+	painelContagem.Visible = true
+
+	task.spawn(function()
+		for _, passo in ipairs(Tipos.CONTAGEM_DE_RODADA) do
+			-- Outra rodada comecou por cima desta: abandona sem tocar na tela,
+			-- senao duas contagens escreveriam no mesmo rotulo.
+			if contagemEmCurso ~= minha then
+				return
+			end
+			numeroContagem.Text = tostring(passo.numero)
+			pulsar(escalaContagem, 1.25, 0.25)
+			task.wait(passo.segundos)
+		end
+
+		if contagemEmCurso == minha then
+			painelContagem.Visible = false
+			numeroContagem.Text = ""
+		end
+	end)
+end
+
+local tweenMeta = nil
+
+--[[ A barra ANDA ate o valor novo em vez de saltar.
+
+	Nao e enfeite: o movimento e o que comunica "subiu", e num salto seco de
+	dois presentes seguidos o espectador nao veria diferenca entre um e outro.
+	Curto (0,25s) para nao competir com a animacao do boneco. ]]
+local function atualizarMeta(plataforma, total)
+	if not total or total <= 0 then
+		numeroGrande.Text = tostring(plataforma)
+		preenchimentoMeta.Size = UDim2.fromScale(0, 1)
+		return
+	end
+
+	numeroGrande.Text = tostring(plataforma) .. " / " .. tostring(total)
+
+	local fracao = math.max(0, math.min(1, plataforma / total))
+	if tweenMeta then
+		tweenMeta:Cancel()
+	end
+	tweenMeta = TweenService:Create(
+		preenchimentoMeta,
+		TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = UDim2.fromScale(fracao, 1) }
+	)
+	tweenMeta:Play()
+end
 
 -- ===== coluna esquerda: ultimo presente (+ disputa) =====
 
@@ -432,22 +710,17 @@ local function aoReceberEstado(dados)
 	end
 
 	local referencia = tonumber(dados.plataformaReferencia)
-	if referencia then
-		local mudou = numeroGrande.Text ~= tostring(referencia)
-		numeroGrande.Text = tostring(referencia)
-		if mudou then
-			-- Pulso pequeno: reforca que o numero reagiu na hora ao presente,
-			-- o Principio no1 do projeto (latencia percebida).
-			pulsar(escalaPlataforma, 1.08, 0.18)
-		end
-	end
-
 	local total = tonumber(dados.totalPlataformas)
-	if total and total > 0 then
-		fracaoTotal.Text = "/" .. tostring(total)
-		fracaoTotalSlot.Visible = true
-	else
-		fracaoTotalSlot.Visible = false
+	local anterior = numeroGrande.Text
+
+	atualizarMeta(referencia or 0, total)
+
+	atualizarPlacar(tonumber(dados.vitorias), tonumber(dados.derrotas))
+
+	if referencia and numeroGrande.Text ~= anterior then
+		-- Pulso pequeno: reforca que o numero reagiu na hora ao presente, o
+		-- Principio no1 do projeto (latencia percebida).
+		pulsar(escalaPlataforma, 1.08, 0.18)
 	end
 end
 
@@ -574,3 +847,31 @@ conectar(Eventos.ESTADO, aoReceberEstado)
 conectar(Eventos.PRESENTE, aoReceberPresente)
 conectar(Eventos.COMBATE_ANULADO, aoReceberCombateAnulado)
 conectar(Eventos.VITORIA, aoReceberVitoria)
+
+--[[ O portal: abriu, apanhou, quebrou.
+
+	Chega a cada golpe, e nao a cada batimento de estado: a barra precisa andar
+	no MESMO instante em que o presente entra, senao o espectador nao liga o que
+	mandou ao estrago que fez. ]]
+conectar(Eventos.PORTAL, function(dados)
+	atualizarPortal(dados)
+end)
+
+conectar(Eventos.RODADA_ENCERRADA, function(dados)
+	if type(dados) ~= "table" then
+		return
+	end
+	-- O placar sobe na hora, sem esperar o proximo batimento de estado: o
+	-- numero mudando junto com o "TOPO!" e o que liga uma coisa a outra.
+	atualizarPlacar(dados.vitorias, dados.derrotas)
+
+	-- Cancelado: o streamer saiu da plataforma antes de a contagem terminar. O
+	-- placar FICA como esta — o ponto foi feito ao tocar a plataforma, e
+	-- desfaze-lo faria o numero piscar por um passo em falso.
+	if dados.resultado == "cancelado" then
+		cancelarContagem()
+		return
+	end
+
+	rodarContagem(dados.resultado)
+end)

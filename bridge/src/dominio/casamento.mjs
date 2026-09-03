@@ -15,6 +15,17 @@ export function indexarSlots(preset) {
 }
 
 /**
+ * Índice presenteId → efeito de placar ("vitoria" | "derrota").
+ *
+ * Lista separada dos 6 slots (ADR-007): presente de vitória não custa um slot
+ * de subida. Um presente nunca está nos dois — a regra R1.4 recusa o preset
+ * antes de ele ser salvo.
+ */
+export function indexarPlacar(preset) {
+  return new Map((preset?.placar ?? []).map((vinculo) => [vinculo.presenteId, vinculo.efeito]));
+}
+
+/**
  * R4 — o delta do slot é multiplicado pelas repetições e a intensidade sobe UM
  * nível, com teto em 5. A animação toca uma vez só: tocar N animações para N
  * repetições trava a tela e quebra a latência das próximas.

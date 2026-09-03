@@ -1,7 +1,7 @@
 /** Mapas gerados. A validação de jogabilidade e de acervo acontece no cliente Gemini. */
 
 import { ErroDeDominio } from "../erros.mjs";
-import { caminhoDeDados, escreverJsonAtomico, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
+import { apagar, caminhoDeDados, escreverJsonAtomico, existe, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
 
 const arquivo = (mapaId) => caminhoDeDados("mapas", `${mapaId}.json`);
@@ -24,4 +24,14 @@ export async function salvarMapa(mapa) {
   }
   await escreverJsonAtomico(arquivo(mapa.mapaId), mapa);
   return mapa;
+}
+
+/** Apaga o arquivo do mapa. Quem recusa apagar mapa em uso é o núcleo. */
+export async function apagarMapa(mapaId) {
+  const caminho = arquivo(mapaId);
+  if (!(await existe(caminho))) {
+    throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, { status: 404 });
+  }
+  await apagar(caminho);
+  return { mapaId };
 }

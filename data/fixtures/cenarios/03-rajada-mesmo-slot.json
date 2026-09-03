@@ -1,7 +1,7 @@
 {
   "cenario": "03-rajada-mesmo-slot",
   "regra": "ADR-012",
-  "descricao": "Três eventos do MESMO slot em rajada. O primeiro chega com o boneco livre e dispara NA HORA. Os dois seguintes chegam durante os 0,6s do sub_impulso e entram no combate, onde presentes do mesmo slot viram um participante só com os deltas somados.",
+  "descricao": "Três eventos do MESMO slot em rajada. O primeiro chega com o boneco livre e dispara NA HORA. Os dois seguintes chegam durante os 1,8s do sub_jato_propulsor e entram no combate, onde presentes do mesmo slot viram um participante só com os deltas somados.",
   "presetId": "escalada-padrao",
   "entrada": [
     {
@@ -46,15 +46,15 @@
       {
         "emMs": 0,
         "slot": 2,
-        "animacaoId": "sub_impulso",
+        "animacaoId": "sub_jato_propulsor",
         "delta": 5,
         "intensidade": 1,
         "efeitoCurto": false
       },
       {
-        "emMs": 600,
+        "emMs": 1800,
         "slot": 2,
-        "animacaoId": "sub_impulso",
+        "animacaoId": "sub_jato_propulsor",
         "delta": 10,
         "intensidade": 1,
         "efeitoCurto": false
@@ -71,6 +71,6 @@
       "contestado": false
     }
   },
-  "nota": "600ms é o fim do sub_impulso (duracaoBase 0,6s), que começou em 0. Os deltas somam 15 no total, distribuídos em dois disparos — somar tudo num disparo só exigiria segurar o primeiro evento e gastar orçamento de latência para resolver um caso raro.\n\nA intensidade do segundo disparo fica em 1, a do slot: o ADR-012 só sobe um nível quando a disputa é contestada, e aqui só houve subida.",
+  "nota": "1800ms é o fim do sub_jato_propulsor (duracaoBase 1,8s), que começou em 0. Os deltas somam 15 no total, distribuídos em dois disparos — somar tudo num disparo só exigiria segurar o primeiro evento e gastar orçamento de latência para resolver um caso raro.\n\nA intensidade do segundo disparo fica em 1, a do slot: o ADR-012 só sobe um nível quando a disputa é contestada, e aqui só houve subida.",
   "combateMaxMs": 2000
 }

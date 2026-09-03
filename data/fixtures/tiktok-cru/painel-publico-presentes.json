@@ -1,0 +1,83 @@
+{
+  "status_code": 0,
+  "data": {
+    "gifts": [
+      {
+        "id": 5655,
+        "name": "Rose",
+        "diamond_count": 1,
+        "combo": true,
+        "type": 1,
+        "icon": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp"
+          ]
+        },
+        "image": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp"
+          ]
+        }
+      },
+      {
+        "id": 9101,
+        "name": "TikTok Universe",
+        "diamond_count": 44999,
+        "combo": true,
+        "type": 2,
+        "icon": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8f471afbcebfda3841a6cc515e381f58~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/8f471afbcebfda3841a6cc515e381f58~tplv-obj.webp"
+          ]
+        },
+        "image": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8f471afbcebfda3841a6cc515e381f58~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/8f471afbcebfda3841a6cc515e381f58~tplv-obj.webp"
+          ]
+        }
+      },
+      {
+        "id": 5487,
+        "name": "Finger Heart",
+        "diamond_count": 5,
+        "combo": true,
+        "type": 1,
+        "icon": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/a4c4dc437fd3a6632aba149769491f49.png~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/a4c4dc437fd3a6632aba149769491f49.png~tplv-obj.webp"
+          ]
+        },
+        "image": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/a4c4dc437fd3a6632aba149769491f49.png~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/a4c4dc437fd3a6632aba149769491f49.png~tplv-obj.webp"
+          ]
+        }
+      },
+      {
+        "id": 11046,
+        "name": "Galaxy",
+        "diamond_count": 1000,
+        "combo": true,
+        "type": 2,
+        "icon": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/79a02148079526539f7599150da9fd28.png~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/79a02148079526539f7599150da9fd28.png~tplv-obj.webp"
+          ]
+        },
+        "image": {
+          "url_list": [
+            "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/79a02148079526539f7599150da9fd28.png~tplv-obj.webp",
+            "https://p19-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/79a02148079526539f7599150da9fd28.png~tplv-obj.webp"
+          ]
+        }
+      }
+    ]
+  }
+}

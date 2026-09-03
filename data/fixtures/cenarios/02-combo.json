@@ -8,7 +8,7 @@
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 0, "slot": 1, "animacaoId": "sub_pulo", "delta": 18, "intensidade": 2 }
+      { "emMs": 0, "slot": 1, "animacaoId": "sub_lanca_raios", "delta": 18, "intensidade": 2 }
     ],
     "naoMapeados": [],
     "descartados": []

@@ -38,6 +38,11 @@ export function carregarConfig(env = process.env) {
     host: env.BRIDGE_HOST ?? "127.0.0.1",
     usuarioTiktok: env.TIKTOK_USERNAME ?? "",
     chaveGemini: env.GEMINI_API_KEY ?? "",
+    // Open Cloud do Roblox: sobe as imagens do acervo e devolve o assetId
+    // (ADR-004, nota de 2026-09-02). Opcional — sem elas o painel diz o que
+    // falta em vez de quebrar, e o resto do produto não depende disso.
+    chaveRoblox: env.ROBLOX_API_KEY ?? "",
+    criadorRoblox: env.ROBLOX_CREATOR_ID ?? "",
     longpollTimeoutMs: inteiro(env.LONGPOLL_TIMEOUT_MS, 20_000),
     combateMaxMs: inteiro(env.COMBATE_MAX_MS, REGRAS.COMBATE_MAX_MS),
   };

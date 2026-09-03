@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
-import { avisoDeDirecao } from "../lib/regras.js";
+import { animacoesOferecidas, avisoDeDirecao } from "../lib/regras.js";
 import "./SeletorDeAnimacao.css";
 
 /**
- * Modal de escolha entre as 20 animações da biblioteca (ver
+ * Modal de escolha entre as animações ATIVAS da biblioteca (ver
  * 03_REGRAS_DE_NEGOCIO/biblioteca-animacoes.md).
+ *
+ * `ativa:false` é animação aposentada, e some da lista — mesma regra que o
+ * `SeletorDePresente` aplica a `presente.ativo`, e pelo mesmo motivo: a rota
+ * `/api/animacoes` serve a biblioteca INTEIRA porque preset salvo pode apontar
+ * para uma aposentada e o cartão do slot precisa do nome dela para mostrar.
+ * Filtrar é trabalho de quem oferece escolha, não de quem serve o dado.
+ *
+ * A exceção é a que já está escolhida neste slot: ela continua na lista, marcada
+ * como aposentada. Escondê-la deixaria o slot sem nada selecionado na tela e o
+ * streamer trocaria sem saber que estava trocando.
  *
  * R1.5 / ADR-007: qualquer animação vale em qualquer slot, sem restrição. A
  * `direcao` de cada animação é só informativa — quem decide para onde o
@@ -48,11 +58,15 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
   // `animacoes` chega pronto via prop (nenhuma chamada de rede aqui). Mesmo
   // assim o componente que busca dado tem que cobrir carregando/erro/vazio
   // (06_COMPONENTES): null/undefined ainda não chegou, algo que não é lista é
-  // falha, lista vazia é falha de cadastro (as 20 deveriam sempre existir).
+  // falha, lista vazia é falha de cadastro (a biblioteca nunca deveria ser vazia).
   const carregando = animacoes == null;
   const comErro = !carregando && !Array.isArray(animacoes);
   const semCadastro = !carregando && !comErro && animacoes.length === 0;
-  const listaCompleta = !carregando && !comErro && !semCadastro ? animacoes : [];
+  // Aposentada só aparece se já for a escolhida deste slot. A regra é uma função
+  // pura em lib/regras.js porque o testador aplica a MESMA, e duas cópias dela
+  // divergiriam no dia em que uma das duas telas mudasse.
+  const listaCompleta =
+    !carregando && !comErro && !semCadastro ? animacoesOferecidas(animacoes, animacaoIdAtual) : [];
 
   const listaFiltrada = listaCompleta.filter((animacao) => {
     const passaDirecao = filtroDirecao === "todas" || animacao.direcao === filtroDirecao;
@@ -209,6 +223,12 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
 
                       {!animacao.aceitaDeltaVariavel && (
                         <span className="seletor-anim-fixo secundario">Efeito fixo — não estica com o delta</span>
+                      )}
+
+                      {animacao.ativa === false && (
+                        <p className="seletor-anim-aviso">
+                          Aposentada da biblioteca, mas continua neste slot.
+                        </p>
                       )}
 
                       {aviso && <p className="seletor-anim-aviso">{aviso}</p>}

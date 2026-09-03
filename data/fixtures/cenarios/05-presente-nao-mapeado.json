@@ -9,7 +9,7 @@
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 900, "slot": 5, "animacaoId": "sub_cometa", "delta": 40, "intensidade": 3 }
+      { "emMs": 900, "slot": 5, "animacaoId": "sub_shuriken_vento", "delta": 40, "intensidade": 3 }
     ],
     "naoMapeados": [
       { "presenteNome": "Doughnut Gigante", "moedas": 3000, "contagem": 1 }

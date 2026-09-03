@@ -1,9 +1,9 @@
 {
   "cenario": "04-combate-de-presentes",
   "regra": "ADR-012",
-  "descricao": "Cinco presentes chegam enquanto o sub_cometa (1,6s) está tocando. As subidas somam entre si, as descidas somam entre si, e os dois lados se anulam. Vence a descida por 49 plataformas: o boneco anda o LÍQUIDO da disputa, não o bruto. Nenhum presente é descartado.",
+  "descricao": "Cinco presentes chegam enquanto o sub_shuriken_vento (2,0s) está tocando. As subidas somam entre si, as descidas somam entre si, e os dois lados se anulam. Vence a descida por 49 plataformas: o boneco anda o LÍQUIDO da disputa, não o bruto. Nenhum presente é descartado.",
   "presetId": "escalada-padrao",
-  "combateMaxMs": 2000,
+  "combateMaxMs": 2500,
   "entrada": [
     { "emMs": 0,   "evento": { "presenteId": "sem-galaxy",      "presenteNome": "Galaxy",       "moedas": 1000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "A", "recebidoEm": 1756742620000 } },
     { "emMs": 100, "evento": { "presenteId": "sem-rose",        "presenteNome": "Rose",         "moedas": 1,    "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "B", "recebidoEm": 1756742620100 } },
@@ -14,13 +14,13 @@
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 0,    "slot": 5, "animacaoId": "sub_cometa",       "delta": 40,  "intensidade": 3, "efeitoCurto": false },
-      { "emMs": 1600, "slot": 6, "animacaoId": "des_buraco_negro", "delta": -49, "intensidade": 5, "efeitoCurto": false }
+      { "emMs": 0,    "slot": 5, "animacaoId": "sub_shuriken_vento",       "delta": 40,  "intensidade": 3, "efeitoCurto": false },
+      { "emMs": 2000, "slot": 6, "animacaoId": "des_meteoro_igneo", "delta": -49, "intensidade": 5, "efeitoCurto": false }
     ],
     "disputa": { "participantes": 5, "somaSubida": 19, "somaDescida": -68, "liquido": -49, "contestado": true },
     "naoMapeados": [],
     "descartados": [],
     "anulados": []
   },
-  "nota": "O Galaxy chega com o boneco livre e dispara na hora, sem esperar ninguém. Os cinco seguintes chegam durante a animação dele e formam o combate: subida 2+5+12=19, descida -60-8=-68, líquido -49. A animação é a do maior presente do lado vencedor (Lion, des_buraco_negro) e a intensidade sobe um nível porque a disputa foi contestada, com teto em 5. O combate fecha em 1600, quando o sub_cometa termina."
+  "nota": "O Galaxy chega com o boneco livre e dispara na hora, sem esperar ninguém. Os cinco seguintes chegam durante a animação dele e formam o combate: subida 2+5+12=19, descida -60-8=-68, líquido -49. A animação é a do maior presente do lado vencedor (Lion, des_meteoro_igneo) e a intensidade sobe um nível porque a disputa foi contestada, com teto em 5. O combate fecha em 2000, quando o sub_shuriken_vento termina — antes do teto de 2500, que é o que separa este cenário do 07."
 }

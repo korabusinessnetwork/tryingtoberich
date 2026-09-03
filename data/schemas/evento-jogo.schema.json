@@ -22,7 +22,7 @@
       "items": { "$ref": "#/$defs/anulado" }
     },
     "comandos": {
-      "description": "Ordem do streamer, não do espectador (ADR-013). Não tem delta e não casa com slot: é o painel mandando o jogo fazer algo que nenhum presente faz. Hoje só `reiniciar`, do R6. Viaja no mesmo envelope e no mesmo cursor porque a ordem entre comando e presente importa: reiniciar depois de um presente que já saiu é diferente de reiniciar antes.",
+      "description": "Instrução ao jogo que NÃO é presente animado: sem delta, sem casar com slot (ADR-013). Vem do painel (`reiniciar`) ou de um presente vinculado ao placar (`vitoria`, `derrota`). Não tem delta e não casa com slot: é o painel mandando o jogo fazer algo que nenhum presente faz. Hoje só `reiniciar`, do R6. Viaja no mesmo envelope e no mesmo cursor porque a ordem entre comando e presente importa: reiniciar depois de um presente que já saiu é diferente de reiniciar antes.",
       "type": "array",
       "items": { "$ref": "#/$defs/comando" }
     }
@@ -34,7 +34,14 @@
       "required": ["id", "tipo", "emitidoEm"],
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
-        "tipo": { "type": "string", "enum": ["reiniciar"] },
+        "tipo": { "description": "reiniciar, zerar-placar e recarregar-mapa vêm do painel. vitoria e derrota vêm de PRESENTE, pelo vínculo de placar do preset — a origem muda, o canal não: todos são instrução ao jogo que não casa com slot nem tem delta.", "type": "string", "enum": ["reiniciar", "zerar-placar", "recarregar-mapa", "vitoria", "derrota"] },
+        "quantidade": {
+          "description": "Quantas rodadas o comando vale, vindo da RAJADA do presente (R4): um donate de vitória mandado 6 vezes vale 6 vitórias. O jogo cobra uma por vez, cada uma com sua queda e sua contagem — é o espetáculo, não só o número. Só vale para vitoria e derrota; nos comandos de painel é sempre 1. O teto existe porque cada rodada leva a contagem inteira: rajada gigante travaria a live por horas.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 1
+        },
         "emitidoEm": { "type": "integer", "minimum": 0 }
       }
     },
@@ -58,10 +65,8 @@
         "id": { "type": "integer", "minimum": 0 },
         "animacaoId": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
         "delta": {
-          "description": "Já multiplicado por repeticoes (R4) e já coalescido (R5). Por isso a faixa é maior que a do slot: 6 slots de 200 em rajada cabem aqui.",
+          "description": "Já multiplicado por repeticoes (R4) e já coalescido (R5). Sem teto, como o delta do slot: uma faixa aqui recusaria no meio da live justamente a rajada grande que o streamer configurou de propósito. O destino é grampeado no jogo, não no contrato.",
           "type": "integer",
-          "minimum": -40000,
-          "maximum": 40000,
           "not": { "const": 0 }
         },
         "intensidade": { "$ref": "comuns.schema.json#/$defs/intensidade" },

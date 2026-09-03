@@ -30,6 +30,37 @@ Eventos.VESTIARIO_EQUIPAR = "VestiarioEquipar"
 Eventos.VESTIARIO_SALVAR = "VestiarioSalvar"
 
 --[[
+	Ajuste de geometria ao vivo, para achar o formato da torre sem o ciclo
+	"muda o prompt -> regera -> reabre o Studio -> Play", que custa minutos por
+	tentativa. Cliente manda os números, o servidor reconstrói e responde o que
+	deu. Ferramenta de AFINAÇÃO: nunca toca no mapa em disco.
+]]
+Eventos.AJUSTAR_MAPA = "AjustarMapa"
+
+--[[
+	Fim de rodada: chegou ao topo (vitória) ou voltou ao primeiro andar depois
+	de ter saído dele (derrota). Leva o placar acumulado e dispara a contagem
+	regressiva antes do reinício automático.
+]]
+Eventos.RODADA_ENCERRADA = "RodadaEncerrada"
+
+--[[
+	O portal do primeiro andar: abriu, apanhou, quebrou.
+
+	Sem isto o HUD não teria como mostrar a barra de vida, e uma disputa que o
+	espectador não vê acontecer não é disputa — é o boneco parado no chão. Leva
+	`vida` e `vidaMaxima` a cada golpe, e `quebrou` no último.
+]]
+Eventos.PORTAL = "Portal"
+
+--[[
+	Galeria de skins: o vestiário pede a lista de nicks curada no painel, ou a
+	skin de um deles para vestir como base. Cliente → servidor, e a resposta
+	volta pelo mesmo remoto.
+]]
+Eventos.VESTIARIO_GALERIA = "VestiarioGaleria"
+
+--[[
 	Formato de cada evento, para os dois lados escreverem contra a mesma coisa:
 
 	PRESENTE (servidor → cliente), a cada disparo aplicado
@@ -117,6 +148,8 @@ function Eventos.criarTodos()
 		Eventos.PRESENTE, Eventos.ESTADO, Eventos.COMBATE_ANULADO, Eventos.VITORIA,
 		Eventos.TREMOR, Eventos.CAMERA, Eventos.FLASH,
 		Eventos.VESTIARIO_BUSCAR, Eventos.VESTIARIO_EQUIPAR, Eventos.VESTIARIO_SALVAR,
+		Eventos.AJUSTAR_MAPA, Eventos.RODADA_ENCERRADA, Eventos.VESTIARIO_GALERIA,
+		Eventos.PORTAL,
 	}
 	for _, nome in ipairs(nomes) do
 		Eventos.obter(nome)

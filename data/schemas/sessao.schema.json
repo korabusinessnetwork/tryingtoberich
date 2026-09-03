@@ -72,7 +72,7 @@
         "slot": { "type": "integer", "minimum": 1, "maximum": 6 },
         "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
         "repeticoes": { "type": "integer", "minimum": 1 },
-        "delta": { "type": "integer", "minimum": -40000, "maximum": 40000 },
+        "delta": { "type": "integer" },
         "animacaoId": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
         "latenciaMs": { "type": "integer", "minimum": 0 }
       }

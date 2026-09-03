@@ -51,7 +51,7 @@ test("todo componente do painel é montado por alguém", async () => {
   // os cartões de slot, e o cartão monta o aviso de curva. O que este teste
   // proíbe é componente que ninguém monta — código morto que passa no build.
   const arquivos = (await readdir(COMPONENTES)).filter((f) => f.endsWith(".jsx"));
-  assert.equal(arquivos.length, 22, "o 06_COMPONENTES lista os 22 componentes do painel");
+  assert.equal(arquivos.length, 26, "o 06_COMPONENTES lista os 26 componentes do painel");
 
   const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
   const fontes = await Promise.all(arquivos.map(lerComponente));
@@ -87,7 +87,10 @@ test("toda prop que o App passa existe no componente que a recebe", async () => 
   for (const arquivo of arquivos) {
     const nome = arquivo.replace(".jsx", "");
     const passadas = propsPassadas(app, nome);
-    if (!passadas) continue;
+    // Sem prop nenhuma não há o que conferir — e exigir uma assinatura
+    // desestruturada de um componente que não recebe nada (`PainelDeOverlay`
+    // busca os próprios dados) seria cobrar do componente um limite do parser.
+    if (!passadas || passadas.size === 0) continue;
 
     const aceitas = propsAceitas(await lerComponente(arquivo), nome);
     assert.ok(aceitas, `não consegui ler a assinatura de ${nome}`);
@@ -110,4 +113,43 @@ test("a checagem de prop morde de verdade", () => {
   const passadas = propsPassadas(appFalso, "Falso");
 
   assert.deepEqual([...passadas].filter((p) => !aceitas.has(p)), ["errado"]);
+});
+
+test("a galeria do acervo mostra a FOTO de cada peça, servida pela ponte", async () => {
+  //[[ "textura_pedra_musgo" e "textura_areia_compacta" são dois nomes; olhando,
+  // são duas coisas. Sem a imagem, escolher o que vai no mapa era ler etiqueta
+  // e torcer — e as texturas são desenhadas em código, então nem existe arquivo
+  // para abrir e conferir. ]]
+  const painel = await readFile(path.join(COMPONENTES, "PainelDeAcervo.jsx"), "utf8");
+
+  assert.match(painel, /acervo-item-foto/, "falta a foto na linha do acervo");
+  assert.match(
+    painel,
+    /\/api\/acervo\/imagem\/\$\{colecao\}\//,
+    "a foto tem que vir da ponte, que é quem sabe desenhar a peça",
+  );
+  assert.match(painel, /loading="lazy"/, "22 imagens de uma vez sem lazy travam a abertura da página");
+
+  // E o componente nunca monta caminho de rota à mão para DADO — só para
+  // imagem, que é `src` e não `fetch`. A regra de `lib/api.js` continua de pé.
+  assert.ok(!/fetch\(/.test(painel), "componente não chama fetch: quem fala com a ponte é lib/api.js");
+});
+
+test("o montador de mundo distingue 'vazio' de 'ainda não escolhi'", async () => {
+  //[[ Bug real: `escolhidas.length > 0 ? escolhidas : doMapa` fazia tirar a
+  // ÚLTIMA textura cair de volta na lista do mapa — o clique parecia não ter
+  // feito nada, e não havia como chegar em zero para o botão avisar o que
+  // falta. São dois estados diferentes e precisam de duas variáveis. ]]
+  const fonte = await readFile(path.join(COMPONENTES, "SeletorDeMundo.jsx"), "utf8");
+
+  assert.match(fonte, /const \[mexeu, definirMexeu\]/, "falta a marca de 'o streamer já escolheu'");
+  assert.match(fonte, /mexeu \? escolhidas : doMapa/, "a lista vazia tem que valer depois do primeiro toque");
+
+  //[[ E o formato tem que vir do mapa no ar: sem isto a tela mostrava "Escada"
+  // num mundo de passarela, e montar o convertia sem ninguém ter pedido. ]]
+  assert.match(
+    fonte,
+    /formato \?\? mapa\?\.plataformas\?\.formato/,
+    "o formato do mundo no ar tem que semear a tela",
+  );
 });

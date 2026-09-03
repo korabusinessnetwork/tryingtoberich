@@ -170,10 +170,25 @@
   flex-shrink: 0;
 }
 
-/* O aviso da semente virou bloco com ação: texto à esquerda, saída à direita.
-   Aviso sem saída é só má notícia. */
+/* O aviso da semente é só texto: a ação vive na barra de coleta, que é
+   permanente. Aviso sem saída é só má notícia — a saída está logo abaixo. */
 .seletor-presente-semente-texto {
   margin: 0;
+}
+
+/* A barra de coleta: quantos presentes existem e de quando eles são, com o
+   botão que refaz a busca. Fica entre a busca e a lista porque é a resposta
+   para "por que não acho o presente que quero?". */
+.seletor-presente-coleta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco);
+}
+
+.seletor-presente-coleta-conta {
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
 }
 
 .seletor-presente-atualizar {

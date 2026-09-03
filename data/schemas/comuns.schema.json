@@ -54,10 +54,8 @@
       "maxLength": 48
     },
     "delta": {
-      "description": "Inteiro de plataformas. Positivo sobe, negativo desce. Nunca 0. Ver R2.",
+      "description": "Inteiro de plataformas. Positivo sobe, negativo desce. Nunca 0. Sem teto: quem decide o tamanho do empurrão é o streamer, e o jogo já grampeia o destino nas pontas da torre (Tipos.limitarPlataforma). Ver R2.",
       "type": "integer",
-      "minimum": -200,
-      "maximum": 200,
       "not": { "const": 0 }
     },
     "intensidade": {

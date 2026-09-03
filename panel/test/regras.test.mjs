@@ -12,8 +12,10 @@ import assert from "node:assert/strict";
 
 import {
   SLOTS,
+  animacoesOferecidas,
   avisoDeCurva,
   avisoDeDirecao,
+  contarAposentadas,
   combateDoEvento,
   corDaFaixa,
   faixaDeMoedas,
@@ -84,8 +86,8 @@ test("delta zero é o relance — sem sinal, para não parecer subida", () => {
 /* -------------------------------------------------------------- */
 
 test("presente barato com delta enorme vira aviso", () => {
-  const aviso = avisoDeCurva({ moedas: 1, delta: 100 });
-  assert.ok(aviso, "1 moeda movendo 100 plataformas está fora da curva");
+  const aviso = avisoDeCurva({ moedas: 1, delta: 600 });
+  assert.ok(aviso, "1 moeda movendo 600 plataformas está fora da curva");
   assert.match(aviso, /rajada/, "e o motivo é o que importa: presente barato chega em rajada");
 });
 
@@ -105,7 +107,7 @@ test("o aviso é sempre TEXTO, nunca um booleano que trave o salvar", () => {
   // R3 e ADR-007: o vínculo é escolha explícita do streamer, e presente de 1
   // moeda que derruba tudo é uma piada boa de live. Se o retorno fosse
   // booleano, a próxima pessoa a mexer transformaria em bloqueio sem perceber.
-  const aviso = avisoDeCurva({ moedas: 1, delta: 200 });
+  const aviso = avisoDeCurva({ moedas: 1, delta: 900 });
   assert.equal(typeof aviso, "string");
   assert.ok(aviso.length > 20, "e o texto diz o porquê, não só que está errado");
 });
@@ -118,12 +120,14 @@ test("delta zero e entrada inválida não geram aviso", () => {
   assert.equal(avisoDeCurva({}), null);
 });
 
-test("as fronteiras exatas do aviso de rajada (faixa I/II, força 50)", () => {
-  assert.match(avisoDeCurva({ moedas: 99, delta: 50 }), /rajada/, "força 50 já avisa");
-  assert.equal(avisoDeCurva({ moedas: 99, delta: 49 }), null, "força 49 ainda não avisa");
+test("as fronteiras exatas do aviso de rajada (faixa I/II, força 250)", () => {
+  // 250 é 5% da torre de 5000, a mesma proporção que os 50 de quando ela tinha
+  // 1000 andares. O aviso mede o quanto do mapa o presente barato atravessa.
+  assert.match(avisoDeCurva({ moedas: 99, delta: 250 }), /rajada/, "força 250 já avisa");
+  assert.equal(avisoDeCurva({ moedas: 99, delta: 249 }), null, "força 249 ainda não avisa");
   // A força é o módulo do delta: descida grande num presente barato é a mesma
   // piada de live que subida grande, e merece o mesmo aviso.
-  assert.match(avisoDeCurva({ moedas: 5, delta: -50 }), /rajada/, "delta negativo também conta pela força");
+  assert.match(avisoDeCurva({ moedas: 5, delta: -250 }), /rajada/, "delta negativo também conta pela força");
 });
 
 test("as fronteiras exatas do aviso de decepção (faixa IV/V, força 3)", () => {
@@ -132,8 +136,8 @@ test("as fronteiras exatas do aviso de decepção (faixa IV/V, força 3)", () =>
 });
 
 test("a faixa III (100 a 999) nunca avisa, nem com delta grande — é a zona morta das duas regras", () => {
-  assert.equal(avisoDeCurva({ moedas: 500, delta: 200 }), null);
-  assert.equal(avisoDeCurva({ moedas: 100, delta: -200 }), null);
+  assert.equal(avisoDeCurva({ moedas: 500, delta: 2000 }), null);
+  assert.equal(avisoDeCurva({ moedas: 100, delta: -2000 }), null);
 });
 
 /* -------------------------------------------------------------- */
@@ -356,4 +360,54 @@ test("o corte em 64 não deixa traço na ponta", () => {
 
   // E um nome longo que não cai no traço usa os 64 inteiros.
   assert.equal(idDePreset("b".repeat(80)).length, 64);
+});
+
+/* ---------------------------------------------------------------- */
+/* Animação aposentada — a mesma regra do `ativo` do catálogo        */
+/* ---------------------------------------------------------------- */
+
+const BIBLIOTECA = [
+  { id: "sub_lanca_raios", direcao: "subida", ativa: true },
+  { id: "sub_pulo", direcao: "subida", ativa: false },
+  { id: "des_meteoro_igneo", direcao: "descida", ativa: true },
+  { id: "des_buraco_negro", direcao: "descida", ativa: false },
+];
+
+test("o painel só oferece animação ativa, mesmo recebendo a biblioteca inteira", () => {
+  // /api/animacoes serve tudo de propósito: o cartão do slot precisa do NOME de
+  // uma aposentada para conseguir mostrá-la. Quem filtra é quem oferece escolha.
+  assert.deepEqual(
+    animacoesOferecidas(BIBLIOTECA).map((a) => a.id),
+    ["sub_lanca_raios", "des_meteoro_igneo"],
+  );
+});
+
+test("a aposentada que já está no slot continua na lista — senão o slot fica sem seleção", () => {
+  assert.deepEqual(
+    animacoesOferecidas(BIBLIOTECA, "sub_pulo").map((a) => a.id),
+    ["sub_lanca_raios", "sub_pulo", "des_meteoro_igneo"],
+  );
+
+  // Só a do slot volta, não as aposentadas em geral.
+  assert.ok(!animacoesOferecidas(BIBLIOTECA, "sub_pulo").some((a) => a.id === "des_buraco_negro"));
+});
+
+test("`ativa` ausente conta como ativa: índice velho em disco não pode esvaziar o seletor", () => {
+  // data/animacoes.json é artefato gerado e não é versionado. Uma cópia gerada
+  // antes da coluna Ativa existir chegaria sem o campo, e tratar isso como
+  // aposentada deixaria o streamer sem NENHUMA animação para escolher.
+  const semCampo = [{ id: "sub_pulo", direcao: "subida" }, { id: "des_tropeco", direcao: "descida" }];
+  assert.equal(animacoesOferecidas(semCampo).length, 2);
+  assert.equal(contarAposentadas(semCampo), 0);
+});
+
+test("entrada que não é lista não quebra a tela", () => {
+  for (const lixo of [null, undefined, "x", 7, {}]) {
+    assert.deepEqual(animacoesOferecidas(lixo), []);
+    assert.equal(contarAposentadas(lixo), 0);
+  }
+});
+
+test("contarAposentadas conta só as desligadas", () => {
+  assert.equal(contarAposentadas(BIBLIOTECA), 2);
 });

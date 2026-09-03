@@ -1,30 +1,113 @@
 {
   "mapaId": "torre-vulcanica-01",
   "streamerId": "local",
-  "nome": "Torre Vulcânica",
+  "nome": "Torre de Lava ao Pôr do Sol",
   "geradoPor": "gemini",
   "promptOriginal": "torre vulcânica ao entardecer, plataformas de rocha",
   "geradoEm": "2026-09-01T13:00:00Z",
-  "totalPlataformas": 250,
-  "jumpHeight": 7.2,
-  "skyboxAssetId": "skybox_entardecer_vulcanico",
-  "paleta": { "primaria": "#C4462A", "secundaria": "#2B1B18", "destaque": "#F5A623" },
+  "totalPlataformas": 5000,
+  "jumpHeight": 12,
+  "skyboxAssetId": "skybox_por_do_sol",
+  "paleta": {
+    "primaria": "#C4462A",
+    "secundaria": "#2B1B18",
+    "destaque": "#F5A623"
+  },
   "plataformas": {
     "formato": "disco",
-    "raioBase": 8,
-    "variacaoRaio": 0.3,
-    "espacamentoVertical": 5,
-    "variacaoHorizontal": 6,
-    "materialAssetId": "textura_rocha_vulcanica"
+    "raioBase": 7.5,
+    "variacaoRaio": 0.1,
+    "espacamentoVertical": 3.5,
+    "variacaoHorizontal": 20,
+    "materialAssetId": "textura_lava"
   },
   "props": [
-    { "tipo": "fumaca", "densidade": 0.4, "aCadaNPlataformas": 10 }
+    {
+      "tipo": "fumaca",
+      "densidade": 0.4,
+      "aCadaNPlataformas": 10
+    }
   ],
   "marcos": [
-    { "plataforma": 50,  "tipo": "checkpoint_visual" },
-    { "plataforma": 100, "tipo": "checkpoint_visual" },
-    { "plataforma": 150, "tipo": "checkpoint_visual" },
-    { "plataforma": 200, "tipo": "checkpoint_visual" },
-    { "plataforma": 250, "tipo": "topo" }
+    {
+      "plataforma": 250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 1750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 2750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 3750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4000,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4250,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4500,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 4750,
+      "tipo": "checkpoint_visual"
+    },
+    {
+      "plataforma": 5000,
+      "tipo": "topo"
+    }
   ]
 }

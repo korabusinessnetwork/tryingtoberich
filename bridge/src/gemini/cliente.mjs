@@ -159,8 +159,13 @@ export class ClienteGemini {
   /**
    * Gera um mapa a partir da descrição livre do streamer.
    * Uma retentativa acrescentando o que veio errado; falhou de novo, erro claro.
+   *
+   * `formato` escolhe entre as duas construções do ADR-009 — degraus separados
+   * com vão (`disco`) ou passarela de lajes encostadas (`laje`). Ele atravessa
+   * o prompt inteiro, porque as regras numéricas dos dois são OPOSTAS: pedir
+   * laje com a receita do disco daria spec reprovado nas duas tentativas.
    */
-  async gerarMapa(descricao, acervoCompleto) {
+  async gerarMapa(descricao, acervoCompleto, formato = "disco") {
     if (!this.configurado) {
       throw new ErroDeDominio(
         "gemini_sem_chave",
@@ -181,14 +186,14 @@ export class ClienteGemini {
     }
 
     const { validar } = await criarValidador();
-    let usuario = montarPrompt(descricao, oferecivel);
+    let usuario = montarPrompt(descricao, oferecivel, formato);
 
     for (const tentativa of [1, 2]) {
-      const texto = await this.chamar({ chave: this.chave, modelo: this.modelo, system: SYSTEM, usuario });
+      const texto = await this.chamar({ chave: this.chave, modelo: this.modelo, system: SYSTEM(formato), usuario });
       const { spec, problemas } = await validarSpec(texto, oferecivel, { validar });
 
       if (problemas.length === 0) {
-        log.info("mapa_gerado", { mapaId: spec.mapaId, tentativa });
+        log.info("mapa_gerado", { mapaId: spec.mapaId, formato, tentativa });
         return spec;
       }
 
@@ -200,7 +205,7 @@ export class ClienteGemini {
           { status: 422 },
         );
       }
-      usuario = montarPromptDeCorrecao(descricao, oferecivel, problemas);
+      usuario = montarPromptDeCorrecao(descricao, oferecivel, problemas, formato);
     }
   }
 

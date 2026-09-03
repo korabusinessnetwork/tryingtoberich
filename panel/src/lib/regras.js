@@ -76,7 +76,12 @@ export function avisoDeCurva({ moedas, delta }) {
 
   // Faixas I e II são presentes de 1 a 99 moedas: eles chegam em rajada, e um
   // delta grande neles faz o boneco atravessar o mapa por centavos.
-  if (faixa <= 2 && forca >= 50) {
+  //
+  // O número acompanhou a torre. Eram 50 quando ela tinha 1000 andares — 5%
+  // dela. Com 5000, 50 é 1%, e o aviso passaria a aparecer em quase todo slot
+  // barato: aviso que aparece sempre é ruído, e ruído some da vista junto com
+  // o aviso que importava.
+  if (faixa <= 2 && forca >= 250) {
     return `${forca} plataformas por ${moedas} ${moedas === 1 ? "moeda" : "moedas"} é muito para um presente barato — ele chega em rajada.`;
   }
 
@@ -105,6 +110,33 @@ export function avisoDeDirecao({ animacao, delta }) {
     return "Animação de descida com delta positivo: o boneco sobe enquanto o efeito desce.";
   }
   return null;
+}
+
+/**
+ * As animações que o painel pode OFERECER, das que a ponte serviu.
+ *
+ * `/api/animacoes` serve a biblioteca inteira de propósito, aposentadas
+ * incluídas: preset salvo pode apontar para uma delas e o cartão do slot precisa
+ * do nome para mostrar. Filtrar é trabalho de quem oferece escolha. Mesma
+ * divisão que o catálogo já faz com `presente.ativo`.
+ *
+ * `emUso` é a escapatória: a animação já escolhida naquele slot continua na
+ * lista mesmo aposentada. Sem isso o slot apareceria sem nada selecionado, e o
+ * streamer trocaria a animação sem perceber que estava trocando.
+ *
+ * `ativa` ausente conta como ativa: um `data/animacoes.json` gerado antes desta
+ * coluna existir não pode esvaziar o seletor inteiro.
+ */
+export function animacoesOferecidas(animacoes, emUso) {
+  if (!Array.isArray(animacoes)) return [];
+  const guardadas = emUso instanceof Set ? emUso : new Set(emUso ? [emUso] : []);
+  return animacoes.filter((animacao) => animacao?.ativa !== false || guardadas.has(animacao?.id));
+}
+
+/** Quantas a biblioteca tem aposentadas. Serve para a tela não mentir sobre o tamanho dela. */
+export function contarAposentadas(animacoes) {
+  if (!Array.isArray(animacoes)) return 0;
+  return animacoes.filter((animacao) => animacao?.ativa === false).length;
 }
 
 /**
@@ -235,4 +267,16 @@ export function saudeDaLatencia(ms) {
   if (ms <= 600) return "ok";
   if (ms <= 1000) return "atencao";
   return "erro";
+}
+
+/**
+ * A lista de presentes, venha ela como array ou como envelope.
+ *
+ * `api.catalogo()` devolve o envelope inteiro. Aceitar os dois formatos evita
+ * que a fiação da tela decida o desenho do componente — e mora aqui, e não
+ * dentro de um componente, porque mais de um precisa dela.
+ */
+export function listaDePresentes(catalogo) {
+  if (Array.isArray(catalogo)) return catalogo;
+  return catalogo?.presentes ?? [];
 }

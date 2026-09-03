@@ -26,7 +26,6 @@ import {
 
 export { RAIZ, criarValidador };
 export {
-  FATOR_DERIVA_HORIZONTAL,
   FATOR_SALTO_VERTICAL,
   faixaDeMoedas,
   mapaPodeIrAoAr,

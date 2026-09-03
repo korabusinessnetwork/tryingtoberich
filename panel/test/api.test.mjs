@@ -235,13 +235,32 @@ test("gerarMapa manda só a descrição — a chave do Gemini nunca passa pelo n
     (url, opcoes) => {
       assert.ok(url.endsWith("/api/mapas/gerar"));
       assert.equal(opcoes.method, "POST");
-      // deepEqual (não só .match) garante que o corpo tem SÓ descricao —
-      // nenhuma chave de API nem outro campo viajando até a ponte.
-      assert.deepEqual(JSON.parse(opcoes.body), { descricao: "torre vulcânica ao entardecer" });
+      // deepEqual (não só .match) garante que o corpo tem SÓ o que devia —
+      // nenhuma chave de API nem outro campo viajando até a ponte. `formato`
+      // entrou depois, é do contrato do mapa (ADR-009) e não é segredo; a
+      // igualdade estrita continua sendo o que prova que nada mais vaza.
+      assert.deepEqual(JSON.parse(opcoes.body), {
+        descricao: "torre vulcânica ao entardecer",
+        formato: "disco",
+      });
       return respostaFalsa(200, { mapa: {} });
     },
     async () => {
       await api.gerarMapa("torre vulcânica ao entardecer");
+    },
+  );
+});
+
+test("gerarMapa leva o formato escolhido, e o padrão é o disco de sempre", async () => {
+  // Formato errado não dá erro visível: dá mapa reprovado nas duas tentativas,
+  // porque as regras dos dois são opostas. Vale amarrar que ele viaja.
+  await comFetch(
+    (url, opcoes) => {
+      assert.deepEqual(JSON.parse(opcoes.body), { descricao: "escadaria de praça", formato: "laje" });
+      return respostaFalsa(200, { mapa: {} });
+    },
+    async () => {
+      await api.gerarMapa("escadaria de praça", "laje");
     },
   );
 });

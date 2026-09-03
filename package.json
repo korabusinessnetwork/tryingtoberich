@@ -14,6 +14,7 @@
     "pretest": "node scripts/gerar-animacoes.mjs --silencioso && node scripts/gerar-tokens.mjs --silencioso",
     "ponte": "node --env-file=.env bridge/src/index.mjs",
     "semear": "node scripts/semear-dev.mjs",
+  "acervo:previa": "node scripts/previa-acervo.mjs",
     "luau": "node scripts/verificar-luau.mjs",
     "gemini": "node scripts/verificar-gemini.mjs",
     "painel": "npm run dev --workspace @kora/painel",

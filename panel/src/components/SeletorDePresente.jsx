@@ -166,23 +166,10 @@ export function SeletorDePresente({
         {catalogo?.confirmado === false && (
           <div className="seletor-presente-semente">
             <p className="seletor-presente-semente-texto">
-              Catálogo da <strong>semente de desenvolvimento</strong> — os valores em moedas
-              ainda não são confirmados. A primeira coleta da live sobrescreve esses números.
+              Catálogo da <strong>semente de desenvolvimento</strong> — id inventado e valor
+              em moedas não confirmado. Preset montado aqui não casa com presente de verdade:
+              use “Atualizar da TikTok” logo abaixo.
             </p>
-            {/* O aviso apontava um problema e não oferecia a saída. A coleta
-                fala com a TikTok pela ponte e traz os ids e valores de verdade
-                — que é o que faz o presente do preset casar com o presente que
-                o espectador vê no painel de desejos. */}
-            {aoAtualizar && (
-              <button
-                type="button"
-                className="seletor-presente-atualizar"
-                onClick={aoAtualizar}
-                disabled={atualizando}
-              >
-                {atualizando ? "Coletando…" : "Coletar da live agora"}
-              </button>
-            )}
           </div>
         )}
 
@@ -199,6 +186,29 @@ export function SeletorDePresente({
           spellCheck={false}
         />
 
+        {/* A coleta virou permanente. Antes ela só aparecia junto do aviso da
+            semente, e sumia no instante em que passava a ser útil: com o
+            catálogo real em disco não havia mais como pedir a lista de novo, e
+            a TikTok acrescenta presente o tempo todo. */}
+        {aoAtualizar && (
+          <div className="seletor-presente-coleta">
+            <span className="seletor-presente-coleta-conta">
+              {presentesDoCatalogo?.length ?? 0} presentes
+              {catalogo?.atualizadoEm
+                ? ` · atualizado ${new Date(catalogo.atualizadoEm).toLocaleDateString("pt-BR")}`
+                : ""}
+            </span>
+            <button
+              type="button"
+              className="seletor-presente-atualizar"
+              onClick={aoAtualizar}
+              disabled={atualizando}
+            >
+              {atualizando ? "Buscando…" : "Atualizar da TikTok"}
+            </button>
+          </div>
+        )}
+
         <div className="seletor-presente-lista">
           {carregando && <p className="seletor-presente-estado">Carregando catálogo…</p>}
 
@@ -210,7 +220,7 @@ export function SeletorDePresente({
 
           {catalogoVazio && (
             <p className="seletor-presente-estado">
-              O catálogo está vazio. Conecte a live ou carregue a semente de desenvolvimento.
+              O catálogo está vazio. Clique em “Atualizar da TikTok” para buscar a lista de presentes.
             </p>
           )}
 

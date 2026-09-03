@@ -1,0 +1,69 @@
+{
+  "streamerId": "local",
+  "presetId": "escalada-padrao",
+  "nome": "Escalada padrão",
+  "modalidade": "escalada",
+  "mapaId": "mundo-montado",
+  "atualizadoEm": "2026-09-03T03:55:50.630Z",
+  "personagem": {
+    "lookId": "escalador-vulcanico"
+  },
+  "slots": [
+    {
+      "posicao": 1,
+      "presenteId": "6064",
+      "animacaoId": "sub_jato_propulsor",
+      "delta": 20,
+      "intensidade": 3,
+      "cooldownMs": 0
+    },
+    {
+      "posicao": 2,
+      "presenteId": "5655",
+      "animacaoId": "des_braco_elastico",
+      "delta": -20,
+      "intensidade": 3,
+      "cooldownMs": 0
+    },
+    {
+      "posicao": 3,
+      "presenteId": "5879",
+      "animacaoId": "sub_shuriken_vento",
+      "delta": 50,
+      "intensidade": 4,
+      "cooldownMs": 0
+    },
+    {
+      "posicao": 4,
+      "presenteId": "14488",
+      "animacaoId": "des_punho_impacto",
+      "delta": -50,
+      "intensidade": 4,
+      "cooldownMs": 0
+    },
+    {
+      "posicao": 5,
+      "presenteId": "5509",
+      "animacaoId": "sub_shuriken_vento",
+      "delta": 150,
+      "intensidade": 5,
+      "cooldownMs": 0
+    },
+    {
+      "posicao": 6,
+      "presenteId": "5794",
+      "animacaoId": "des_meteoro_igneo",
+      "delta": -150,
+      "intensidade": 5,
+      "cooldownMs": 2000
+    }
+  ],
+  "placar": [
+    {
+      "presenteId": "11046",
+      "efeito": "vitoria"
+    }
+  ],
+  "animacaoDeVitoria": "sub_fenix",
+  "animacaoDeDerrota": "des_buraco_negro"
+}

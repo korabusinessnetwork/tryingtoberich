@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kora.local/kora-stream-games/catalogo-presentes.schema.json",
   "title": "Catálogo de presentes",
-  "description": "Vale para os dois arquivos: a semente de desenvolvimento (data/catalogo-presentes.seed.json, origem=semente) e o catálogo real coletado da live (data/catalogo-presentes.json, origem=live). O catálogo da TikTok muda sem aviso: a fonte de verdade é sempre a própria live. Ver 04_MODELAGEM/catalogo-presentes.md.",
+  "description": "Vale para os dois arquivos: a semente de desenvolvimento (data/catalogo-presentes.seed.json, origem=semente) e o catálogo real (data/catalogo-presentes.json, origem=live ou publico). O catálogo da TikTok muda sem aviso: a fonte mais completa é sempre a própria sala ao vivo, que traz os presentes exclusivos dela; o painel público da TikTok traz a lista global e serve para configurar antes da live. Ver 04_MODELAGEM/catalogo-presentes.md.",
   "type": "object",
   "additionalProperties": false,
   "required": ["streamerId", "origem", "confirmado", "presentes"],
   "properties": {
     "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
-    "origem": { "type": "string", "enum": ["semente", "live"] },
+    "origem": { "type": "string", "enum": ["semente", "live", "publico"] },
     "confirmado": {
-      "description": "Falso na semente: valor em moedas ali é referência não confirmada e não deve ser tratado como verdade. Vira verdadeiro só depois de coleta real.",
+      "description": "Falso na semente: valor em moedas ali é referência não confirmada e não deve ser tratado como verdade. Vira verdadeiro em coleta real, seja da sala (live) ou do painel público da TikTok (publico) — os dois trazem o valor que a própria TikTok publica.",
       "type": "boolean"
     },
     "atualizadoEm": {
