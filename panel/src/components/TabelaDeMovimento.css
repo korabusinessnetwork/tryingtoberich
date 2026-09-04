@@ -348,3 +348,15 @@
     grid-column: 2 / -1;
   }
 }
+
+/* Prévia: a conta pronta de um preset cuja tabela ainda não está valendo. */
+.movimento-previa {
+  margin: 0;
+  padding: 8px 10px;
+  border: var(--borda);
+  border-left: 3px solid var(--estado-atencao);
+  border-radius: var(--raio);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}

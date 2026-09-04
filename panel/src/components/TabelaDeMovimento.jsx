@@ -96,6 +96,15 @@ export function TabelaDeMovimento({
   const [rascunhos, definirRascunhos] = useState({});
 
   const movimento = useMemo(() => movimentoDoPreset(preset), [preset]);
+  //[[ Preset sem o bloco salvo mostra a conta, mas NÃO diz que está valendo.
+  //
+  // `movimentoDoPreset` preenche os buracos com o padrão para a lista abrir com
+  // número em vez de vazio — é o "pré-definido" que o dono pediu. Se a chave
+  // lesse esse padrão, ela apareceria ligada num preset que a ponte trata como
+  // desligado, e o streamer sairia daqui achando que configurou. Ligar é o que
+  // grava o bloco; até lá, a tela diz que é prévia. ]]
+  const temTabela = preset?.movimento != null;
+  const valendo = temTabela && movimento.ativo;
   const linhas = useMemo(() => linhasDeMovimento(catalogo, preset), [catalogo, preset]);
   const resumo = useMemo(() => resumoDaTabela(linhas, totalPlataformas), [linhas, totalPlataformas]);
 
@@ -167,17 +176,25 @@ export function TabelaDeMovimento({
         <label className="movimento-chave">
           <input
             type="checkbox"
-            checked={movimento.ativo}
+            checked={valendo}
             onChange={(evento) => mudarRegra("ativo", evento.target.checked)}
           />
           <span>
-            <strong>Tabela ligada</strong>
+            <strong>{valendo ? "Tabela ligada" : "Tabela desligada"}</strong>
             <span className="movimento-chave-nota">
               Desligada, só os 6 slots mexem na torre e o resto volta a ser contado como não
               mapeado. O que você editou aqui fica guardado.
             </span>
           </span>
         </label>
+
+        {valendo ? null : (
+          <p className="movimento-previa">
+            {temTabela
+              ? "Os números abaixo são o que a tabela FARIA. Ligue e salve para valerem na live."
+              : "Este preset ainda não tem tabela. Os números abaixo são a conta pronta — ligue e salve para valerem na live."}
+          </p>
+        )}
 
         <div className="movimento-campos">
           <label className="movimento-campo">
@@ -256,7 +273,7 @@ export function TabelaDeMovimento({
           presente caro vale muitas torres. O jogo grampeia nas pontas, então
           nada quebra — mas a corrida acaba num presente só, e isso se descobre
           antes da live ou ao vivo. */}
-      {resumo.varremATorre ? (
+      {valendo && resumo.varremATorre ? (
         <p className="pastilha pastilha-atencao movimento-aviso">
           {resumo.varremATorre} presente{resumo.varremATorre > 1 ? "s" : ""} sozinho
           {resumo.varremATorre > 1 ? "s" : ""} já {resumo.varremATorre > 1 ? "andam" : "anda"} a torre
