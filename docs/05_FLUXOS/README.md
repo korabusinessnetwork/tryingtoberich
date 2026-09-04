@@ -17,9 +17,13 @@
 2. `tiktok-live-connector` emite o evento na ponte.
 3. Ponte normaliza: `{presenteId, repeatCount, nomeDoador}`.
 4. Ponte procura o `presenteId` nos 6 slots do preset ativo.
-   - Não achou: descarta, incrementa contador de "presente não mapeado" e segue.
-     Isso aparece no painel para o streamer ajustar depois.
    - Achou: calcula `delta * repeatCount`, aplica cooldown e coalescência (R5).
+   - Não achou: procura na **tabela de movimento** (R12, ADR-016), que dá delta
+     a todo presente do catálogo. Achou lá, dispara com a animação padrão da
+     tabela e sem slot.
+   - Não achou em lugar nenhum, ou o delta é zero: descarta, incrementa o
+     contador de "presente não mapeado" e segue. Isso aparece no painel para o
+     streamer ajustar depois.
 5. Ponte responde o long-poll pendente do Roblox com
    `{animacaoId, delta, intensidade, nomeDoador, presenteNome}`.
 6. Roblox recebe e calcula o destino a partir de `plataformaReferencia` (R9),

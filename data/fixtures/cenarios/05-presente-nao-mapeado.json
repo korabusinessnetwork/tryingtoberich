@@ -1,20 +1,23 @@
 {
   "cenario": "05-presente-nao-mapeado",
-  "regra": "F2.4 e ADR-007",
-  "descricao": "Presente que não está em nenhum dos 6 slots. É descartado e contabilizado para o streamer ver no painel o que está deixando na mesa. O fluxo NÃO para: o presente seguinte, que está mapeado, dispara normalmente.",
+  "regra": "F2.4, ADR-007 e ADR-016",
+  "descricao": "Presente que não está em nenhum dos 6 slots. Com a tabela de movimento ligada ele deixa de ser descartado: anda o que a conta manda (moedas × multiplicador), com a animação padrão da tabela e sem ocupar slot. Só continua não mapeado o que não vale moeda nenhuma — e é ele que aparece no contador do painel. O fluxo NÃO para: o presente do slot dispara na hora, e o da tabela entra no combate porque chegou com a animação tocando.",
   "presetId": "escalada-padrao",
   "entrada": [
-    { "emMs": 0,   "evento": { "presenteId": "sem-doughnut-gigante", "presenteNome": "Doughnut Gigante", "moedas": 3000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Terceiro Espectador", "recebidoEm": 1756742611000 } },
-    { "emMs": 900, "evento": { "presenteId": "sem-galaxy",           "presenteNome": "Galaxy",           "moedas": 1000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Quarto Espectador",  "recebidoEm": 1756742611900 } }
+    { "emMs": 0,   "evento": { "presenteId": "sem-galaxy",            "presenteNome": "Galaxy",           "moedas": 1000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Quarto Espectador",  "recebidoEm": 1756742611000 } },
+    { "emMs": 100, "evento": { "presenteId": "sem-doughnut-gigante",  "presenteNome": "Doughnut Gigante", "moedas": 3000, "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Terceiro Espectador", "recebidoEm": 1756742611100 } },
+    { "emMs": 200, "evento": { "presenteId": "sem-curtida",           "presenteNome": "Curtida",          "moedas": 0,    "repeticoes": 1, "rajadaEncerrada": true, "nomeDoador": "Quinto Espectador",   "recebidoEm": 1756742611200 } }
   ],
   "esperado": {
     "disparos": [
-      { "emMs": 900, "slot": 5, "animacaoId": "sub_shuriken_vento", "delta": 40, "intensidade": 3 }
+      { "emMs": 0,    "slot": 5,    "animacaoId": "sub_shuriken_vento", "delta": 40,    "intensidade": 3 },
+      { "emMs": 2000, "slot": null, "animacaoId": "sub_lanca_raios",    "delta": 30000, "intensidade": 2 }
     ],
     "naoMapeados": [
-      { "presenteNome": "Doughnut Gigante", "moedas": 3000, "contagem": 1 }
+      { "presenteNome": "Curtida", "moedas": 0, "contagem": 1 }
     ],
-    "descartados": []
+    "descartados": [],
+    "disputa": { "participantes": 1, "somaSubida": 30000, "somaDescida": 0, "liquido": 30000, "contestado": false }
   },
-  "nota": "As 3000 moedas não compram nada. O valor sugere, nunca decide (R3): presente fora dos 6 slots não dispara nem o mais caro do catálogo."
+  "nota": "As 3000 moedas do Doughnut compravam ZERO enquanto o presente fora dos 6 era descartado (R3 no ADR-007). Com a tabela do ADR-016 elas compram 30.000 andares — trinta vezes a torre inteira, que o jogo grampeia na ponta. É exatamente o número que a página de presentes avisa antes da live: com 10 andares por moeda, presente caro acaba a corrida sozinho. O presente que não custa moeda continua não movendo nada, e é o que sobra no contador de não mapeado."
 }

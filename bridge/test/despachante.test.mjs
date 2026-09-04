@@ -174,7 +174,11 @@ test("o não mapeado carrega o presenteId, e não só o nome", () => {
   // tela; o id vai junto, como carga.
   const naoMapeados = [];
   const despachante = new Despachante({ animacoes, aoNaoMapeado: (d) => naoMapeados.push(d) });
-  despachante.definirPreset(preset);
+  // Com a tabela de movimento ligada (ADR-016), presente de 42 moedas ANDA em
+  // vez de virar contagem. O contador de não mapeado é o que sobra quando a
+  // tabela está desligada — ou quando o presente não vale moeda nenhuma —, e é
+  // esse caso que este teste protege.
+  despachante.definirPreset({ ...preset, movimento: { ...preset.movimento, ativo: false } });
 
   const evento = { presenteId: "sem-nao-mapeado", presenteNome: "Fora do preset", moedas: 42, repeticoes: 1, recebidoEm: T0 };
   despachante.receber(evento, T0);

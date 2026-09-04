@@ -107,8 +107,12 @@ test("o painel acompanha a mesma sessão pelo SSE", async () => {
     await nucleo.iniciarSessao({ presetId: PRESET_ID, cenario: "05-presente-nao-mapeado" });
     await laco;
 
+    // Com a tabela de movimento ligada (ADR-016), o Doughnut de 3000 moedas
+    // deixou de ser descartado: ele anda. Quem sobra no contador é o presente
+    // que não vale moeda nenhuma, e é ele que o painel mostra como deixado na
+    // mesa — a curtida não compra andar por definição.
     const naoMapeado = recebidos.find((r) => r.evento === "naoMapeado");
-    assert.equal(naoMapeado.dados.presenteNome, "Doughnut Gigante");
+    assert.equal(naoMapeado.dados.presenteNome, "Curtida");
     assert.equal(naoMapeado.dados.contagem, 1, "o painel mostra o que o streamer está deixando na mesa");
 
     const presente = recebidos.find((r) => r.evento === "presente");
@@ -121,7 +125,7 @@ test("o painel acompanha a mesma sessão pelo SSE", async () => {
     // quem PAGOU — mapeado ou não — e some no Stop.
     const naoMapeados = recebidos.filter((r) => r.evento === "naoMapeado");
     assert.equal(
-      JSON.stringify(naoMapeados).includes("Terceiro Espectador"),
+      JSON.stringify(naoMapeados).includes("Quinto Espectador"),
       false,
       "o contador de não mapeado não carrega nickname de quem mandou",
     );

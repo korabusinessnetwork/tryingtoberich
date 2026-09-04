@@ -301,3 +301,132 @@ export function listaDePresentes(catalogo) {
   if (Array.isArray(catalogo)) return catalogo;
   return catalogo?.presentes ?? [];
 }
+
+/* ---------------------------------------------------------------- */
+/* ADR-016 — a tabela de movimento                                   */
+/* ---------------------------------------------------------------- */
+
+/**
+ * O padrão da tabela, igual ao de `bridge/src/dominio/movimento.mjs`.
+ *
+ * Terceira duplicação assumida do painel (as outras estão em cima): o painel
+ * não importa do Node. O teste de `panel/test/regras.test.mjs` trava o número
+ * 10 e o da ponte trava o mesmo — se um dia divergirem, a tela mostra um delta
+ * e o jogo anda outro, que é o pior tipo de bug para descobrir ao vivo.
+ */
+export const MOVIMENTO_PADRAO = {
+  ativo: true,
+  multiplicador: 10,
+  animacaoDeSubida: "sub_lanca_raios",
+  animacaoDeDescida: "des_punho_impacto",
+  intensidade: 2,
+};
+
+/** O bloco do preset com os buracos preenchidos. Preset sem tabela mostra o padrão. */
+export function movimentoDoPreset(preset) {
+  const bloco = preset?.movimento ?? {};
+  return { ...MOVIMENTO_PADRAO, ...bloco, excecoes: bloco.excecoes ?? [] };
+}
+
+/** A regra sozinha: moedas × multiplicador. Espelha `deltaDaRegra` da ponte. */
+export function deltaDaRegra(moedas, multiplicador) {
+  const valor = Number.isFinite(moedas) ? Math.max(0, Math.trunc(moedas)) : 0;
+  const fator = Number.isFinite(multiplicador) ? Math.max(0, Math.trunc(multiplicador)) : 0;
+  return valor * fator;
+}
+
+/**
+ * Uma linha por presente do catálogo: quanto ele anda hoje, e de onde esse
+ * número veio.
+ *
+ * A ORIGEM é o que a tela precisa dizer, e são três:
+ *
+ * - `slot` — o presente é um dos 6. O delta é o do slot e a tabela não encosta
+ *   nele (ADR-016). A linha aparece assim mesmo, porque "por que este não
+ *   segue a regra?" é a primeira pergunta de quem olha a lista.
+ * - `excecao` — o streamer escreveu o número à mão.
+ * - `regra` — saiu da conta.
+ *
+ * Ordenado por valor, do mais caro para o mais barato, como o resto do painel.
+ */
+export function linhasDeMovimento(catalogo, preset) {
+  const movimento = movimentoDoPreset(preset);
+  const excecoes = new Map(
+    movimento.excecoes
+      .filter((e) => typeof e?.presenteId === "string" && Number.isInteger(e?.delta))
+      .map((e) => [e.presenteId, e.delta]),
+  );
+  const slots = new Map((preset?.slots ?? []).map((slot) => [String(slot.presenteId), slot]));
+
+  return listaDePresentes(catalogo)
+    .filter((presente) => typeof presente?.presenteId === "string")
+    .map((presente) => {
+      const slot = slots.get(presente.presenteId);
+      const excecao = excecoes.get(presente.presenteId);
+      const daRegra = deltaDaRegra(presente.moedas, movimento.multiplicador);
+
+      return {
+        presenteId: presente.presenteId,
+        nome: presente.nome ?? presente.presenteId,
+        moedas: Number.isFinite(presente.moedas) ? presente.moedas : 0,
+        faixa: presente.faixa ?? faixaDeMoedas(presente.moedas ?? 0),
+        iconeUrl: presente.iconeUrl ?? null,
+        iconeLocal: presente.iconeLocal ?? null,
+        ativo: presente.ativo !== false,
+        origem: slot ? "slot" : excecao !== undefined ? "excecao" : "regra",
+        slot: slot?.posicao ?? null,
+        delta: slot ? slot.delta : (excecao ?? daRegra),
+        daRegra,
+      };
+    })
+    .sort((a, b) => b.moedas - a.moedas || a.nome.localeCompare(b.nome));
+}
+
+/**
+ * Escreve — ou apaga — a exceção de um presente.
+ *
+ * Delta igual ao da regra APAGA a exceção em vez de gravar o mesmo número: o
+ * preset só guarda o que foge da conta, e é isso que faz o multiplicador
+ * continuar valendo para quem nunca foi tocado. Zero é diferente de "igual à
+ * regra" e vira exceção de verdade — é como se silencia um presente.
+ */
+export function comExcecao(preset, presenteId, delta, daRegra = null) {
+  const movimento = movimentoDoPreset(preset);
+  const outras = movimento.excecoes.filter((e) => e?.presenteId !== presenteId);
+  if (delta === daRegra) return { ...movimento, excecoes: outras };
+  return { ...movimento, excecoes: [...outras, { presenteId, delta }] };
+}
+
+/** Devolve o presente para a regra: some da lista de exceções. */
+export function semExcecao(preset, presenteId) {
+  const movimento = movimentoDoPreset(preset);
+  return { ...movimento, excecoes: movimento.excecoes.filter((e) => e?.presenteId !== presenteId) };
+}
+
+/**
+ * Quantos presentes a tabela move, e quanto pesa o maior deles.
+ *
+ * O resumo existe por causa de uma consequência que só aparece na conta: com
+ * multiplicador 10, um presente de 44.999 moedas empurra 449.990 andares numa
+ * torre de 1.000. O jogo grampeia o destino nas pontas, então isso não quebra
+ * nada — mas é o fim da corrida num presente só, e o streamer precisa ver esse
+ * número antes da live, não durante.
+ */
+export function resumoDaTabela(linhas, totalPlataformas) {
+  const queMovem = linhas.filter((linha) => linha.delta !== 0);
+  const maior = queMovem.reduce(
+    (atual, linha) => (Math.abs(linha.delta) > Math.abs(atual?.delta ?? 0) ? linha : atual),
+    null,
+  );
+  const teto = Number.isFinite(totalPlataformas) && totalPlataformas > 0 ? totalPlataformas : null;
+
+  return {
+    movem: queMovem.length,
+    parados: linhas.length - queMovem.length,
+    excecoes: linhas.filter((linha) => linha.origem === "excecao").length,
+    maior,
+    // Quantos presentes sozinhos já dão a torre inteira. Sem mapa gerado não
+    // há torre para comparar, e aí a conta não é feita em vez de ser inventada.
+    varremATorre: teto === null ? null : queMovem.filter((linha) => Math.abs(linha.delta) >= teto).length,
+  };
+}

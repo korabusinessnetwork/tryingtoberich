@@ -25,6 +25,7 @@ import { SeletorDeAnimacao } from "./components/SeletorDeAnimacao.jsx";
 import { SeletorDeLook } from "./components/SeletorDeLook.jsx";
 import { SeletorDePresente } from "./components/SeletorDePresente.jsx";
 import { SeletorModalidade } from "./components/SeletorModalidade.jsx";
+import { TabelaDeMovimento } from "./components/TabelaDeMovimento.jsx";
 import { TestadorDeAnimacao } from "./components/TestadorDeAnimacao.jsx";
 import { TestadorDePresente } from "./components/TestadorDePresente.jsx";
 import "./App.css";
@@ -640,6 +641,9 @@ export function App() {
       <NavegacaoDePaginas
         paginas={[
           { id: "aovivo", rotulo: "Ao vivo" },
+          // Vizinha da Ao vivo de propósito: a tabela (ADR-016) é a irmã dos 6
+          // slots — os slots dizem o que ANIMA, ela diz quanto o resto ANDA.
+          { id: "presentes", rotulo: "Presentes" },
           { id: "configurar", rotulo: "Configurar" },
           { id: "jogo", rotulo: "Jogo" },
           { id: "overlay", rotulo: "Overlay" },
@@ -856,6 +860,24 @@ export function App() {
               aoFechar={() => definirSessaoEscolhida(null)}
             />
           )}
+        </div>
+      ) : null}
+
+      {/* A tabela de movimento (ADR-016): quanto a torre anda com CADA
+          presente, e não só com os 6 dos slots. Mesmo preset, mesmo botão de
+          salvar — o bloco `movimento` viaja dentro dele. */}
+      {pagina === "presentes" ? (
+        <div className="app-pagina">
+          <TabelaDeMovimento
+            preset={preset}
+            catalogo={dados.catalogo}
+            animacoes={dados.animacoes}
+            totalPlataformas={(fluxo.estado ?? dados.sessao?.estado)?.totalPlataformas ?? null}
+            salvando={salvando}
+            aoMudarMovimento={(movimento) =>
+              definirPreset((atual) => (atual ? { ...atual, movimento } : atual))}
+            aoSalvar={salvarPreset}
+          />
         </div>
       ) : null}
 

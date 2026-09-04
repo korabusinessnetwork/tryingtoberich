@@ -1,0 +1,350 @@
+/* A página de presentes (ADR-016).
+
+   Tela de CONFIGURAÇÃO: o streamer vem aqui antes da live, com tempo, para
+   olhar uma lista longa e mexer em alguns números. Ela pode respirar e
+   explicar — ao contrário da página Ao vivo, olhada por 2 segundos.
+
+   A lista é longa de propósito e o layout é uma GRADE de colunas fixas: com
+   670 linhas, coluna que muda de largura conforme o nome do presente faz o
+   olho perder a coluna do número, que é a única que importa aqui.
+
+   Nenhum hex literal: toda cor vem de tokens.css (02_DESIGN_SYSTEM). */
+
+.movimento {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+}
+
+.movimento-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.movimento-titulo {
+  margin: 0;
+  font-size: 15px;
+}
+
+.movimento-etiqueta,
+.movimento-explicacao,
+.movimento-vazio {
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-etiqueta {
+  font-size: 12px;
+}
+
+.movimento-explicacao,
+.movimento-vazio {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* A regra, no topo: ela vale para a lista inteira. */
+.movimento-regra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+}
+
+.movimento-chave {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.movimento-chave input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex: none;
+}
+
+.movimento-chave span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.movimento-chave-nota,
+.movimento-campo-nota {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--espaco);
+}
+
+.movimento-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.movimento-campo-rotulo {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.movimento-campo input,
+.movimento-campo select {
+  min-height: var(--alvo-minimo);
+  padding: 0 8px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+  color: var(--painel-texto-primario);
+  font-size: 14px;
+}
+
+/* O resumo: a conta que a lista longa esconde. */
+.movimento-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-aviso {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.movimento-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.movimento-busca {
+  flex: 1 1 240px;
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+  color: var(--painel-texto-primario);
+  font-size: 14px;
+}
+
+.movimento-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.movimento-filtro,
+.movimento-acao,
+.movimento-mais,
+.movimento-salvar {
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+  color: var(--painel-texto-primario);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.movimento-filtro-ativo {
+  background: var(--painel-acento);
+  border-color: var(--painel-acento);
+}
+
+.movimento-acao:disabled,
+.movimento-salvar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A lista. Grade fixa: ícone, presente, origem, delta, ações. */
+.movimento-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.movimento-linha {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 72px 96px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--raio);
+  /* 670 linhas: o navegador só desenha as que estão à vista. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+.movimento-linha:nth-child(odd) {
+  background: var(--painel-fundo);
+}
+
+.movimento-linha-slot {
+  border-color: var(--faixa-do-slot, var(--painel-borda));
+}
+
+.movimento-linha-excecao {
+  border-color: var(--estado-atencao);
+}
+
+.movimento-icone {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio);
+  object-fit: contain;
+}
+
+.movimento-icone-vazio {
+  display: grid;
+  place-items: center;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  font-size: 13px;
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-presente {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.movimento-nome {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movimento-detalhe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-faixa {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.movimento-inativo {
+  color: var(--estado-atencao);
+}
+
+/* A origem é TEXTO, não cor: "slot 3" e "à mão" se leem sem legenda. */
+.movimento-origem {
+  font-size: 11px;
+  text-align: center;
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-origem-excecao {
+  color: var(--estado-atencao);
+}
+
+.movimento-delta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.movimento-delta-campo {
+  width: 96px;
+  min-height: var(--alvo-minimo);
+  padding: 0 8px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+  color: var(--painel-texto-primario);
+  font-size: 14px;
+  text-align: right;
+}
+
+.movimento-delta-fixo {
+  padding: 0 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.movimento-delta.sobe .movimento-delta-campo,
+.movimento-delta.sobe .movimento-delta-fixo {
+  color: var(--estado-ok);
+}
+
+.movimento-delta.desce .movimento-delta-campo,
+.movimento-delta.desce .movimento-delta-fixo {
+  color: var(--estado-erro);
+}
+
+.movimento-delta.parado .movimento-delta-campo {
+  color: var(--painel-texto-secundario);
+}
+
+.movimento-acoes {
+  display: flex;
+  gap: 6px;
+}
+
+.movimento-mais {
+  align-self: center;
+}
+
+.movimento-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.movimento-rodape-nota {
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+/* Tela estreita: a origem sai da grade e o nome ocupa o que sobra. */
+@media (max-width: 720px) {
+  .movimento-linha {
+    grid-template-columns: 32px minmax(0, 1fr) 88px;
+  }
+
+  .movimento-origem {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .movimento-acoes {
+    grid-column: 2 / -1;
+  }
+}

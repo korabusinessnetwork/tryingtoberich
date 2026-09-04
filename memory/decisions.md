@@ -19,6 +19,7 @@
 | ADR-013 | Ordem do painel para o jogo pelo mesmo long-poll | Aceito | 2026-09-02 |
 | ADR-014 | Cutscene de fim de rodada no overlay do OBS, escolhida no preset; a pasta é a lista | Aceito | 2026-09-03 |
 | ADR-015 | HUD da live (ranking, combo, maior presente, VS, legenda, barra) no overlay do OBS, agregado em memória pela ponte | Aceito | 2026-09-03 |
+| ADR-016 | Todo presente move a torre: tabela `moedas × 10` no preset, com exceções à mão; os 6 slots vencem a tabela | Aceito | 2026-09-04 |
 
 ## Resolvidas no Bloco 2
 - **Como o HUD mostra o combate (ADR-012).** Disputa contestada: o painel

@@ -65,5 +65,13 @@
     }
   ],
   "cutsceneDeVitoria": "vitoria",
-  "cutsceneDeDerrota": "derrota"
+  "cutsceneDeDerrota": "derrota",
+  "movimento": {
+    "ativo": true,
+    "multiplicador": 10,
+    "animacaoDeSubida": "sub_lanca_raios",
+    "animacaoDeDescida": "des_punho_impacto",
+    "intensidade": 2,
+    "excecoes": []
+  }
 }

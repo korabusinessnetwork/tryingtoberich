@@ -38,6 +38,14 @@ exemplo é schema quebrado.
   "personagem": { "lookId": "escalador-vulcanico" },
   "cutsceneDeVitoria": "vitoria",
   "cutsceneDeDerrota": "derrota",
+  "movimento": {
+    "ativo": true,
+    "multiplicador": 10,
+    "animacaoDeSubida": "sub_lanca_raios",
+    "animacaoDeDescida": "des_punho_impacto",
+    "intensidade": 2,
+    "excecoes": [{ "presenteId": "5655", "delta": -60 }]
+  },
   "slots": [
     {
       "posicao": 1,
@@ -60,6 +68,14 @@ Regras: `slots` tem no máximo 6 itens, `posicao` de 1 a 6 e única,
 cadastro — e nulo é "nada toca, o placar só muda". A lista `placar` (ADR-007)
 diz quais presentes provocam cada resultado, e não pode repetir presente de
 slot.
+
+`movimento` é a tabela do ADR-016: quanto a torre anda com CADA presente do
+catálogo, e não só com os 6 dos slots. Guarda a **regra** (`moedas ×
+multiplicador`, 10 por padrão) e só as `excecoes` que o streamer escreveu à mão
+— as 670 linhas nunca vão para o disco, e presente novo da TikTok já nasce com
+delta. Delta 0 numa exceção quer dizer "este presente não mexe na torre".
+Ausente, o preset se comporta como antes: fora dos 6 slots, nada acontece.
+O slot vence a tabela para o presente que está nele. Ver R12.
 
 O preset apenas **referencia** um look. A composição vive em `data/looks/`,
 montada pelo vestiário dentro do jogo. Ver ADR-011.

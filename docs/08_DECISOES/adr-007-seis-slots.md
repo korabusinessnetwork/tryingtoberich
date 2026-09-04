@@ -31,6 +31,15 @@ presentes ativos é limitado a 6, que é o que a TikTok exibe como desejos na li
   > O que toca quando a rodada acaba é a **cutscene** do overlay do OBS,
   > escolhida no mesmo editor, por resultado. Ver ADR-014.
 
+  > **Acréscimo de 2026-09-04 — a tabela de movimento (ADR-016).** "Presente que
+  > chega e não está em nenhum slot é descartado" deixou de valer sozinho: o
+  > preset ganhou uma tabela que dá delta a TODO presente do catálogo, calculado
+  > por `moedas × multiplicador`. O que este ADR decidiu continua de pé onde
+  > importa — **os 6 slots são escolha explícita e vencem a tabela**, com
+  > animação, delta, intensidade e cooldown próprios. A tabela responde uma
+  > pergunta só, "quanto a torre anda", e nunca escolhe animação. Descartado
+  > continua sendo só o presente que não move nada. Ver ADR-016 e R12.
+
 ## Alternativas consideradas
 ### Faixa de valor dispara animação automaticamente
 - Prós: cobre o catálogo inteiro sem configuração.

@@ -54,6 +54,39 @@
         }
       }
     },
+    "movimento": {
+      "description": "A tabela de movimento: quanto a torre anda com CADA presente do catálogo, e não só com os 6 dos slots (ADR-016). O delta sai de uma regra — moedas × multiplicador —, e cada presente pode ter o seu ajustado à mão em `excecoes`. Ausente = comportamento do ADR-007 puro: presente fora dos 6 slots não faz nada. Os slots continuam mandando no presente que está neles: o delta do slot vence a tabela, e é lá que se escolhe a animação daquele presente.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ativo", "multiplicador", "animacaoDeSubida", "animacaoDeDescida", "intensidade"],
+      "properties": {
+        "ativo": {
+          "description": "Falso desliga a tabela inteira e devolve o jogo aos 6 slots. As exceções ficam guardadas, para religar sem reconfigurar.",
+          "type": "boolean"
+        },
+        "multiplicador": {
+          "description": "Andares por moeda. 10 é o padrão pedido pelo dono: rosa de 1 moeda sobe 10. Zero desliga a regra e deixa valer só o que estiver em `excecoes` — o modo \"só o que eu escolhi a mão\".",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "animacaoDeSubida": {
+          "description": "A animação de todo presente que sobe pela tabela. Uma só, e curta: aqui entra o catálogo inteiro, não os 6 escolhidos, e cada animação ocupa o canal pelo tempo dela.",
+          "$ref": "comuns.schema.json#/$defs/animacaoId"
+        },
+        "animacaoDeDescida": {
+          "description": "A mesma coisa para quem desce.",
+          "$ref": "comuns.schema.json#/$defs/animacaoId"
+        },
+        "intensidade": { "$ref": "comuns.schema.json#/$defs/intensidade" },
+        "excecoes": {
+          "description": "O que foge da regra, presente a presente. Só o que o streamer mexeu mora aqui: o resto sai da conta, e presente novo no catálogo da TikTok já nasce com delta sem ninguém configurar nada.",
+          "type": "array",
+          "maxItems": 2000,
+          "items": { "$ref": "#/$defs/excecaoDeMovimento" }
+        }
+      }
+    },
     "placar": {
       "description": "Presentes que mexem no PLACAR em vez de animar. Lista separada dos 6 slots de propósito (ADR-007): presente de vitória não pode custar um slot de subida, e as duas coisas crescem sem competir. Um presente não pode estar aqui E nos slots — ver a regra cruzada em bridge/src/dominio/regras.mjs.",
       "type": "array",
@@ -76,6 +109,19 @@
     }
   },
   "$defs": {
+    "excecaoDeMovimento": {
+      "description": "Um presente cujo delta o streamer escreveu à mão, em vez de deixar a regra calcular.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presenteId", "delta"],
+      "properties": {
+        "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
+        "delta": {
+          "description": "Inteiro de plataformas, como em R2 — positivo sobe, negativo desce. A diferença é o ZERO, que aqui vale e quer dizer \"este presente não mexe na torre\". É como se apaga um presente da tabela sem desligar a tabela inteira; ele volta a contar como não mapeado.",
+          "type": "integer"
+        }
+      }
+    },
     "vinculoDePlacar": {
       "type": "object",
       "additionalProperties": false,

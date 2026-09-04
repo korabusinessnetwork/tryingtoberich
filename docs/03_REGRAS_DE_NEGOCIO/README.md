@@ -24,9 +24,15 @@ Cada slot preenchido tem:
 animação de subida com delta negativo, o painel avisa que está invertido mas
 permite. A animação toca do jeito que é; o boneco vai para onde o delta manda.
 
-## R3 — O valor sugere, nunca decide
-O valor em moedas do presente **não** determina animação, delta nem intensidade.
-Ele é usado apenas para:
+## R3 — O valor sugere, nunca decide (nos 6 slots)
+> **Emendada em 2026-09-04 pelo ADR-016.** O que está abaixo vale para os 6
+> slots, e só para eles: o vínculo entre presente escolhido, animação e delta
+> continua sendo do streamer, um a um. Fora dos 6, o valor passou a decidir —
+> é a tabela de movimento da R12, em que a conta é a regra e a mão do streamer
+> é a exceção.
+
+O valor em moedas do presente **não** determina animação, delta nem intensidade
+de um slot. Ele é usado apenas para:
 - ordenar o catálogo no painel;
 - colorir o presente por faixa na interface;
 - exibir aviso quando o vínculo foge muito da curva (ex.: presente de 1 moeda
@@ -131,3 +137,35 @@ onde o boneco está.
   teto de 30s) e avisa o painel. O jogo continua no estado em que está.
 - Se o Roblox para de fazer long-poll por mais de 60s, a ponte marca o jogo como
   offline no painel e passa a descartar evento em vez de acumular.
+
+## R12 — Tabela de movimento (todo o resto do catálogo)
+> Nasceu com o ADR-016, por pedido do dono: *"quero uma página só pra definir a
+> subida ou descida por presentes, e já pré-definida com base no valor × 10 —
+> doou uma rosa que vale 1 moeda, sobe 10"*. Ela emenda a R3 e não substitui a
+> R1: os 6 slots continuam sendo os 6.
+
+1. Todo presente do catálogo tem um **delta**, e não só os 6 dos slots. O
+   presente fora dos slots deixou de ser descartado.
+2. O delta padrão é `moedas × multiplicador`, com **multiplicador 10**: presente
+   de 1 moeda sobe 10 andares. Ele é do preset e vale para o catálogo inteiro.
+3. **A regra só sobe.** Descida é escolha do streamer e vira exceção — não se
+   deduz do preço de uma rosa que ela deveria empurrar para baixo.
+4. O preset guarda **a regra e as exceções**, nunca as 670 linhas. Presente novo
+   no catálogo da TikTok já nasce com delta, sem ninguém abrir o painel.
+5. **Delta 0 é válido aqui** e quer dizer "este presente não mexe na torre". Ele
+   volta a ser contado como não mapeado, que é o que sobra do mundo anterior.
+   Presente que não custa moeda cai neste caso sozinho.
+6. **O slot vence a tabela.** Presente que está num dos 6 dispara com a animação,
+   o delta, a intensidade e o cooldown do slot. A tabela responde pelo resto.
+7. Quem vem da tabela usa **uma animação por direção**, escolhida no preset, com
+   intensidade fixa e sem cooldown. A rajada (R4) vale igual: o delta multiplica
+   e a intensidade sobe um nível.
+8. No combate (R5), presentes da tabela agrupam por **presente**, não por slot —
+   eles não têm slot, e agrupá-los juntos somaria uma rosa com um foguete.
+9. A tabela pode ser **desligada** no painel. Desligada, vale a R1 sozinha e o
+   jogo volta a ser o do ADR-007.
+
+Consequência que a página precisa mostrar antes da live: com 10 andares por
+moeda, um presente de 3.000 moedas anda 30.000 andares numa torre de 1.000. O
+jogo grampeia o destino nas pontas (R6) e nada quebra, mas a corrida acaba num
+presente só. Por isso a página avisa quantos presentes varrem a torre sozinhos.

@@ -19,6 +19,7 @@
 
 import { REGRAS } from "../config.mjs";
 import { casar, indexarPlacar, indexarSlots } from "../dominio/casamento.mjs";
+import { casarPorMovimento, indexarMovimento } from "../dominio/movimento.mjs";
 import { resolverCombate } from "./combate.mjs";
 
 const semAcao = () => {};
@@ -33,6 +34,9 @@ const TETO_DE_RODADAS_POR_PRESENTE = 50;
 export class Despachante {
   #indice = new Map();
   #placar = new Map();
+  #movimento = null;
+  #preset = null;
+  #catalogo = null;
   #animacoes = new Map();
   #combate = null;
   #naoMapeados = new Map();
@@ -58,9 +62,25 @@ export class Despachante {
     this.aoComando = aoComando;
   }
 
-  definirPreset(preset) {
+  /**
+   * O preset ativo, e o catálogo de que a tabela de movimento precisa.
+   *
+   * O catálogo é opcional: sem ele a tabela ainda vale, calculando o delta
+   * pelo valor que vem no próprio evento. Passá-lo é o que faz a página de
+   * presentes e o jogo mostrarem o mesmo número.
+   */
+  definirPreset(preset, catalogo = this.#catalogo) {
+    this.#preset = preset;
+    this.#catalogo = catalogo;
     this.#indice = indexarSlots(preset);
     this.#placar = indexarPlacar(preset);
+    this.#movimento = indexarMovimento(preset, catalogo);
+  }
+
+  /** O catálogo mudou (coleta da live). Só a tabela de movimento depende dele. */
+  definirCatalogo(catalogo) {
+    this.#catalogo = catalogo;
+    this.#movimento = indexarMovimento(this.#preset, catalogo);
   }
 
   definirAnimacoes(animacoes) {
@@ -140,7 +160,14 @@ export class Despachante {
       return { tipo: "placar", efeito, quantidade, presenteNome: evento.presenteNome ?? evento.presenteId };
     }
 
-    const disparo = casar(evento, this.#indice);
+    //[[ Os 6 slots primeiro, a tabela depois (ADR-016).
+    //
+    // A ordem é a decisão: presente escolhido pelo streamer tem animação,
+    // delta, intensidade e cooldown próprios, e a tabela nunca passa por cima
+    // disso. Ela responde pelo RESTO do catálogo, que antes chegava e não
+    // fazia nada. Sem tabela no preset, `casarPorMovimento` devolve null e o
+    // comportamento é o de sempre. ]]
+    const disparo = casar(evento, this.#indice) ?? casarPorMovimento(evento, this.#movimento);
 
     if (!disparo) {
       const chave = evento.presenteNome ?? evento.presenteId;

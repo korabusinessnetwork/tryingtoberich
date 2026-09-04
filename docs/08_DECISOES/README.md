@@ -20,3 +20,4 @@ no código. Use `adr-000-template.md` para criar a próxima.
 | [013](./adr-013-comando-pelo-long-poll.md) | Ordem do painel para o jogo pelo mesmo long-poll | Aceito |
 | [014](./adr-014-cutscene-no-overlay.md) | Cutscene de fim de rodada no overlay do OBS, escolhida no preset | Aceito |
 | [015](./adr-015-hud-da-live-no-overlay.md) | O HUD da live vive no overlay do OBS, alimentado pela ponte | Aceito |
+| [016](./adr-016-tabela-de-movimento.md) | Todo presente move a torre: tabela pré-calculada por valor (moedas × 10), com os 6 slots por cima | Aceito |

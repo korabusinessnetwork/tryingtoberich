@@ -14,17 +14,24 @@ import { REGRAS } from "../config.mjs";
 /**
  * Presentes do mesmo slot viram um participante só. Se a plateia manda 30 Rose
  * de +2, quem disputa a animação é "slot 1 com +60", não trinta entradas de +2.
+ *
+ * Quem vem da tabela de movimento (ADR-016) não tem slot, e aí quem agrupa é o
+ * PRESENTE. Agrupar todos eles no mesmo balde nulo somaria uma rosa de +10 com
+ * um foguete de -3000 e mandaria um participante só, com o delta somado e a
+ * animação de um deles — a disputa entre dois presentes de fora dos 6
+ * simplesmente não apareceria.
  */
 export function agruparPorSlot(disparos) {
   const porSlot = new Map();
 
   for (const disparo of disparos) {
-    const anterior = porSlot.get(disparo.slot);
+    const chave = disparo.slot ?? `presente:${disparo.presenteId}`;
+    const anterior = porSlot.get(chave);
     if (!anterior) {
-      porSlot.set(disparo.slot, { ...disparo });
+      porSlot.set(chave, { ...disparo });
       continue;
     }
-    porSlot.set(disparo.slot, {
+    porSlot.set(chave, {
       ...anterior,
       delta: anterior.delta + disparo.delta,
       repeticoes: anterior.repeticoes + disparo.repeticoes,

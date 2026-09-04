@@ -69,7 +69,10 @@
       "required": ["em", "slot", "presenteId", "repeticoes", "delta", "animacaoId"],
       "properties": {
         "em": { "$ref": "comuns.schema.json#/$defs/instante" },
-        "slot": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "slot": {
+          "description": "Qual dos 6 slots disparou. NULO quando o presente veio da tabela de movimento (ADR-016): ele moveu a torre sem ocupar slot nenhum, e o resumo por slot não o conta.",
+          "oneOf": [{ "type": "integer", "minimum": 1, "maximum": 6 }, { "type": "null" }]
+        },
         "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
         "repeticoes": { "type": "integer", "minimum": 1 },
         "delta": { "type": "integer" },

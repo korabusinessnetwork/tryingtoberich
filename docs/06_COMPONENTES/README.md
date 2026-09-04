@@ -7,7 +7,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 |---|---|---|
 | `ControleDaPartida` | Reiniciar, zerar placar e recarregar mapa, com a sessão de pé | estado do jogo |
 | `ContaDaLive` | O @ do TikTok: define em qual live a sessão vai rodar | configuração |
-| `NavegacaoDePaginas` | Troca entre as 3 páginas do painel, com contador de problemas | página atual |
+| `NavegacaoDePaginas` | Troca entre as 7 páginas do painel, com contador de problemas | página atual |
 | `BarraDeSessao` | Start/stop, estado da live e do jogo, cronômetro | estado do SSE |
 | `SeletorModalidade` | Escolhe a modalidade (Fase 1: só Escalada) | lista de modalidades |
 | `EditorDePlacar` | Por resultado: a cutscene que o OBS toca e os presentes que contam vitória ou derrota; e a vida do portal | preset, catálogo, `/api/cutscenes` |
@@ -31,6 +31,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `GerenciadorDePresets` | Criar, duplicar e apagar preset | presets |
 | `PainelDeAcervo` | A galeria do acervo: foto, tags, status e assetId de cada peça, e o botão que desenha e sobe o que falta (ADR-004) | acervo |
 | `PainelDeOverlay` | As URLs dos dois overlays para colar no OBS ou no TikTok LIVE Studio (cutscenes e HUD da live), os ajustes do HUD, os vídeos na pasta e se o escolhido pelo preset ativo está lá | `/api/overlay` |
+| `TabelaDeMovimento` | A página de presentes (ADR-016): a regra `moedas × multiplicador`, a animação de cada direção, e uma linha por presente do catálogo com o delta editável | preset + catálogo |
 
 ## Regras
 - `CartaoDeSlot` é o componente mais importante do produto. Ele precisa mostrar
@@ -93,9 +94,13 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
   o preenche, porque o que muda entre uma plataforma e outra é a foto, não a
   dificuldade. Peça que derruba o jogador faria escolher textura virar escolha
   de jogabilidade.
-- O painel tem 5 páginas: **Ao vivo** (6 slots, monitor, testador), **Configurar**
+- O painel tem 7 páginas: **Ao vivo** (6 slots, monitor, testador),
+  **Presentes** (a tabela de movimento do ADR-016), **Configurar**
   (conta, presets, modalidade, look, mapa, prévia e acervo), **Jogo** (abrir no
-  Studio e testar as 20 animações), **Histórico** (lives passadas) e **Log**.
+  Studio e testar as 20 animações), **Overlay** (as URLs para o OBS e o LIVE
+  Studio), **Histórico** (lives passadas) e **Log**.
+  "Presentes" fica ao lado de "Ao vivo" porque é a irmã dos 6 slots: eles dizem
+  o que ANIMA, ela diz quanto o resto do catálogo ANDA.
   "Ao vivo" é a de abertura, e é
   inegociável que ela carregue os 6 slots: o 02_DESIGN_SYSTEM exige os seis lado
   a lado e sempre visíveis. O que foi para "Configurar" é o que já era pré-live
@@ -131,6 +136,11 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 - `PainelDeOverlay` existe porque a cutscene falha **calada**: sem o arquivo,
   o OBS mostra um retângulo transparente e nada reclama. A aba diz se o vídeo
   está no disco ANTES da live, que é o único momento em que dá para resolver.
+- `TabelaDeMovimento` mostra o catálogo INTEIRO, e por isso ela é a única lista
+  do painel que abre parcial: filtro e busca primeiro, 100 linhas por vez
+  depois. São 670 presentes, e montar 670 campos editáveis trava a tela de quem
+  só queria achar a rosa. O resumo no topo existe pelo mesmo motivo: a conta que
+  importa — quantos presentes varrem a torre sozinhos — some numa lista longa.
 - `EditorDePlacar` agrupa **por resultado** (ADR-014): cada um mostra a sua
   cutscene e os seus presentes, porque é a mesma pergunta — "o que acontece
   quando o streamer vence?" — vista de dois lados. A cutscene é um vídeo de

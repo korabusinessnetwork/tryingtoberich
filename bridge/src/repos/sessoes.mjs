@@ -65,6 +65,10 @@ export function reduzirAoResumo(sessao, encerradaEm) {
 
   const presentesPorSlot = {};
   for (const evento of eventos) {
+    // Presente da tabela de movimento (ADR-016) não ocupa slot: conta no total
+    // e fica fora deste mapa, que é sobre os 6 escolhidos. Sem esta linha ele
+    // viraria a chave "null", que o schema do resumo recusa.
+    if (evento.slot == null) continue;
     presentesPorSlot[evento.slot] = (presentesPorSlot[evento.slot] ?? 0) + 1;
   }
 

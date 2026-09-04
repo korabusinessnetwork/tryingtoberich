@@ -11,7 +11,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  MOVIMENTO_PADRAO,
   SLOTS,
+  comExcecao,
+  deltaDaRegra,
+  linhasDeMovimento,
+  movimentoDoPreset,
+  resumoDaTabela,
+  semExcecao,
   animacoesOferecidas,
   avisoDeCurva,
   avisoDeDirecao,
@@ -443,4 +450,97 @@ test("pasta vazia ou lixo não quebram a tela, e escolha nula não inventa opç�
   assert.deepEqual(opcoesDeCutscene([], "vitoria"), [{ id: "vitoria", arquivo: "vitoria", ausente: true }]);
   for (const lixo of [null, undefined, "x", 7, {}]) assert.deepEqual(opcoesDeCutscene(lixo, null), []);
   assert.deepEqual(opcoesDeCutscene([{ semId: true }, null], ""), []);
+});
+
+/* ---------------------------------------------------------------- */
+/* ADR-016 — a tabela de movimento                                   */
+/* ---------------------------------------------------------------- */
+
+const CATALOGO_DA_TABELA = {
+  presentes: [
+    { presenteId: "rosa", nome: "Rose", moedas: 1, faixa: 1, ativo: true },
+    { presenteId: "perfume", nome: "Perfume", moedas: 20, faixa: 2, ativo: true },
+    { presenteId: "galaxia", nome: "Galaxy", moedas: 1000, faixa: 4, ativo: true },
+    { presenteId: "gratis", nome: "TikTok", moedas: 0, faixa: 1, ativo: true },
+  ],
+};
+
+const PRESET_DA_TABELA = {
+  presetId: "p",
+  slots: [{ posicao: 1, presenteId: "galaxia", animacaoId: "sub_shuriken_vento", delta: 50, intensidade: 4 }],
+  movimento: { ativo: true, multiplicador: 10, intensidade: 2, excecoes: [{ presenteId: "perfume", delta: -60 }] },
+};
+
+test("o padrão da tabela é o mesmo dos dois lados: 10 andares por moeda", () => {
+  // O número vive aqui E em bridge/src/dominio/movimento.mjs. Divergir faria a
+  // tela mostrar um delta e o jogo andar outro — o pior bug para achar ao vivo.
+  assert.equal(MOVIMENTO_PADRAO.multiplicador, 10);
+  assert.equal(deltaDaRegra(1, MOVIMENTO_PADRAO.multiplicador), 10);
+  assert.equal(deltaDaRegra(20, 10), 200);
+  assert.equal(deltaDaRegra("lixo", 10), 0);
+});
+
+test("cada linha diz de onde veio o número: do slot, da mão, ou da conta", () => {
+  const linhas = linhasDeMovimento(CATALOGO_DA_TABELA, PRESET_DA_TABELA);
+  const porId = new Map(linhas.map((linha) => [linha.presenteId, linha]));
+
+  assert.deepEqual(
+    linhas.map((linha) => linha.presenteId),
+    ["galaxia", "perfume", "rosa", "gratis"],
+    "ordenado pelo valor, do mais caro para o mais barato",
+  );
+
+  assert.equal(porId.get("galaxia").origem, "slot");
+  assert.equal(porId.get("galaxia").delta, 50, "o delta do slot, não os 10.000 da conta");
+  assert.equal(porId.get("galaxia").slot, 1);
+
+  assert.equal(porId.get("perfume").origem, "excecao");
+  assert.equal(porId.get("perfume").delta, -60);
+  assert.equal(porId.get("perfume").daRegra, 200, "a conta continua visível, para dar como desfazer");
+
+  assert.equal(porId.get("rosa").origem, "regra");
+  assert.equal(porId.get("rosa").delta, 10);
+
+  assert.equal(porId.get("gratis").delta, 0, "presente de graça não move nada");
+});
+
+test("preset sem tabela mostra a conta padrão, para o streamer ver antes de ligar", () => {
+  const linhas = linhasDeMovimento(CATALOGO_DA_TABELA, { presetId: "p", slots: [] });
+  assert.equal(linhas.find((linha) => linha.presenteId === "rosa").delta, 10);
+  assert.equal(movimentoDoPreset(null).multiplicador, 10);
+});
+
+test("escrever o número da própria conta APAGA a exceção em vez de gravá-la", () => {
+  // É o que faz o multiplicador continuar valendo para quem nunca foi tocado.
+  const igual = comExcecao(PRESET_DA_TABELA, "rosa", 10, 10);
+  assert.equal(igual.excecoes.some((e) => e.presenteId === "rosa"), false);
+
+  const diferente = comExcecao(PRESET_DA_TABELA, "rosa", -5, 10);
+  assert.deepEqual(diferente.excecoes.find((e) => e.presenteId === "rosa"), { presenteId: "rosa", delta: -5 });
+
+  // Zero NÃO é "igual à regra": é o presente silenciado, e vira exceção.
+  const zerado = comExcecao(PRESET_DA_TABELA, "rosa", 0, 10);
+  assert.deepEqual(zerado.excecoes.find((e) => e.presenteId === "rosa"), { presenteId: "rosa", delta: 0 });
+
+  // Uma exceção por presente, nunca duas.
+  const trocada = comExcecao(PRESET_DA_TABELA, "perfume", -80, 200);
+  assert.equal(trocada.excecoes.filter((e) => e.presenteId === "perfume").length, 1);
+  assert.equal(semExcecao(PRESET_DA_TABELA, "perfume").excecoes.length, 0);
+});
+
+test("o resumo conta o que a lista longa esconde, inclusive quem varre a torre sozinho", () => {
+  const linhas = linhasDeMovimento(CATALOGO_DA_TABELA, PRESET_DA_TABELA);
+  const resumo = resumoDaTabela(linhas, 1000);
+
+  assert.equal(resumo.movem, 3, "o de graça não conta");
+  assert.equal(resumo.parados, 1);
+  assert.equal(resumo.excecoes, 1);
+  assert.equal(resumo.maior.presenteId, "perfume", "o maior é por tamanho, não por sinal");
+  assert.equal(resumo.varremATorre, 0, "nenhum dos três chega a 1000 andares");
+
+  // Com a galáxia solta na conta, ela sozinha anda dez torres.
+  const semSlot = linhasDeMovimento(CATALOGO_DA_TABELA, { ...PRESET_DA_TABELA, slots: [] });
+  assert.equal(resumoDaTabela(semSlot, 1000).varremATorre, 1);
+  // Sem mapa gerado não há torre para comparar: a conta não é inventada.
+  assert.equal(resumoDaTabela(semSlot, null).varremATorre, null);
 });

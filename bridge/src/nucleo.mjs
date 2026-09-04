@@ -299,8 +299,11 @@ export class Nucleo {
     if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, { status: 404 });
 
     await this.carregarAnimacoesNaMemoria();
+    // O catálogo antes do preset: é dele que a tabela de movimento tira o valor
+    // de cada presente (ADR-016). Caminho frio — disco aqui, nunca por evento.
+    await this.prepararCatalogoEmMemoria();
     this.#preset = preset;
-    this.#despachante.definirPreset(preset);
+    this.#despachante.definirPreset(preset, this.#catalogoEmMemoria);
     this.#despachante.limpar();
     this.#sessao = new Sessao({ presetId, mapaId: preset.mapaId ?? null });
     // Vitória e tamanho do mapa são da CORRIDA, não da ponte. Sessão nova
@@ -416,7 +419,15 @@ export class Nucleo {
   #aoCatalogo(presentes) {
     // Caminho frio: a coleta grava disco e não pode segurar a conexão da live.
     salvarColeta(presentes)
-      .then((catalogo) => this.#publicar("catalogo", { total: catalogo.presentes.length }))
+      .then((catalogo) => {
+        // A coleta da live é a lista mais completa que existe: traz os presentes
+        // exclusivos da sala. A tabela de movimento é refeita com ela, e o
+        // presente que a ponte acabou de conhecer passa a mover a torre pelo
+        // valor certo, sem esperar a próxima troca de preset (ADR-016).
+        this.#catalogoEmMemoria = catalogo;
+        this.#despachante.definirCatalogo(catalogo);
+        this.#publicar("catalogo", { total: catalogo.presentes.length });
+      })
       .catch((erro) => log.aviso("catalogo_nao_persistiu", { motivo: erro.message }));
   }
 
@@ -724,7 +735,11 @@ export class Nucleo {
     const anterior = this.#preset;
     // R7 — trocar de preset no meio da sessão vale a partir do próximo evento.
     this.#preset = preset;
-    this.#despachante.definirPreset(preset);
+    // A tabela de movimento sai do preset E do catálogo (ADR-016). Sem o
+    // catálogo em memória ela cairia no valor que vem no evento, que é um
+    // número diferente do que a página de presentes mostra.
+    if (!this.#catalogoEmMemoria) await this.prepararCatalogoEmMemoria();
+    this.#despachante.definirPreset(preset, this.#catalogoEmMemoria);
 
     //[[ Trocar de mapa no painel tem que chegar ao jogo sozinho.
     //

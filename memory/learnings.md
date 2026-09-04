@@ -185,3 +185,35 @@ nas duas formas e `/api/overlay` entrega a que funciona nos dois programas.
 A lição: quando um programa de terceiros recusa a URL sem nem tentar conectar,
 o erro é de FORMA, e a regra costuma estar legível no bundle instalado — foi
 mais rápido ler a regex do que adivinhar o que ele queria.
+
+## O dono reabriu o ADR-007, e a resposta certa foi emendar, não substituir (2026-09-04)
+O pedido — "uma página só pra definir subida ou descida por presente,
+pré-definida com valor × 10" — é literalmente a alternativa que o ADR-007
+descartou ("faixa de valor dispara animação automaticamente"). A tentação era
+tratar como contradição e perguntar. Mas os dois argumentos daquele ADR
+continuavam de pé e não colidiam com o pedido: *escolher a animação* é a
+proposta de valor, e *catálogo que muda sozinho* não pode virar tabela morta. O
+que mudou foi o buraco que a live mostrou: 6 presentes configurados e 664
+mudos, com o contador de "não mapeado" medindo um problema que não tinha
+conserto possível.
+
+A saída foi separar as duas perguntas que o ADR-007 tratava como uma:
+
+- **o que TOCA** continua sendo escolha, um presente por slot (ADR-007 intacto);
+- **quanto ANDA** virou conta, com a mão do streamer como exceção (ADR-016).
+
+E guardar a REGRA no preset em vez das 670 linhas resolveu de graça a objeção
+do catálogo: presente novo da TikTok nasce com delta sem ninguém abrir o painel.
+
+A lição: quando o dono pede o que um ADR descartou, ler os ARGUMENTOS do ADR
+antes de discutir a decisão. Duas vezes em dois dias eles apontaram o desenho
+certo em vez de bloquear o pedido.
+
+## Consequência que só aparece quando se faz a conta (2026-09-04)
+Com 10 andares por moeda numa torre de 1000, **541 dos 670 presentes do
+catálogo varrem a torre inteira sozinhos** — qualquer um de 100 moedas ou mais.
+Não quebra nada (o jogo grampeia nas pontas), mas acaba a corrida num presente.
+Isso não aparece lendo a regra; apareceu ao rodar `resumoDaTabela` sobre o
+catálogo real. Virou linha na tela, antes da live: toda regra nova que
+multiplica valor por alguma coisa merece uma passada sobre o dado REAL, e o
+resultado dessa passada merece ficar visível para quem configura.
