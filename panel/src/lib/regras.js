@@ -140,6 +140,27 @@ export function contarAposentadas(animacoes) {
 }
 
 /**
+ * As cutscenes que o painel pode OFERECER, e a escolhida que sumiu do disco.
+ *
+ * A lista vem da PASTA, não de um cadastro (ADR-014): o streamer põe o vídeo
+ * lá e ele aparece. O preset pode apontar para um arquivo que saiu da pasta
+ * depois — renomeado, apagado, máquina trocada. Escondê-lo deixaria o
+ * `<select>` sem seleção, e o próximo clique trocaria a escolha sem o streamer
+ * perceber. Mesma regra de `animacoesOferecidas` para a aposentada: ele volta,
+ * marcado `ausente: true`, para a tela dizer o que aconteceu.
+ */
+export function opcoesDeCutscene(cutscenes, escolhida) {
+  const lista = Array.isArray(cutscenes) ? cutscenes : [];
+  const opcoes = lista
+    .filter((cutscene) => typeof cutscene?.id === "string")
+    .map((cutscene) => ({ id: cutscene.id, arquivo: cutscene.arquivo ?? cutscene.id, ausente: false }));
+  if (typeof escolhida === "string" && escolhida && !opcoes.some((opcao) => opcao.id === escolhida)) {
+    opcoes.push({ id: escolhida, arquivo: escolhida, ausente: true });
+  }
+  return opcoes;
+}
+
+/**
  * O nome que o streamer digita vira o id que o arquivo usa.
  *
  * O `identificador` de `comuns.schema.json` é `^[a-z0-9][a-z0-9-]*$`: sem

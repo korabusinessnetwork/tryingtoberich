@@ -129,6 +129,22 @@ hoje um teste em `test/jogo.test.mjs` compara os dois lados.
 reinicia sozinho — quem decide é o streamer, e a ordem volta pelo `comandos`
 do long-poll.
 
+### `POST /jogo/rodada`
+O fim de rodada **confirmado** (ADR-014). O jogo avisa no instante em que o
+resultado é definitivo — a contagem da vitória zerou sem o streamer sair do
+topo, ou o portal quebrou — e é deste aviso que o overlay do OBS toca a
+cutscene. Separado do `/estado` de propósito: o estado é um instantâneo, e
+"a rodada acabou" é um instante. Derivá-lo do placar disparava a cutscene no
+início de uma contagem que a vitória ainda podia abandonar.
+```json
+{ "resultado": "vitoria", "vitorias": 3, "derrotas": 1 }
+```
+Fire-and-forget como o estado. Corpo fora do contrato
+(`rodada-jogo.schema.json`) é descartado com aviso no log e `{ "aceito": false }`,
+sempre 200 — o jogo não lê a resposta. Rodada comprada por donate de placar
+avisa do mesmo jeito: a vitória vinda de presente não é cancelável, porque a
+condição dela é o donate, não a posição.
+
 ---
 
 ## B. Superfície local (ponte ↔ painel), só em `localhost`
@@ -174,6 +190,22 @@ protege é o bind em `127.0.0.1` e o túnel não conhecer esta porta.
 | POST | `/api/jogo/abrir-studio` | Monta um `.rbxlx` com `KoraConfig` e HttpService prontos e abre o Studio nele |
 | GET | `/api/logs` | Log recente da ponte, para o painel ter o que veio antes dele |
 | GET | `/api/cenarios` | Cenários de fixture, para o modo sem live |
+| GET | `/api/cutscenes` | Os vídeos em `data/cutscenes/`, para o preset escolher (ADR-014). A pasta É a lista; o que está fora do padrão de nome volta em `ignorados` |
+| GET | `/api/overlay` | As URLs dos dois overlays para colar no OBS ou no TikTok LIVE Studio (`url` das cutscenes, `urlHud` do HUD), já na forma com `.html` que o LIVE Studio aceita; os vídeos da pasta e qual está `emUso` em cada resultado do preset ativo — com `existe`, porque a cutscene falha calada |
+| GET | `/api/hud` | A legenda do HUD da live (ADR-015): os slots do preset ativo com nome, ícone e delta, o mais forte primeiro. Sem preset ativo, `slots: []` — a página abre antes da sessão |
+
+Fora de `/api`, na mesma porta do painel, as páginas que o OBS abre como
+Browser Source: `GET /overlay` (as cutscenes, ADR-014) e `GET /overlay/hud`
+(o HUD da live, ADR-015 — aceita `?cam=43`, `?meta=10000`, `?barra=nao` e
+`?esticar=nao`).
+Cada uma responde também com `.html` no fim (`/overlay.html`,
+`/overlay/hud.html`), e é essa a forma que `/api/overlay` entrega: a fonte
+"Link" do TikTok LIVE Studio (1.35) só aceita URL em que apareça um
+`algo.letras`, e `127.0.0.1` termina em número — sem a extensão, "Digite o URL
+correto". Mesma página nas duas formas; o OBS aceita qualquer uma.
+`GET /overlay/video/:id` serve `data/cutscenes/<id>.mp4` (ou `.webm`) por
+faixa (`Range`, 206 — o Chromium do OBS exige). O id só passa se for
+`identificador`: `..` e nome fora do padrão são 404 antes de tocar o disco.
 
 ### Eventos do SSE
 ```
@@ -182,7 +214,17 @@ data: { "slot": 3, "presenteNome": "Galaxy", "delta": 15, "latenciaMs": 620 }
 
 event: estado
 data: { "live": "conectada", "jogo": "online", "plataformaAtual": 184,
-        "totalPlataformas": 200, "vitoria": false }
+        "totalPlataformas": 200, "vitoria": false, "vitorias": 2, "derrotas": 1,
+        "cutscenes": { "vitoria": "vitoria", "derrota": "derrota" } }
+
+event: rodada
+data: { "resultado": "vitoria", "cutscene": "vitoria", "vitorias": 3, "derrotas": 1 }
+
+event: hud
+data: { "moedas": 294, "ranking": [{ "nome": "julin_", "moedas": 120 }],
+        "topCombo": { "presenteId": "5655", "presenteNome": "Rose", "nome": "kelvyn", "repeticoes": 20 },
+        "topPresente": { "presenteId": "5879", "presenteNome": "Lion", "nome": "raylton", "moedas": 100 },
+        "disputa": { "subida": 70, "descida": 58 } }
 
 event: naoMapeado
 data: { "presenteNome": "Rose", "presenteId": "7934", "moedas": 1, "contagem": 7 }
@@ -195,6 +237,17 @@ em um clique, no meio da live (F2.4). Sem ele o contador só sabe lamentar.
 para o `GET /api/sessao` da abertura do painel contar a mesma história que o
 SSE — senão quem abrisse o painel no meio de uma live veria a vitória sumir até
 o próximo batimento do jogo.
+
+`hud` é o HUD da live (ADR-015): agregado em memória pela ponte, por sessão,
+publicado inteiro a cada presente e entregue de cara a quem assina o fluxo. O
+nickname só existe ali e no `presente`; nunca em disco (11_SEGURANCA, camada 4).
+
+`cutscenes` no `estado` é para o overlay do OBS **preparar** os vídeos (ADR-014);
+o fluxo manda um `estado` assim que a conexão abre, para ele saber qual carregar
+antes de a rodada acabar. Quem **toca** é o evento `rodada`, republicado do
+`POST /jogo/rodada` com o id da cutscene já resolvido pelo preset ativo — nunca
+a comparação de `vitorias`/`derrotas`, que sobe no início da contagem e voltava
+a zero a cada reinício da ponte.
 
 ---
 

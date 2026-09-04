@@ -25,8 +25,12 @@ export function exigirToken(esperado) {
 }
 
 /**
- * Rate limit simples por janela. O Roblox legítimo faz cerca de 3 requisições
- * por minuto; qualquer coisa acima de 60 é abuso, não uso.
+ * Rate limit simples por janela, contra flood na porta pública.
+ *
+ * O teto vive em `REGRAS.LIMITE_JOGO_POR_MINUTO`, e a conta que o justifica
+ * está lá: batimento de estado a cada 2s, um long-poll por presente, mapa e
+ * look ao montar mundo. Ele já foi 60 e derrubava o jogo legítimo — o teste de
+ * animação do painel bastava para o Roblox tomar 429 e entrar em backoff.
  */
 export function limitarTaxa({ porMinuto = REGRAS.LIMITE_JOGO_POR_MINUTO, agora = Date.now } = {}) {
   const janelas = new Map();

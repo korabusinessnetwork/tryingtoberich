@@ -18,3 +18,5 @@ no código. Use `adr-000-template.md` para criar a próxima.
 | [011](./adr-011-vestiario-hibrido.md) | Vestiário híbrido: monta no jogo, escolhe no painel | Aceito |
 | [012](./adr-012-combate-de-presentes.md) | Combate de presentes: a plateia briga entre si | Aceito |
 | [013](./adr-013-comando-pelo-long-poll.md) | Ordem do painel para o jogo pelo mesmo long-poll | Aceito |
+| [014](./adr-014-cutscene-no-overlay.md) | Cutscene de fim de rodada no overlay do OBS, escolhida no preset | Aceito |
+| [015](./adr-015-hud-da-live-no-overlay.md) | O HUD da live vive no overlay do OBS, alimentado pela ponte | Aceito |

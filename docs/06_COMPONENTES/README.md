@@ -10,7 +10,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `NavegacaoDePaginas` | Troca entre as 3 páginas do painel, com contador de problemas | página atual |
 | `BarraDeSessao` | Start/stop, estado da live e do jogo, cronômetro | estado do SSE |
 | `SeletorModalidade` | Escolhe a modalidade (Fase 1: só Escalada) | lista de modalidades |
-| `EditorDePlacar` | Presentes que contam vitória ou derrota, e a vida do portal | preset, catálogo |
+| `EditorDePlacar` | Por resultado: a cutscene que o OBS toca e os presentes que contam vitória ou derrota; e a vida do portal | preset, catálogo, `/api/cutscenes` |
 | `EditorDePreset` | Container dos 6 slots, salva o preset | preset |
 | `CartaoDeSlot` | Um slot: presente, animação, delta, intensidade | slot, catálogo, animações |
 | `SeletorDePresente` | Modal com busca, ícone oficial, cor de faixa | catálogo |
@@ -30,7 +30,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `HistoricoDeSessoes` | As lives passadas, uma linha por sessão | lista de `/api/sessoes` |
 | `GerenciadorDePresets` | Criar, duplicar e apagar preset | presets |
 | `PainelDeAcervo` | A galeria do acervo: foto, tags, status e assetId de cada peça, e o botão que desenha e sobe o que falta (ADR-004) | acervo |
-| `PainelDeOverlay` | A URL do overlay para colar no OBS, e se as cutscenes estão no disco | `/api/overlay` |
+| `PainelDeOverlay` | As URLs dos dois overlays para colar no OBS ou no TikTok LIVE Studio (cutscenes e HUD da live), os ajustes do HUD, os vídeos na pasta e se o escolhido pelo preset ativo está lá | `/api/overlay` |
 
 ## Regras
 - `CartaoDeSlot` é o componente mais importante do produto. Ele precisa mostrar
@@ -131,6 +131,11 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 - `PainelDeOverlay` existe porque a cutscene falha **calada**: sem o arquivo,
   o OBS mostra um retângulo transparente e nada reclama. A aba diz se o vídeo
   está no disco ANTES da live, que é o único momento em que dá para resolver.
+- `EditorDePlacar` agrupa **por resultado** (ADR-014): cada um mostra a sua
+  cutscene e os seus presentes, porque é a mesma pergunta — "o que acontece
+  quando o streamer vence?" — vista de dois lados. A cutscene é um vídeo de
+  `data/cutscenes/`, nunca uma animação da biblioteca: a pasta é a lista, e o
+  seletor mostra a escolhida que sumiu da pasta em vez de trocá-la calado.
 
 - `PainelDeLogs` é a **única tela do painel feita para ler**, e não para olhar
   de canto de olho: o streamer só vem aqui depois que algo falhou, e nesse

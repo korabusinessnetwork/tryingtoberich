@@ -116,11 +116,31 @@ test("o painel acompanha a mesma sessão pelo SSE", async () => {
     assert.equal(typeof presente.dados.latenciaMs, "number", "disparo imediato tem latência medida");
     assert.ok(presente.dados.latenciaMs < 1000, `latência da ponte foi ${presente.dados.latenciaMs}ms`);
 
+    // O CONTADOR de não mapeado é só contagem, sem doador (F2.4). O nome tem
+    // um lugar no SSE, e é um só: o ranking do HUD do OBS (ADR-015), que conta
+    // quem PAGOU — mapeado ou não — e some no Stop.
+    const naoMapeados = recebidos.filter((r) => r.evento === "naoMapeado");
     assert.equal(
-      JSON.stringify(recebidos).includes("Terceiro Espectador"),
+      JSON.stringify(naoMapeados).includes("Terceiro Espectador"),
       false,
-      "o SSE não carrega nickname de quem mandou presente não mapeado",
+      "o contador de não mapeado não carrega nickname de quem mandou",
     );
+
+    const huds = recebidos.filter((r) => r.evento === "hud");
+    const ultimoHud = huds.at(-1).dados;
+    assert.ok(
+      ultimoHud.ranking.some((d) => d.nome === "Terceiro Espectador"),
+      "o Doughnut não está em slot nenhum, mas quem pagou 3000 por ele entra no ranking",
+    );
+    assert.ok(ultimoHud.ranking.some((d) => d.nome === "Quarto Espectador"), "o Galaxy também conta");
+    assert.equal(ultimoHud.topPresente.presenteNome, "Doughnut Gigante", "o maior presente é o de 3000");
+
+    // A disputa da rodada só conta o que CHEGOU ao jogo: o Galaxy é +40 no
+    // preset; o Doughnut não mapeado não empurra ninguém. O HUD publicado logo
+    // depois do `presente` já traz o empurrão.
+    const indiceDoPresente = recebidos.findIndex((r) => r.evento === "presente");
+    const hudDepoisDoPresente = recebidos.slice(indiceDoPresente).find((r) => r.evento === "hud").dados;
+    assert.deepEqual(hudDepoisDoPresente.disputa, { subida: 40, descida: 0 });
 
     const resumo = await nucleo.encerrarSessao();
     await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));

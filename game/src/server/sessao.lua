@@ -52,6 +52,10 @@ local estado = {
 	-- "derrota"), não um booleano: é ele que diz qual condição precisa continuar
 	-- valendo para a contagem seguir. `false` quando não há contagem em curso.
 	encerrando = false,
+	-- A rodada em curso foi COMPRADA por donate de placar, não conquistada por
+	-- posição. Uma vitória comprada não depende de o streamer estar no topo —
+	-- ele não está — e por isso não pode ser cancelada por ele não estar lá.
+	encerramentoForcado = false,
 	-- Sobe a cada rodada encerrada E a cada cancelamento. É o que faz um
 	-- `task.delay` já agendado saber que virou passado e desistir sozinho.
 	geracaoDaRodada = 0,
@@ -180,7 +184,8 @@ function cobrarProximaDaFila()
 		publicarPortal(true)
 	end
 
-	encerrarRodada(fila.tipo)
+	-- Forçada: a condição desta rodada é o donate, não a posição do boneco.
+	encerrarRodada(fila.tipo, true)
 end
 
 --[[
@@ -194,10 +199,11 @@ end
 	A contagem é a mesma dos dois lados: `Tipos.CONTAGEM_DE_RODADA`. O servidor
 	só soma para saber quando reiniciar; quem desenha é o cliente.
 ]]
-function encerrarRodada(resultado)
+function encerrarRodada(resultado, forcada)
 	-- Guarda QUAL resultado, não só "está encerrando": é ele que diz qual
 	-- condição precisa continuar valendo para a contagem seguir de pé.
 	estado.encerrando = resultado
+	estado.encerramentoForcado = forcada == true
 	estado.geracaoDaRodada = estado.geracaoDaRodada + 1
 	local minhaGeracao = estado.geracaoDaRodada
 
@@ -213,23 +219,16 @@ function encerrarRodada(resultado)
 		derrotas = estado.derrotas,
 	})
 
-	--[[ A animação do fim de rodada.
+	--[[ O espetáculo do fim de rodada é a CUTSCENE do overlay do OBS (ADR-014),
+		e o jogo só AVISA a ponte — no instante em que o resultado é definitivo.
 
-		Vitória e derrota não têm delta — ninguém sobe nem desce por ter chegado
-		ao topo — mas são os dois instantes mais altos da live, e até aqui
-		aconteciam com o boneco parado. Toca solta, sem mover e sem tomar o
-		controle: a contagem regressiva já está correndo por cima.
-
-		Qual animação é escolha do streamer, no preset. Nenhuma escolhida =
-		nada toca, que é como era antes. ]]
-	local animacoes = estado.mapa and estado.mapa.animacoesDeRodada
-	local animacaoId = animacoes and animacoes[resultado]
-	local personagem = personagemAtual()
-	if personagem and type(animacaoId) == "string" then
-		Movimento.tocarSolta(personagem, animacaoId, {
-			plataforma = Plataformas.referencia(),
-			presenteNome = resultado == "vitoria" and "VITÓRIA" or "DERROTA",
-		})
+		Derrota é definitiva AGORA: o portal quebrou, e isso não desacontece.
+		Vitória, não: ela é posição, e o streamer pode sair do topo no meio da
+		contagem (ver `cancelarRodada`). O aviso dela sai lá embaixo, quando a
+		contagem zera de verdade. Nada de animação no boneco: a contagem já
+		está correndo, e ele vai ser teleportado em seguida de qualquer jeito. ]]
+	if resultado == "derrota" then
+		Ponte.enviarFimDeRodada("derrota", estado.vitorias, estado.derrotas)
 	end
 
 	task.delay(Tipos.duracaoDaContagem(), function()
@@ -248,6 +247,12 @@ function encerrarRodada(resultado)
 			return
 		end
 
+		-- A contagem zerou com o streamer ainda no topo: AGORA a vitória é de
+		-- verdade, e é agora que a cutscene dela pode tocar.
+		if resultado == "vitoria" then
+			Ponte.enviarFimDeRodada("vitoria", estado.vitorias, estado.derrotas)
+		end
+
 		local personagem = personagemAtual()
 		if personagem then
 			Movimento.restaurar(personagem)
@@ -258,6 +263,7 @@ function encerrarRodada(resultado)
 
 		estado.saiuDoPrimeiro = false
 		estado.encerrando = false
+		estado.encerramentoForcado = false
 
 		-- Torre nova, portal novo: a vida não atravessa a rodada.
 		Portal.fechar()
@@ -281,6 +287,7 @@ end
 local function cancelarRodada()
 	local resultado = estado.encerrando
 	estado.encerrando = false
+	estado.encerramentoForcado = false
 	estado.geracaoDaRodada = estado.geracaoDaRodada + 1
 
 	-- O placar NÃO volta atrás: o ponto foi feito no instante em que o streamer
@@ -304,8 +311,17 @@ end
 	desacontece: sair do primeiro andar depois que o portal foi ao chão não
 	devolve a rodada. Antes, quando derrota era "estar no andar 1", cancelar
 	fazia sentido; hoje seria apagar um estrago que a plateia pagou para ver.
+
+	E a rodada COMPRADA por donate de placar tampouco é posição: a vitória
+	vinda de presente encerra com o boneco onde ele estiver. Sem esta guarda,
+	o próximo batimento via "encerrando vitória, mas não está no topo" e
+	cancelava — a contagem sumia em dois segundos e a cutscene nunca tocava,
+	por uma vitória que o espectador pagou.
 ]]
 local function aindaNaPlataformaDoFim(atual)
+	if estado.encerramentoForcado then
+		return true
+	end
 	if estado.encerrando == "vitoria" then
 		return atual.vitoria == true
 	end

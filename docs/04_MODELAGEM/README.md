@@ -36,6 +36,8 @@ exemplo é schema quebrado.
   "mapaId": "torre-vulcanica-01",
   "atualizadoEm": "2026-09-01T13:00:00Z",
   "personagem": { "lookId": "escalador-vulcanico" },
+  "cutsceneDeVitoria": "vitoria",
+  "cutsceneDeDerrota": "derrota",
   "slots": [
     {
       "posicao": 1,
@@ -52,6 +54,12 @@ exemplo é schema quebrado.
 Regras: `slots` tem no máximo 6 itens, `posicao` de 1 a 6 e única,
 `presenteId` único dentro do preset, `delta` inteiro diferente de 0 (sem teto),
 `intensidade` entre 1 e 5.
+
+`cutsceneDeVitoria` e `cutsceneDeDerrota` apontam para um vídeo de
+`data/cutscenes/` pelo nome sem extensão (ADR-014). A pasta é a lista — não há
+cadastro — e nulo é "nada toca, o placar só muda". A lista `placar` (ADR-007)
+diz quais presentes provocam cada resultado, e não pode repetir presente de
+slot.
 
 O preset apenas **referencia** um look. A composição vive em `data/looks/`,
 montada pelo vestiário dentro do jogo. Ver ADR-011.

@@ -37,6 +37,7 @@ local Ponte = {}
 -- Ponte.buscarItensDoCatalogo(busca) -> itens, erro    -- GET /jogo/catalogo-itens?busca=
 -- Ponte.salvarLook(lookId, look) -> ok, erro           -- PUT /jogo/looks/:lookId
 -- Ponte.enviarEstado(estado)                            -- POST /jogo/estado, FIRE-AND-FORGET
+-- Ponte.enviarFimDeRodada(resultado, vitorias, derrotas) -- POST /jogo/rodada, FIRE-AND-FORGET (ADR-014)
 
 local BACKOFF_INICIAL = 1
 local BACKOFF_MAXIMO = 30
@@ -512,6 +513,30 @@ function Ponte.enviarEstado(estado)
 			liveConectada = corpo.live == true
 		end
 		enviandoEstado = false
+	end)
+end
+
+--[[
+	Avisa a ponte que uma rodada acabou DE VERDADE (ADR-014).
+
+	Separado de `enviarEstado` porque o estado é um instantâneo com throttle, e
+	isto é um instante: a contagem da vitória zerou sem ser cancelada, ou o
+	portal quebrou. É deste aviso que o overlay do OBS toca a cutscene — nunca
+	do placar, que sobe no início da contagem.
+
+	Fire-and-forget como o estado: um erro aqui não mexe no online() do
+	long-poll, e ninguém espera a resposta.
+]]
+function Ponte.enviarFimDeRodada(resultado, vitorias, derrotas)
+	if resultado ~= "vitoria" and resultado ~= "derrota" then
+		return
+	end
+	task.spawn(function()
+		requisitar("POST", "/jogo/rodada", {
+			resultado = resultado,
+			vitorias = vitorias,
+			derrotas = derrotas,
+		})
 	end)
 end
 

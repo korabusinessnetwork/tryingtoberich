@@ -24,6 +24,15 @@ import { ClienteSkins } from "./roblox/skins.mjs";
 import { PublicadorRoblox } from "./roblox/publicador.mjs";
 import { publicarAcervoPendente } from "./acervo/publicar.mjs";
 import { montarMundo } from "./dominio/mundo.mjs";
+import {
+  criarHud,
+  instantaneoDoHud,
+  legendaDoPreset,
+  registrarDisputa,
+  registrarEmpurrao,
+  registrarPresente,
+  zerarDisputa,
+} from "./dominio/hud.mjs";
 import { desenharCeu, desenharTextura } from "./acervo/desenho.mjs";
 import { carregarAnimacoes, indexarAnimacoes } from "./repos/animacoes.mjs";
 import { carregarAcervo, miniaturaDaPeca, resolverAssetsDoMapa } from "./repos/acervo.mjs";
@@ -79,6 +88,12 @@ export class Nucleo {
    * próximo batimento do jogo.
    */
   #doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0 };
+  /**
+   * O HUD da live para o overlay do OBS (ADR-015): ranking, combo, maior
+   * presente, disputa da rodada. Só memória: nasce e morre com a sessão, e é
+   * o único lugar da ponte onde nickname vira agregado (11_SEGURANCA, camada 4).
+   */
+  #hud = criarHud();
   #ouvintes = new Set();
   #catalogoEmMemoria = null;
   #animacoesEmMemoria = null;
@@ -106,7 +121,8 @@ export class Nucleo {
       // Presente que mexe no placar vira COMANDO, não animação: mesmo canal do
       // "reiniciar", porque não tem delta e não casa com slot (ADR-013).
       aoComando: (comando) => {
-        this.#longpoll.publicar([comando]);
+        const entrega = this.#longpoll.publicar([comando]);
+        if (entrega.descartados) log.aviso("comando_descartado_jogo_offline", { tipo: comando.tipo });
         this.#publicar("placar", { efeito: comando.tipo });
         log.info("placar_por_presente", { efeito: comando.tipo });
       },
@@ -120,6 +136,11 @@ export class Nucleo {
 
   get sessaoAtiva() {
     return this.#sessao;
+  }
+
+  /** O HUD da live para o overlay do OBS (ADR-015), já em forma de ir para o SSE. */
+  get hud() {
+    return instantaneoDoHud(this.#hud);
   }
 
   /** Estado que o painel mostra em destaque: live, jogo e sessão. */
@@ -138,6 +159,13 @@ export class Nucleo {
       // sabe que uma rodada acabou.
       vitorias: this.#doJogo.vitorias,
       derrotas: this.#doJogo.derrotas,
+      // QUAL vídeo o overlay toca em cada resultado (ADR-014). Vem do preset
+      // ativo: é regra de partida, e o overlay não conhece preset — ele só lê
+      // este estado. Nula = nada toca, e o placar só muda.
+      cutscenes: {
+        vitoria: this.#preset?.cutsceneDeVitoria ?? null,
+        derrota: this.#preset?.cutsceneDeDerrota ?? null,
+      },
     };
   }
 
@@ -153,11 +181,25 @@ export class Nucleo {
   /** Síncrono e sem disco. Etapas 2 e 3 do caminho crítico de `docs/01_ARQUITETURA`. */
   #aoEventoDaLive(evento) {
     this.#despachante.receber(evento);
+    // Daqui para baixo é caminho frio: o long-poll já foi respondido dentro de
+    // `receber`. O HUD do OBS conta TODO presente, mapeado ou não (ADR-015) —
+    // o ranking é sobre quem pagou, não sobre o que o preset aproveitou.
+    registrarPresente(this.#hud, evento);
+    this.#publicarHud();
   }
 
   #aoDespachar(despachado) {
     // Primeiro o jogo. Tudo abaixo desta linha é caminho frio.
-    this.#longpoll.publicar([despachado]);
+    const entrega = this.#longpoll.publicar([despachado]);
+    //[[ Descartado com o jogo offline (F7) era silêncio: o painel via o presente
+    // "aplicado", o boneco não mexia, e nada dizia por quê. O log é adiado
+    // (log.mjs), então avisar aqui não entra no caminho quente. ]]
+    if (entrega.descartados) {
+      log.aviso("presente_descartado_jogo_offline", {
+        presenteNome: despachado.presenteNome,
+        animacaoId: despachado.animacaoId,
+      });
+    }
 
     const registrado = this.#sessao?.registrarDisparo(despachado);
     this.#sessao?.persistirEmSegundoPlano();
@@ -172,6 +214,17 @@ export class Nucleo {
       disputa: despachado.disputa,
       latenciaMs: registrado?.latenciaMs ?? null,
     });
+
+    // A barra "VS" do HUD do OBS (ADR-015): combate entra pelas duas somas
+    // brutas — a barra é sobre quanto cada lado brigou, e o líquido já está na
+    // torre —, presente solto entra pelo sinal do delta.
+    const disputa = despachado.disputa;
+    if (disputa && (disputa.somaSubida != null || disputa.somaDescida != null)) {
+      registrarDisputa(this.#hud, disputa);
+    } else {
+      registrarEmpurrao(this.#hud, despachado.delta);
+    }
+    this.#publicarHud();
   }
 
   /**
@@ -180,8 +233,12 @@ export class Nucleo {
    * travamento. Vai para o jogo E para o painel.
    */
   #aoAnular(dados) {
-    this.#longpoll.publicar([{ ...dados, tipoDeEntrada: "anulado" }]);
+    const entrega = this.#longpoll.publicar([{ ...dados, tipoDeEntrada: "anulado" }]);
+    if (entrega.descartados) log.aviso("empate_descartado_jogo_offline", { participantes: dados.participantes });
     this.#publicar("combateAnulado", dados);
+    // Empate exato também é briga: as duas somas entram na barra "VS".
+    registrarDisputa(this.#hud, dados);
+    this.#publicarHud();
   }
 
   #aoNaoMapeado(dados) {
@@ -196,6 +253,9 @@ export class Nucleo {
   ouvir(ouvinte) {
     this.#ouvintes.add(ouvinte);
     ouvinte("estado", this.estado);
+    // O HUD de agora também: o overlay do OBS abre no meio da live e precisa
+    // do ranking que já existe, não só do próximo presente.
+    ouvinte("hud", this.hud);
 
     // O log vai junto pelo mesmo fluxo: quando algo falha durante a live, o
     // streamer precisa ver no painel, não no terminal do Node atrás da janela.
@@ -223,6 +283,11 @@ export class Nucleo {
     }
   }
 
+  /** O instantâneo inteiro a cada mudança: é pequeno, e o overlay só desenha. */
+  #publicarHud() {
+    this.#publicar("hud", this.hud);
+  }
+
   /* ---------------------------------------------------------------- */
   /* Sessão                                                            */
   /* ---------------------------------------------------------------- */
@@ -243,6 +308,8 @@ export class Nucleo {
     // live que acabou no topo abriria a próxima já com o aviso de vitória na
     // tela e um botão de reiniciar que não tem o que reiniciar.
     this.#doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0 };
+    // Ranking, combo e disputa são desta live. A anterior já foi embora.
+    this.#hud = criarHud();
 
     this.#conector = cenario
       ? new ConectorDeFixture({
@@ -262,6 +329,11 @@ export class Nucleo {
     this.#iniciarRelogio();
     await this.#conector.conectar();
     log.info("sessao_iniciada", { sessaoId: this.#sessao.id, presetId, cenario });
+    // Sessão que começa sem o Roblox pendurado no long-poll vai descartar tudo
+    // (F7). A barra do painel já mostra "Jogo offline", mas o log é onde se
+    // procura quando "o modo de teste não funcionou" — e uma linha aqui é o
+    // que aponta o lugar certo, em vez de um presente sumindo em silêncio.
+    if (!this.#longpoll.jogoOnline()) log.aviso("sessao_iniciada_com_jogo_offline", { sessaoId: this.#sessao.id });
     return this.#sessao.instantaneo;
   }
 
@@ -320,7 +392,11 @@ export class Nucleo {
     // vitória é a ponte. Sem isto o aviso do R6 fica na tela por cima do
     // resumo da live, oferecendo reiniciar uma corrida que não existe mais.
     this.#doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0 };
+    // O ranking morre com a sessão (11_SEGURANCA, camada 4) — e o overlay
+    // fica sabendo, senão mostraria os nomes da live que acabou.
+    this.#hud = criarHud();
     this.#publicar("estado", this.estado);
+    this.#publicarHud();
     log.info("sessao_encerrada", { sessaoId: resumo.sessaoId, totalPresentes: resumo.resumo.totalPresentes });
     return resumo;
   }
@@ -456,9 +532,59 @@ export class Nucleo {
     return this.#catalogoEmMemoria;
   }
 
+  /**
+   * A legenda do HUD do OBS (ADR-015): os slots do preset ativo com nome,
+   * ícone e delta. Lê o catálogo do disco se ainda não estiver em memória —
+   * caminho frio, o overlay pede uma vez ao abrir e quando o preset troca.
+   */
+  async legendaDoHud() {
+    const catalogo = this.#catalogoEmMemoria ?? (await this.prepararCatalogoEmMemoria());
+    return {
+      presetId: this.#preset?.presetId ?? null,
+      slots: legendaDoPreset(this.#preset, catalogo),
+    };
+  }
+
   /* ---------------------------------------------------------------- */
   /* Vindo do jogo                                                     */
   /* ---------------------------------------------------------------- */
+
+  /**
+   * O fim de rodada CONFIRMADO, vindo do jogo (ADR-014).
+   *
+   * É um instante, não um instantâneo, e por isso não passa pelo `/estado`: a
+   * vitória só é definitiva quando a contagem zera sem o streamer sair do
+   * topo, e a derrota é definitiva no instante em que o portal quebra. O jogo
+   * avisa nesses dois momentos, e o overlay do OBS toca a cutscene DESTE
+   * evento — nunca por ver o placar subir, que sobe no início da contagem.
+   *
+   * O placar que vem junto atualiza o estado na hora, para o painel não ficar
+   * um batimento atrás do vídeo.
+   */
+  registrarFimDeRodada({ resultado, vitorias, derrotas }) {
+    const inteiro = (valor, anterior) => (Number.isInteger(valor) ? valor : anterior);
+    this.#doJogo = {
+      ...this.#doJogo,
+      vitorias: inteiro(vitorias, this.#doJogo.vitorias),
+      derrotas: inteiro(derrotas, this.#doJogo.derrotas),
+    };
+
+    const cutscene =
+      (resultado === "vitoria" ? this.#preset?.cutsceneDeVitoria : this.#preset?.cutsceneDeDerrota) ?? null;
+    log.info("fim_de_rodada", { resultado, cutscene });
+    this.#publicar("rodada", {
+      resultado,
+      cutscene,
+      vitorias: this.#doJogo.vitorias,
+      derrotas: this.#doJogo.derrotas,
+    });
+    this.#publicar("estado", this.estado);
+    // A barra "VS" é da RODADA: quem brigou nesta já brigou. O resto do HUD
+    // (ranking, combo, maior presente) é da sessão inteira e fica.
+    zerarDisputa(this.#hud);
+    this.#publicarHud();
+    return { resultado, cutscene };
+  }
 
   /** R9 — o jogo é a fonte de verdade da posição. A ponte só repassa. */
   aplicarEstadoDoJogo(estado) {
@@ -580,13 +706,6 @@ export class Nucleo {
       ...mapa,
       acervoResolvido: resolverAssetsDoMapa(mapa, await carregarAcervo()),
       portal: { vida: this.#preset?.portal?.vida ?? VIDA_PADRAO_DO_PORTAL },
-      // As animações de fim de rodada viajam pelo mesmo caminho do portal, e
-      // pelo mesmo motivo: são regra de partida, moram no preset, e o jogo não
-      // conhece preset — ele busca mapa e look.
-      animacoesDeRodada: {
-        vitoria: this.#preset?.animacaoDeVitoria ?? null,
-        derrota: this.#preset?.animacaoDeDerrota ?? null,
-      },
     };
   }
 

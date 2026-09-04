@@ -23,6 +23,7 @@ import {
   formatarLatencia,
   idDePreset,
   medianaDeLatencia,
+  opcoesDeCutscene,
   presentesRepetidos,
   saudeDaLatencia,
   slotsDoPreset,
@@ -410,4 +411,36 @@ test("entrada que não é lista não quebra a tela", () => {
 
 test("contarAposentadas conta só as desligadas", () => {
   assert.equal(contarAposentadas(BIBLIOTECA), 2);
+});
+
+/* -------------------------------------------------------------- */
+/* ADR-014 — cutscenes: a pasta é a lista                          */
+/* -------------------------------------------------------------- */
+
+const PASTA = [
+  { id: "vitoria", arquivo: "vitoria.mp4" },
+  { id: "derrota", arquivo: "derrota.mp4" },
+];
+
+test("as opções de cutscene são o que está na pasta, com o nome do arquivo", () => {
+  assert.deepEqual(opcoesDeCutscene(PASTA, null), [
+    { id: "vitoria", arquivo: "vitoria.mp4", ausente: false },
+    { id: "derrota", arquivo: "derrota.mp4", ausente: false },
+  ]);
+});
+
+test("a escolhida que sumiu da pasta continua na lista, marcada — senão o select troca a escolha em silêncio", () => {
+  const opcoes = opcoesDeCutscene(PASTA, "final-boss");
+  assert.equal(opcoes.length, 3);
+  assert.deepEqual(opcoes.at(-1), { id: "final-boss", arquivo: "final-boss", ausente: true });
+
+  // A que está na pasta não é duplicada.
+  assert.equal(opcoesDeCutscene(PASTA, "vitoria").length, 2);
+});
+
+test("pasta vazia ou lixo não quebram a tela, e escolha nula não inventa opção", () => {
+  assert.deepEqual(opcoesDeCutscene([], null), []);
+  assert.deepEqual(opcoesDeCutscene([], "vitoria"), [{ id: "vitoria", arquivo: "vitoria", ausente: true }]);
+  for (const lixo of [null, undefined, "x", 7, {}]) assert.deepEqual(opcoesDeCutscene(lixo, null), []);
+  assert.deepEqual(opcoesDeCutscene([{ semId: true }, null], ""), []);
 });

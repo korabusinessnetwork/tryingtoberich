@@ -12,24 +12,31 @@
  * mundo: ela cobre a tela inteira em qualidade cheia, com som, e o Roblox
  * segue rodando embaixo sem saber de nada.
  *
- * Como o overlay sabe que a rodada acabou: pelo PLACAR. O jogo reporta
- * `vitorias` e `derrotas` no estado, a ponte repassa pelo SSE, e esta página
- * compara com o número anterior. Comparar número é o único jeito que funciona
- * para os dois casos — a vitória tem um booleano no estado, a derrota não tem
- * nada equivalente.
+ * Como o overlay sabe que a rodada acabou: o JOGO AVISA, pelo evento `rodada`
+ * do SSE, no instante em que o resultado é definitivo — a contagem da vitória
+ * zerou sem o streamer sair do topo, ou o portal quebrou (ADR-014). Antes esta
+ * página comparava o placar com o anterior, e isso errava nos dois sentidos:
+ * o placar sobe no INÍCIO da contagem, que a vitória ainda pode abandonar, e
+ * a ponte reiniciada zerava o contador dela enquanto o do jogo continuava —
+ * o primeiro estado depois disso tocava uma vitória que ninguém teve.
+ *
+ * QUAL vídeo toca é escolha do preset: `cutsceneDeVitoria` e
+ * `cutsceneDeDerrota` viajam no `estado` como `cutscenes`, e a página aponta
+ * os dois `<video>` para `/overlay/video/:id` assim que a escolha muda — antes de a
+ * rodada acabar, para o vídeo já estar carregado quando o aviso chegar. O
+ * aviso traz o id de novo, para o caso de o overlay ter aberto no meio. Nula
+ * = nada toca, e o placar só muda.
  *
  * Serve HTML e vídeo pela porta do PAINEL, que nunca sai da máquina
  * (`11_SEGURANCA`, camada 1). O OBS roda aqui do lado; o túnel não alcança.
  */
 
-//[[ A lista e o acesso ao arquivo vivem no repositório.
+//[[ O acesso ao arquivo vive no repositório.
 //
 // O painel precisa da MESMA resposta ("esse vídeo está lá?") para poder avisar
-// antes da live, e duas cópias da lista de nomes desencostariam na primeira
-// cutscene nova. ]]
-import { abrirCutscene, CUTSCENES } from "../repos/cutscenes.mjs";
-
-export { CUTSCENES };
+// antes da live, e a validação do id — que é o que impede `..` de virar
+// caminho — tem que morar num lugar só. ]]
+import { abrirCutscene } from "../repos/cutscenes.mjs";
 
 const PAGINA = `<!doctype html>
 <html lang="pt-BR">
@@ -58,8 +65,9 @@ const PAGINA = `<!doctype html>
 </style>
 </head>
 <body>
-  <video id="vitoria" src="/overlay/vitoria.mp4" preload="auto" playsinline></video>
-  <video id="derrota" src="/overlay/derrota.mp4" preload="auto" playsinline></video>
+  <!-- Sem src de propósito: quem diz qual vídeo é o estado, não a página. -->
+  <video id="vitoria" preload="auto" playsinline></video>
+  <video id="derrota" preload="auto" playsinline></video>
 
 <script>
 (function () {
@@ -67,50 +75,77 @@ const PAGINA = `<!doctype html>
     vitoria: document.getElementById("vitoria"),
     derrota: document.getElementById("derrota"),
   };
-  var placar = null;   // null = ainda não sabemos; o primeiro estado só calibra
-  var tocando = false;
+  var apontadas = { vitoria: null, derrota: null }; // o id carregado em cada <video>
+
+  function algumTocando() {
+    return videos.vitoria.classList.contains("tocando") || videos.derrota.classList.contains("tocando");
+  }
+
+  // Troca o vídeo de um resultado quando o preset muda de ideia. Carrega na
+  // hora, e não no play: o momento de tocar é o pior para começar a baixar.
+  function apontar(qual, id) {
+    if (apontadas[qual] === id) return;
+    apontadas[qual] = id;
+    var video = videos[qual];
+    video.classList.remove("tocando");
+    if (id) video.src = "/overlay/video/" + encodeURIComponent(id);
+    else video.removeAttribute("src");
+    video.load();
+  }
 
   function tocar(qual) {
     var video = videos[qual];
-    if (!video || tocando) return;
-    tocando = true;
+    if (!video || !apontadas[qual] || algumTocando()) return;
     video.currentTime = 0;
     video.classList.add("tocando");
     var promessa = video.play();
     if (promessa && promessa.catch) {
       // O OBS não exige gesto do usuário, mas um navegador comum exige: sem
       // isto a página abriria muda e ninguém saberia por quê.
-      promessa.catch(function (erro) { console.warn("[kora] o vídeo não tocou:", erro); });
+      promessa.catch(function (erro) {
+        video.classList.remove("tocando");
+        console.warn("[kora] o vídeo não tocou:", erro);
+      });
     }
   }
 
   Object.keys(videos).forEach(function (qual) {
     videos[qual].addEventListener("ended", function () {
       videos[qual].classList.remove("tocando");
-      tocando = false;
+    });
+    // Arquivo que sumiu da pasta no meio da live: sem isto a página ficaria
+    // "tocando" um vídeo que nunca vai terminar, e a próxima rodada ficaria muda.
+    videos[qual].addEventListener("error", function () {
+      videos[qual].classList.remove("tocando");
+      console.warn("[kora] o vídeo de " + qual + " não carregou:", apontadas[qual]);
     });
   });
 
+  // O estado só PREPARA: aponta cada <video> para a escolha do preset, para
+  // o arquivo estar carregado antes de a rodada acabar. Nunca toca nada.
   function aoEstado(estado) {
-    if (!estado || typeof estado.vitorias !== "number") return;
+    if (!estado) return;
+    var escolhidas = estado.cutscenes || {};
+    apontar("vitoria", typeof escolhidas.vitoria === "string" ? escolhidas.vitoria : null);
+    apontar("derrota", typeof escolhidas.derrota === "string" ? escolhidas.derrota : null);
+  }
 
-    // O PRIMEIRO estado só calibra. Sem isto, abrir o overlay no meio de uma
-    // live com 3 vitórias no placar dispararia a cutscene na hora.
-    if (placar === null) {
-      placar = { vitorias: estado.vitorias, derrotas: estado.derrotas };
-      return;
-    }
-
-    if (estado.vitorias > placar.vitorias) tocar("vitoria");
-    else if (estado.derrotas > placar.derrotas) tocar("derrota");
-
-    placar = { vitorias: estado.vitorias, derrotas: estado.derrotas };
+  // O gatilho é o AVISO do jogo, no instante em que o resultado é definitivo.
+  // O aviso traz o id: se o overlay abriu depois de a escolha mudar, aponta
+  // agora e toca — um load a mais é melhor que um vídeo errado.
+  function aoRodada(dados) {
+    if (!dados || (dados.resultado !== "vitoria" && dados.resultado !== "derrota")) return;
+    apontar(dados.resultado, typeof dados.cutscene === "string" ? dados.cutscene : null);
+    tocar(dados.resultado);
   }
 
   function ligar() {
     var fonte = new EventSource("/api/sessao/stream");
     fonte.addEventListener("estado", function (evento) {
       try { aoEstado(JSON.parse(evento.data)); } catch (e) { /* quadro solto */ }
+    });
+    fonte.addEventListener("rodada", function (evento) {
+      try { aoRodada(JSON.parse(evento.data)); } catch (e) { /* quadro solto */ }
     });
     // Reconecta sozinho: o EventSource já faz isso, mas a ponte reiniciada
     // fecha o fluxo e o OBS não recarrega a página sozinho.
@@ -125,26 +160,31 @@ const PAGINA = `<!doctype html>
 
 /** Registra as rotas do overlay no app do painel. */
 export function montarOverlay(rotas) {
-  rotas.get("/overlay", (req, res) => {
+  // Também em `/overlay.html`. A fonte "Link" do TikTok LIVE Studio (1.35) só
+  // aceita URL em que apareça `algo.letras`: a validação dele exige um domínio
+  // de letras, e `127.0.0.1` termina em número — "Digite o URL correto". O
+  // `.html` no caminho satisfaz a regra sem sair da máquina; o OBS aceita as
+  // duas formas. É a forma que `/api/overlay` entrega.
+  rotas.get(["/overlay", "/overlay.html"], (req, res) => {
     res.set("content-type", "text/html; charset=utf-8");
     res.send(PAGINA);
   });
 
-  rotas.get("/overlay/:nome", async (req, res) => {
-    const nome = String(req.params.nome).replace(/\.mp4$/, "");
-    const arquivo = CUTSCENES[nome];
-    if (!arquivo) {
-      res.status(404).json({ erro: "cutscene_desconhecida", mensagem: "Só existem vitoria.mp4 e derrota.mp4." });
-      return;
-    }
+  // Debaixo de `/overlay/video/` e não de `/overlay/:id`: a segunda página
+  // (`/overlay/hud`, ADR-015) mora ao lado, e um id de cutscene não pode
+  // roubar o nome de uma página.
+  rotas.get("/overlay/video/:id", async (req, res) => {
+    // Tolerante à extensão: `vitoria.mp4` colado num navegador para conferir
+    // ainda funciona. O id é o que o repositório valida — `..` nunca passa.
+    const id = String(req.params.id).replace(/\.(mp4|webm)$/i, "");
 
     // O acesso a disco passa pelo repositório (ADR-003), inclusive para vídeo:
     // a regra é sobre o diretório, não sobre o formato do arquivo.
-    const fonte = await abrirCutscene(nome);
+    const fonte = await abrirCutscene(id);
     if (!fonte) {
       res.status(404).json({
         erro: "cutscene_ausente",
-        mensagem: `Ponha o vídeo em data/cutscenes/${arquivo}.`,
+        mensagem: "Não há esse vídeo em data/cutscenes/ (.mp4 ou .webm, nome só com minúsculas, números e hífen).",
       });
       return;
     }
@@ -166,13 +206,13 @@ export function montarOverlay(rotas) {
         "content-range": `bytes ${inicio}-${fim}/${tamanho}`,
         "accept-ranges": "bytes",
         "content-length": fim - inicio + 1,
-        "content-type": "video/mp4",
+        "content-type": fonte.tipo,
       });
       fonte.trecho(inicio, fim).pipe(res);
       return;
     }
 
-    res.set({ "content-length": tamanho, "content-type": "video/mp4", "accept-ranges": "bytes" });
+    res.set({ "content-length": tamanho, "content-type": fonte.tipo, "accept-ranges": "bytes" });
     fonte.inteiro().pipe(res);
   });
 }

@@ -20,6 +20,17 @@ import { anotarItemDoAcervo, carregarAcervo } from "../repos/acervo.mjs";
 import { listarResumos } from "../repos/sessoes.mjs";
 import { listarCutscenes } from "../repos/cutscenes.mjs";
 
+/**
+ * A escolha do preset ativo, dita junto de "o arquivo está lá?" (ADR-014).
+ * `id: null` é "nenhuma — só o placar muda", e é dito, não omitido: a aba de
+ * overlay precisa distinguir "não escolhi" de "escolhi e sumiu".
+ */
+function cutscenesEmUso(escolhidas, naPasta) {
+  const ids = new Set(naPasta.map((cutscene) => cutscene.id));
+  const dizer = (id) => ({ id: id ?? null, existe: id != null && ids.has(id) });
+  return { vitoria: dizer(escolhidas?.vitoria), derrota: dizer(escolhidas?.derrota) };
+}
+
 export function rotasDoPainel(nucleo) {
   const rotas = express.Router();
 
@@ -325,6 +336,9 @@ export function rotasDoPainel(nucleo) {
       "x-accel-buffering": "no",
     });
 
+    // `ouvir` entrega o estado de AGORA no ato de assinar: é assim que o
+    // overlay do OBS sabe qual vídeo carregar assim que abre, sem esperar o
+    // próximo batimento do jogo — que pode não vir se o Roblox estiver fechado.
     const parar = nucleo.ouvir((evento, dados) => {
       res.write(`event: ${evento}\ndata: ${JSON.stringify(dados)}\n\n`);
     });
@@ -340,24 +354,50 @@ export function rotasDoPainel(nucleo) {
   });
 
   /**
-   * O overlay do OBS: a URL para colar, e se os vídeos estão no lugar.
+   * A pasta de cutscenes, para o preset escolher (ADR-014). A pasta É a lista:
+   * não há cadastro, e o que está fora do padrão de nome volta em `ignorados`
+   * para o painel dizer por que não aparece.
+   */
+  rotas.get("/cutscenes", async (req, res) => res.json(await listarCutscenes()));
+
+  /**
+   * O overlay do OBS: a URL para colar, os vídeos da pasta, e qual está em uso.
    *
    * A URL é montada da CONFIGURAÇÃO, não do `Host` da requisição. Em
    * desenvolvimento o painel vive em :5173 e chega aqui pelo proxy do Vite —
    * copiar o host de quem perguntou daria ao streamer uma URL que o OBS não
    * alcança, e o sintoma seria uma fonte de navegador eternamente em branco.
    *
-   * `existe: false` não é erro. É o caso de quem ainda não pôs o vídeo lá, e é
-   * exatamente o que precisa aparecer na tela: a cutscene falha CALADA — o OBS
-   * mostra um retângulo transparente e nada no mundo reclama.
+   * `emUso` cruza a escolha do preset ativo com o que há na pasta. "Escolhi
+   * vitoria e o arquivo saiu da pasta" precisa aparecer AQUI, antes da live: a
+   * cutscene falha CALADA — o OBS mostra um retângulo transparente e nada no
+   * mundo reclama.
    */
   rotas.get("/overlay", async (req, res) => {
     const { host, portaPainel } = nucleo.config ?? {};
+    const base = `http://${host ?? "127.0.0.1"}:${portaPainel ?? 8788}`;
+    const pasta = await listarCutscenes();
     res.json({
-      url: `http://${host ?? "127.0.0.1"}:${portaPainel ?? 8788}/overlay`,
-      cutscenes: await listarCutscenes(),
+      // Com `.html` no fim: a fonte "Link" do TikTok LIVE Studio recusa URL sem
+      // um `algo.letras` no texto ("Digite o URL correto"), e `127.0.0.1` não
+      // tem. A extensão satisfaz a validação dele sem trocar de host, e o OBS
+      // aceita igual. As páginas respondem nas duas formas — ver overlay.mjs.
+      url: `${base}/overlay.html`,
+      // O HUD da live (ADR-015) é a segunda fonte de navegador. Mesma base,
+      // mesma regra: quem monta a URL é a ponte, que sabe a porta.
+      urlHud: `${base}/overlay/hud.html`,
+      ...pasta,
+      emUso: cutscenesEmUso(nucleo.estado.cutscenes, pasta.cutscenes),
     });
   });
+
+  /**
+   * A legenda do HUD da live (ADR-015): os slots do preset ativo com nome,
+   * ícone e delta do presente. O overlay busca ao abrir e quando o preset
+   * troca (R7). Sem preset ativo, lista vazia — e dita, não 404: a página
+   * abre antes da sessão começar e não pode ficar em erro por isso.
+   */
+  rotas.get("/hud", async (req, res) => res.json(await nucleo.legendaDoHud()));
 
   return rotas;
 }

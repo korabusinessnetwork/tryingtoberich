@@ -217,5 +217,8 @@ export const api = {
    */
   overlay: () => chamar("/api/overlay"),
 
+  /** A pasta de cutscenes, para o preset escolher: a pasta É a lista (ADR-014). */
+  cutscenes: () => chamar("/api/cutscenes"),
+
   urlDoFluxo: () => `${BASE}/api/sessao/stream`,
 };

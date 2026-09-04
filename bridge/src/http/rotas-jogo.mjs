@@ -103,5 +103,29 @@ export function rotasDoJogo(nucleo) {
     return res.status(200).json(resposta);
   });
 
+  /**
+   * O fim de rodada CONFIRMADO (ADR-014): a contagem da vitória zerou sem ser
+   * cancelada, ou o portal quebrou. Separado do `/estado` de propósito — o
+   * estado é um instantâneo, e "a rodada acabou" é um instante. Derivá-lo de
+   * dois instantâneos ("o placar subiu") disparava a cutscene no INÍCIO da
+   * contagem, que a vitória ainda pode abandonar, e disparava de novo a cada
+   * reinício da ponte, quando o contador dela voltava a zero e o do jogo não.
+   *
+   * Mesmo contrato do `/estado` para corpo inválido: descartado com aviso e
+   * 200, porque o jogo não espera esta resposta e um 4xx só viraria "ponte
+   * fora do ar" para quem lesse o status.
+   */
+  rotas.post("/rodada", async (req, res) => {
+    const { validar } = await criarValidador();
+    const problemas = validar("rodada-jogo", req.body);
+    if (problemas.length > 0) {
+      log.aviso("fim_de_rodada_descartado", { problemas });
+      return res.status(200).json({ aceito: false });
+    }
+
+    nucleo.registrarFimDeRodada(req.body);
+    return res.status(200).json({ aceito: true });
+  });
+
   return rotas;
 }

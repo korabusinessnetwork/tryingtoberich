@@ -40,10 +40,67 @@
   line-height: 1.5;
 }
 
+/* As duas fontes de navegador, uma por bloco: título, o que ela faz, a URL. */
+.overlay-fontes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+}
+
+.overlay-fonte {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overlay-fonte-titulo {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.overlay-fonte-descricao {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
 .overlay-url {
   display: flex;
   align-items: stretch;
   gap: 8px;
+}
+
+/* Os ajustes do HUD: chave em monoespaçada, efeito ao lado. */
+.overlay-parametros {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overlay-parametro {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.overlay-parametro-chave {
+  flex: none;
+  min-width: 110px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+}
+
+.overlay-parametro-efeito {
+  color: var(--painel-texto-secundario);
 }
 
 .overlay-endereco {
@@ -111,10 +168,12 @@
 
 .overlay-marca-ok { background: var(--estado-ok); }
 .overlay-marca-falta { background: var(--estado-erro); }
+.overlay-marca-nenhuma { background: var(--painel-borda); }
 
+/* Sem capitalize: o nome é o id do arquivo, e "final-boss" tem que aparecer
+   como o streamer o escreveu — é o que ele vai procurar na pasta. */
 .overlay-arquivo-nome {
   font-weight: 600;
-  text-transform: capitalize;
 }
 
 .overlay-arquivo-caminho {

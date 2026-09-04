@@ -19,8 +19,21 @@ export const REGRAS = Object.freeze({
   JOGO_OFFLINE_MS: 60_000,
   /** R8 — backoff de reconexão da live (F6). */
   BACKOFF_MS: Object.freeze([1000, 2000, 4000, 8000, 16_000, 30_000]),
-  /** 11_SEGURANCA — o Roblox legítimo faz ~3 req/min. Acima de 60 é abuso. */
-  LIMITE_JOGO_POR_MINUTO: 60,
+  /**
+   * 11_SEGURANCA — teto de requisições do jogo por minuto, por IP.
+   *
+   * Era 60, escrito quando o jogo só fazia long-poll (~3/min parado). Hoje o
+   * jogo legítimo faz MUITO mais: o batimento de estado sozinho é 30/min (um a
+   * cada 2s), cada presente devolve o long-poll na hora e gera outro (uma live
+   * cheia passa de 1 presente/s), e montar mundo pelo painel manda buscar mapa
+   * e look de novo. Com 60, o teste de animação no painel derrubava o jogo em
+   * um minuto: 429, backoff de até 30s, boneco parado e "Jogo online" na tela.
+   *
+   * 300 é 5/s sustentados — dez vezes o batimento, dentro do teto de 500/min
+   * do HttpService do Roblox — e continua cortando qualquer flood na porta
+   * pública, que é para o que o limite existe.
+   */
+  LIMITE_JOGO_POR_MINUTO: 300,
   /** R1 — seis slots, sempre. O limite é o formato da TikTok, não técnico. */
   SLOTS: 6,
   /** R2 e biblioteca de animações — teto de intensidade. */

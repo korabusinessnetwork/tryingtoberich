@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/rodada-jogo.schema.json",
+  "title": "Fim de rodada confirmado (Roblox → ponte)",
+  "description": "Corpo de POST /jogo/rodada. O jogo avisa no INSTANTE em que o resultado é definitivo — a contagem da vitória zerou sem ser cancelada, ou o portal quebrou — e não quando o placar sobe: o placar sobe no início da contagem, que a vitória ainda pode abandonar. É deste aviso que o overlay do OBS toca a cutscene (ADR-014). Fire-and-forget do lado do jogo; corpo fora do contrato é descartado com aviso no log, nunca corrigido (11_SEGURANCA, camada 3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["resultado"],
+  "properties": {
+    "resultado": {
+      "description": "Qual cutscene toca. Só existem estes dois instantes.",
+      "type": "string",
+      "enum": ["vitoria", "derrota"]
+    },
+    "vitorias": {
+      "description": "O placar no instante do aviso, para o painel não ficar um batimento atrás do vídeo.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "derrotas": { "type": "integer", "minimum": 0 },
+    "enviadoEm": { "type": "integer", "minimum": 0 }
+  }
+}

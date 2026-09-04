@@ -1564,35 +1564,90 @@ test("o destino de um presente nunca cai abaixo do PÉ da torre", async () => {
   assert.match(plataformas, /function Plataformas\.primeira/, "falta quem sabe qual é o pé da torre");
 });
 
-test("vitória e derrota tocam a animação escolhida, sem mover o boneco", async () => {
-  //[[ Os dois instantes mais altos da live aconteciam com o boneco parado.
-  //
-  // Vitória e derrota não têm delta — ninguém sobe nem desce por ter chegado ao
-  // topo — e por isso passavam longe do caminho de animação, que é todo
-  // construído em cima do movimento. `tocarSolta` existe para isso: mesmo
-  // contexto, sem mover e sem tomar o controle do personagem, porque a contagem
-  // regressiva já está correndo por cima. ]]
-  const movimento = semComentarios(await lerJogo("server", "movimento.lua"));
-  assert.match(movimento, /function Movimento\.tocarSolta/, "falta tocar animação sem mover");
-
-  const corpo = movimento.slice(movimento.indexOf("function Movimento.tocarSolta"));
-  const ateOFim = corpo.slice(0, corpo.indexOf("\nfunction Movimento."));
-  assert.ok(!ateOFim.includes("tomarControle"), "a animação de fim de rodada não pode ancorar o boneco");
-
+test("o fim de rodada é a cutscene do overlay, não uma animação no jogo (ADR-014)", async () => {
+  //[[ A primeira resposta para "vitória e derrota acontecem com o boneco parado"
+  // foi uma animação da biblioteca, tocada solta no fim da rodada. Durou um
+  // dia: o dono olhou a tela e disse que ali deveria estar a lista das
+  // CUTSCENES. O Roblox não aceita vídeo, e o espetáculo que ele quer é vídeo
+  // com som, tela cheia — coisa do overlay do OBS, não do jogo. Este teste
+  // trava a ida e a volta: o jogo não toca nada no fim da rodada, e a escolha
+  // viaja do preset ao overlay pelo estado. ]]
   const sessao = semComentarios(await lerJogo("server", "sessao.lua"));
-  assert.match(sessao, /Movimento\.tocarSolta\(personagem, animacaoId/, "a rodada não toca a animação");
-  assert.match(sessao, /estado\.mapa\.animacoesDeRodada/, "a escolha do streamer não chega na rodada");
+  assert.ok(!sessao.includes("animacoesDeRodada"), "o jogo voltou a tocar animação no fim da rodada");
+  assert.ok(!sessao.includes("tocarSolta"), "o jogo voltou a tocar animação no fim da rodada");
 
-  // E a escolha viaja do preset até o jogo pelo mesmo caminho do portal.
+  const movimento = semComentarios(await lerJogo("server", "movimento.lua"));
+  assert.ok(!movimento.includes("tocarSolta"), "tocar animação sem mover era caso especial no caminho do movimento");
+
+  // A escolha sai do preset pelo ESTADO, que é o que o overlay lê.
   const nucleo = await readFile(path.join(RAIZ, "bridge", "src", "nucleo.mjs"), "utf8");
-  assert.match(nucleo, /animacoesDeRodada: \{/, "a ponte não manda as animações de rodada");
-  assert.match(nucleo, /this\.#preset\?\.animacaoDeVitoria/, "a vitória não sai do preset");
+  assert.match(nucleo, /cutscenes: \{/, "o estado não carrega as cutscenes");
+  assert.match(nucleo, /this\.#preset\?\.cutsceneDeVitoria/, "a vitória não sai do preset");
+  assert.match(nucleo, /this\.#preset\?\.cutsceneDeDerrota/, "a derrota não sai do preset");
+  assert.ok(!nucleo.includes("animacoesDeRodada"), "a ponte ainda manda animação de rodada ao jogo");
+
+  const overlay = await readFile(path.join(RAIZ, "bridge", "src", "http", "overlay.mjs"), "utf8");
+  assert.match(overlay, /estado\.cutscenes/, "o overlay não lê a escolha do estado");
+  assert.ok(!overlay.includes('src="/overlay/vitoria.mp4"'), "o overlay voltou a ter o vídeo fixo no HTML");
+
+  //[[ O GATILHO é o aviso do jogo, no instante em que o resultado é definitivo
+  // — não o placar, que sobe no início de uma contagem que a vitória ainda
+  // pode abandonar. Pedido do dono: "a cutscene só deve acontecer caso
+  // aconteça a vitória mesmo, quando o cronômetro finalizar, ou quando a
+  // parede do nether quebrar". A derrota avisa ANTES da contagem (o portal
+  // quebrou, e isso não desacontece); a vitória avisa DEPOIS da checagem de
+  // geração, que é o que prova que a contagem zerou sem cancelamento. ]]
+  const derrotaAvisa = sessao.indexOf('Ponte.enviarFimDeRodada("derrota"');
+  const vitoriaAvisa = sessao.indexOf('Ponte.enviarFimDeRodada("vitoria"');
+  const contagem = sessao.indexOf("task.delay(Tipos.duracaoDaContagem()");
+  const geracao = sessao.indexOf("estado.geracaoDaRodada ~= minhaGeracao");
+  assert.ok(contagem !== -1 && geracao !== -1, "a contagem de rodada mudou de forma");
+  assert.ok(derrotaAvisa !== -1 && derrotaAvisa < contagem, "a derrota avisa no instante do portal quebrado, antes da contagem");
+  assert.ok(vitoriaAvisa > geracao, "a vitória só avisa depois de a contagem zerar sem cancelamento");
+
+  const ponte = semComentarios(await lerJogo("server", "ponte.lua"));
+  assert.match(ponte, /function Ponte\.enviarFimDeRodada/, "o jogo não tem como avisar o fim da rodada");
+  assert.match(ponte, /"\/jogo\/rodada"/, "o aviso não vai para a rota certa");
+
+  const rotasJogo = await readFile(path.join(RAIZ, "bridge", "src", "http", "rotas-jogo.mjs"), "utf8");
+  assert.match(rotasJogo, /rotas\.post\("\/rodada"/, "a ponte não recebe o aviso");
+  assert.match(rotasJogo, /validar\("rodada-jogo"/, "o aviso entra sem validação (11_SEGURANCA, camada 3)");
+  assert.match(nucleo, /registrarFimDeRodada\(/, "o núcleo não publica o fim de rodada");
+  assert.match(overlay, /addEventListener\("rodada"/, "o overlay não ouve o aviso de fim de rodada");
+  assert.ok(!/placar\.vitorias/.test(overlay), "o overlay voltou a disparar pelo placar");
 
   const contrato = JSON.parse(
     await readFile(path.join(RAIZ, "data", "schemas", "preset.schema.json"), "utf8"),
   );
-  assert.ok(contrato.properties.animacaoDeVitoria, "o contrato não guarda a animação de vitória");
-  assert.ok(contrato.properties.animacaoDeDerrota, "o contrato não guarda a animação de derrota");
+  assert.ok(contrato.properties.cutsceneDeVitoria, "o contrato não guarda a cutscene de vitória");
+  assert.ok(contrato.properties.cutsceneDeDerrota, "o contrato não guarda a cutscene de derrota");
+  assert.equal(contrato.properties.animacaoDeVitoria, undefined, "o campo aposentado voltou ao contrato");
+  assert.equal(contrato.properties.animacaoDeDerrota, undefined, "o campo aposentado voltou ao contrato");
+});
+
+test("vitória COMPRADA por donate não é cancelável: a condição dela é o donate, não o topo", async () => {
+  //[[ Apareceu junto da cutscene. Um donate de vitória chama encerrarRodada
+  // com o boneco no meio da torre; o batimento seguinte via "encerrando
+  // vitória, mas não está no topo" e cancelava. A contagem sumia em dois
+  // segundos, o ponto ficava, e — com o gatilho da cutscene no fim da
+  // contagem — o vídeo nunca tocava por uma vitória que o espectador pagou. ]]
+  const sessao = semComentarios(await lerJogo("server", "sessao.lua"));
+  assert.match(sessao, /encerrarRodada\(fila\.tipo, true\)/, "a rodada da fila não se declara forçada");
+  assert.match(sessao, /function encerrarRodada\(resultado, forcada\)/, "encerrarRodada não sabe distinguir a forçada");
+  assert.match(sessao, /estado\.encerramentoForcado = forcada == true/, "a marca de forçada não é guardada");
+
+  const guarda = sessao.slice(sessao.indexOf("local function aindaNaPlataformaDoFim"));
+  const corpo = guarda.slice(0, guarda.indexOf("\nend"));
+  assert.ok(
+    corpo.indexOf("estado.encerramentoForcado") < corpo.indexOf('estado.encerrando == "vitoria"'),
+    "a forçada tem que ser decidida ANTES de olhar a posição",
+  );
+
+  // E a marca não vaza para a rodada seguinte, conquistada de verdade.
+  assert.ok(
+    (sessao.match(/estado\.encerramentoForcado = false/g) ?? []).length >= 2,
+    "a marca precisa cair no fim da contagem E no cancelamento",
+  );
 });
 
 test("a forma do degrau sai do acervo e é montada com primitivas", async () => {

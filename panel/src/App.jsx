@@ -98,11 +98,12 @@ export function App() {
 
   const carregar = useCallback(async () => {
     try {
-      const [modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao] = await Promise.all([
-        api.modalidades(), api.listarPresets(), api.animacoes(), api.catalogo(),
-        api.looks(), api.mapas(), api.sessao(), api.cenarios(), api.configuracao(),
-      ]);
-      definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao });
+      const [modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao, cutscenes] =
+        await Promise.all([
+          api.modalidades(), api.listarPresets(), api.animacoes(), api.catalogo(),
+          api.looks(), api.mapas(), api.sessao(), api.cenarios(), api.configuracao(), api.cutscenes(),
+        ]);
+      definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao, cutscenes });
       // O que a ponte registrou ANTES do painel abrir. O que vem depois chega
       // pelo SSE, e o hook junta os dois.
       api.logs()
@@ -147,28 +148,18 @@ export function App() {
     });
   }, []);
 
-  //[[ Os presentes de placar vivem numa lista propria, fora dos 6 slots.
+  //[[ Os presentes de placar vivem numa lista própria, fora dos 6 slots.
   //
-  // Tres funcoes e nao uma: acrescentar, trocar o efeito e remover sao acoes
-  // diferentes na tela, e juntar as tres num "mudar" generico obrigaria o
-  // componente a saber quando passar null — que e regra de dominio vazando
-  // para o desenho. ]]
-  const adicionarAoPlacar = useCallback((presenteId) => {
+  // Acrescentar e remover, e nada de "trocar o efeito": o editor agrupa POR
+  // RESULTADO (ADR-014), então um presente entra já sabendo se dá vitória ou
+  // derrota, e mudar de lado é tirar de um e pôr no outro — duas ações que a
+  // tela já tem, em vez de uma terceira que ela teria que explicar. ]]
+  const adicionarAoPlacar = useCallback((presenteId, efeito) => {
     definirPreset((atual) => {
       if (!atual) return atual;
       const placar = atual.placar ?? [];
       if (placar.some((v) => v.presenteId === presenteId)) return atual;
-      return { ...atual, placar: [...placar, { presenteId, efeito: "vitoria" }] };
-    });
-  }, []);
-
-  const mudarEfeitoDoPlacar = useCallback((presenteId, efeito) => {
-    definirPreset((atual) => {
-      if (!atual) return atual;
-      return {
-        ...atual,
-        placar: (atual.placar ?? []).map((v) => (v.presenteId === presenteId ? { ...v, efeito } : v)),
-      };
+      return { ...atual, placar: [...placar, { presenteId, efeito }] };
     });
   }, []);
 
@@ -178,6 +169,15 @@ export function App() {
       return { ...atual, placar: (atual.placar ?? []).filter((v) => v.presenteId !== presenteId) };
     });
   }, []);
+
+  //[[ A pasta de cutscenes muda por fora do painel: o streamer copia um mp4
+  // para lá com o painel aberto. Sem um jeito de procurar de novo, o vídeo
+  // "não aparece" até o próximo F5 — e F5 no meio de uma edição perde o que
+  // ainda não foi salvo. ]]
+  const recarregarCutscenes = useCallback(async () => {
+    const cutscenes = await executar(() => api.cutscenes());
+    if (cutscenes) definirDados((d) => ({ ...d, cutscenes }));
+  }, [executar]);
 
   const limparSlot = useCallback((posicao) => {
     definirPreset((atual) =>
@@ -687,18 +687,17 @@ export function App() {
           />
 
           <EditorDePlacar
-            animacoes={dados.animacoes}
-            aoEscolherAnimacao={(campo) => definirEditando({ tipo: "animacaoDeRodada", campo })}
-            aoLimparAnimacao={(campo) =>
-              definirPreset((atual) => (atual ? { ...atual, [campo]: null } : atual))}
-            aoMudarPortal={(vida) =>
-              definirPreset((atual) => (atual ? { ...atual, portal: { ...atual.portal, vida } } : atual))}
             preset={preset}
             catalogo={dados.catalogo}
+            cutscenes={dados.cutscenes}
             presenteIdsEmSlot={new Set((preset?.slots ?? []).map((s) => String(s.presenteId)))}
             aoAdicionar={adicionarAoPlacar}
-            aoMudar={mudarEfeitoDoPlacar}
             aoRemover={removerDoPlacar}
+            aoEscolherCutscene={(campo, cutsceneId) =>
+              definirPreset((atual) => (atual ? { ...atual, [campo]: cutsceneId } : atual))}
+            aoRecarregarCutscenes={recarregarCutscenes}
+            aoMudarPortal={(vida) =>
+              definirPreset((atual) => (atual ? { ...atual, portal: { ...atual.portal, vida } } : atual))}
           />
 
           <MonitorAoVivo
@@ -899,27 +898,13 @@ export function App() {
         aoFechar={() => definirEditando(null)}
       />
 
-      {/*[[ O MESMO seletor serve slot e fim de rodada.
-
-          `editando.campo` diz onde a escolha vai cair: num slot dos seis, ou no
-          `animacaoDeVitoria`/`animacaoDeDerrota` do preset. Um segundo modal
-          divergiria do primeiro no primeiro ajuste de filtro. ]]*/}
       <SeletorDeAnimacao
-        aberto={editando?.tipo === "animacao" || editando?.tipo === "animacaoDeRodada"}
+        aberto={editando?.tipo === "animacao"}
         animacoes={dados.animacoes}
-        animacaoIdAtual={
-          editando?.tipo === "animacaoDeRodada"
-            ? preset?.[editando.campo] ?? null
-            : slotEditado?.animacaoId ?? null
-        }
-        deltaDoSlot={editando?.tipo === "animacaoDeRodada" ? null : slotEditado?.delta ?? null}
+        animacaoIdAtual={slotEditado?.animacaoId ?? null}
+        deltaDoSlot={slotEditado?.delta ?? null}
         aoEscolher={(animacaoId) => {
-          if (editando?.tipo === "animacaoDeRodada") {
-            const campo = editando.campo;
-            definirPreset((atual) => (atual ? { ...atual, [campo]: animacaoId } : atual));
-          } else {
-            mudarSlot(editando.posicao, { animacaoId });
-          }
+          mudarSlot(editando.posicao, { animacaoId });
           definirEditando(null);
         }}
         aoFechar={() => definirEditando(null)}

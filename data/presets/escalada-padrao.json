@@ -64,6 +64,6 @@
       "efeito": "vitoria"
     }
   ],
-  "animacaoDeVitoria": "sub_fenix",
-  "animacaoDeDerrota": "des_buraco_negro"
+  "cutsceneDeVitoria": "vitoria",
+  "cutsceneDeDerrota": "derrota"
 }

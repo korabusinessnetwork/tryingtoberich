@@ -21,6 +21,7 @@ import { exigirToken, limitarTaxa } from "./guardas.mjs";
 import { rotasDoJogo } from "./rotas-jogo.mjs";
 import { rotasDoPainel } from "./rotas-painel.mjs";
 import { montarOverlay } from "./overlay.mjs";
+import { montarOverlayHud } from "./overlay-hud.mjs";
 
 function baseComum(nucleo) {
   const app = express();
@@ -69,5 +70,7 @@ export function criarAppDoPainel(nucleo) {
   // streamer digita no OBS parecer uma chamada de API, e ele vive na mesma
   // porta do painel, que nunca sai da máquina. ]]
   montarOverlay(app);
+  // O segundo overlay, o HUD da live (ADR-015). Mesma porta, mesmo motivo.
+  montarOverlayHud(app);
   return fecharComTratamentoDeErro(app);
 }

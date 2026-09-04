@@ -20,7 +20,14 @@ const TOKEN = "t".repeat(32);
 const config = {
   token: TOKEN, portaJogo: 0, portaPainel: 0, host: "127.0.0.1",
   usuarioTiktok: "", chaveGemini: "",
-  longpollTimeoutMs: 150, combateMaxMs: 2000,
+  //[[ 1500 e não 150: o teste de trocar mapa pendura o long-poll e, dentro da
+  // janela, grava o preset E a configuração em disco. Este repositório vive no
+  // OneDrive, onde o rename atômico insiste por até ~1,6s (repos/arquivo.mjs);
+  // com os outros arquivos de teste rodando em paralelo e gravando na mesma
+  // pasta, 150ms viravam 204 antes de o comando sair — e o teste acusava a
+  // ponte por uma lentidão do disco. O long-poll responde no instante do
+  // comando, então o teto só custa tempo no caso "nenhum comando". ]]
+  longpollTimeoutMs: 1500, combateMaxMs: 2000,
 };
 
 let base;

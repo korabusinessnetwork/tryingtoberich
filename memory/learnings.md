@@ -145,3 +145,43 @@ proibia, desabilitando o seletor.
 Ler `03_REGRAS_DE_NEGOCIO` procurando o CONTROLE de cada regra, e não a
 implementação dela, achou as duas. A pergunta que funciona é "onde o streamer
 clica para exercer isto?", não "isto está implementado?".
+
+## Feature que o dono não pediu dura um dia (2026-09-03)
+A animação de fim de rodada (`animacaoDeVitoria`) nasceu de um raciocínio
+correto — "os dois instantes mais altos da live acontecem com o boneco
+parado" — e de uma resposta errada: uma animação da biblioteca, no jogo. O
+dono olhou a tela e disse que ali deveria estar a lista das **cutscenes**. A
+resposta certa já existia no repositório (o overlay do OBS, com vídeo e som);
+faltou perguntar "isto é o que ele quer ver?" antes de construir. Virou o
+ADR-014. A lição: quando a lacuna é de espetáculo, a resposta é do overlay,
+não do Luau — o Roblox não aceita vídeo, e vídeo é o que o dono chama de
+cutscene. E a tela denunciou: "Vitória → Ascensão da Fênix" lia como o
+presente da vitória, não como a animação dela.
+
+## Instante não se deriva de instantâneo (2026-09-03)
+O overlay tocava a cutscene comparando `vitorias`/`derrotas` com o valor
+anterior. Errava nos dois sentidos: o placar sobe no INÍCIO da contagem — que a
+vitória ainda pode abandonar — e a ponte reiniciada zerava o contador dela
+enquanto o do jogo continuava, tocando uma vitória que ninguém teve. "A rodada
+acabou" é um evento, e quem sabe dele é o jogo: `POST /jogo/rodada` no instante
+certo, e o overlay ouve `rodada`. Sempre que uma tela precisar reagir a "X
+aconteceu", procurar quem SABE que aconteceu antes de inferir de dois estados.
+De quebra apareceu um bug escondido: a vitória comprada por donate era
+cancelada pelo batimento seguinte, porque a guarda só conhecia vitória por
+posição.
+
+## O LIVE Studio recusa `127.0.0.1` na fonte "Link" (2026-09-03)
+O dono colou `http://127.0.0.1:8788/overlay` no TikTok LIVE Studio e recebeu
+"Digite o URL correto". A ponte estava no ar e respondia 200; o erro é do
+próprio LIVE Studio, antes de qualquer requisição. A regra está em
+`static/js/modal.*.js` da versão 1.35.2: uma regex sem âncora que exige
+`algo.letras` (`.[a-z]{2,6}`) em algum ponto da URL — `127.0.0.1` termina
+em número e `localhost` não tem ponto. Depois da regex ele faz um GET e só
+recusa 404 ou erro de rede (a janela roda com `webSecurity` desligado, então
+CORS não entra). Dois jeitos de passar: um host de letras que resolve para a
+máquina (`127.0.0.1.nip.io`, `lvh.me`, DNS público) ou um `.html` no caminho.
+Ficou o `.html`: não depende de DNS e não muda de host. As páginas respondem
+nas duas formas e `/api/overlay` entrega a que funciona nos dois programas.
+A lição: quando um programa de terceiros recusa a URL sem nem tentar conectar,
+o erro é de FORMA, e a regra costuma estar legível no bundle instalado — foi
+mais rápido ler a regex do que adivinhar o que ele queria.

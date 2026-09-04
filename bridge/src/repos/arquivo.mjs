@@ -124,16 +124,25 @@ export async function escreverBinarioAtomico(caminho, buffer) {
   }
 }
 
-/** Nomes de arquivo .json de um diretório, sem os temporários. Diretório ausente devolve []. */
-export async function listarJson(dir) {
+/**
+ * Nomes de arquivo de um diretório, sem os temporários e ocultos. Diretório
+ * ausente devolve []: pasta que o streamer ainda não criou não é erro.
+ */
+export async function listarArquivos(dir) {
   try {
-    return (await readdir(dir))
-      .filter((nome) => nome.endsWith(".json") && !nome.startsWith("."))
+    return (await readdir(dir, { withFileTypes: true }))
+      .filter((entrada) => entrada.isFile() && !entrada.name.startsWith("."))
+      .map((entrada) => entrada.name)
       .sort();
   } catch (erro) {
     if (erro.code === "ENOENT") return [];
     throw erro;
   }
+}
+
+/** Só os .json. */
+export async function listarJson(dir) {
+  return (await listarArquivos(dir)).filter((nome) => nome.endsWith(".json"));
 }
 
 export async function apagar(caminho) {

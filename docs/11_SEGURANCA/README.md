@@ -25,8 +25,11 @@ qualquer checagem de "só aceito localhost".
   forem iguais.
 - Header `X-Bridge-Token` obrigatório em `/jogo/*`. Sem token ou token errado: 401.
 - Token gerado com no mínimo 32 bytes aleatórios, guardado em `.env`.
-- Rate limit simples em `/jogo/*`: o Roblox legítimo faz cerca de 3 requisições
-  por minuto. Qualquer coisa acima de 60/min é abuso.
+- Rate limit simples em `/jogo/*`, por IP: 300/min (`REGRAS.LIMITE_JOGO_POR_MINUTO`).
+  O jogo legítimo faz 30/min só de batimento de estado, mais um long-poll por
+  presente, mais mapa e look ao montar mundo — o teto antigo de 60 derrubava o
+  Roblox com o testador de animação do painel (BUG-002). 300 é 5/s sustentados,
+  dentro do teto de 500/min do HttpService, e ainda corta flood.
 
 ## Camada 2 — Segredos
 - `GEMINI_API_KEY` e `BRIDGE_TOKEN` só no `.env` do Node.
@@ -49,6 +52,9 @@ presente de espectadores.
 Regras:
 - **Nada de nickname em log persistido.** O nome do doador vai para a tela do
   jogo e para o SSE do painel, ambos em memória e efêmeros.
+- **O ranking do HUD da live (ADR-015) é o único agregado por nickname**, e
+  segue a mesma regra: vive em `dominio/hud.mjs`, em memória, nasce na sessão
+  e morre no Stop. Nunca entra no arquivo da sessão nem no resumo.
 - O log de evento da sessão guarda tipo de presente, valor, delta e latência.
   Não guarda quem enviou.
 - Ao encerrar a sessão (F5), o arquivo em `data/sessoes/` é reduzido ao resumo

@@ -27,6 +27,9 @@ presentes ativos é limitado a 6, que é o que a TikTok exibe como desejos na li
   > preset antes de salvar. O efeito viaja pelo canal de COMANDO do ADR-013 —
   > não tem delta e não casa com slot — e encerra a rodada pelo mesmo caminho de
   > chegar ao topo.
+  >
+  > O que toca quando a rodada acaba é a **cutscene** do overlay do OBS,
+  > escolhida no mesmo editor, por resultado. Ver ADR-014.
 
 ## Alternativas consideradas
 ### Faixa de valor dispara animação automaticamente

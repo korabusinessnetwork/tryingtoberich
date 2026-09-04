@@ -20,6 +20,31 @@
   e o 204 fez a falha parecer sucesso. **Contrato entre processos só é contrato
   se algum teste ler os dois lados.**
 
+### BUG-002 — o rate limit da ponte derrubava o próprio jogo
+- **Sintoma:** no Studio, `[Ponte] ficou offline: Requisições demais. Espere um
+  minuto.` O painel continuava dizendo "Jogo online" (a janela de online é de
+  60s), o modo de teste sem live disparava a fixture e o boneco não mexia; a
+  sessão fechava com `totalPresentes: 0`.
+- **Reprodução:** com o jogo no ar, montar mundo algumas vezes no painel e
+  clicar no testador de animação uns 40 vezes num minuto. O log da ponte mostra
+  `jogo_taxa_excedida` com `contagem` 61, 62, 63…
+- **Causa raiz:** `LIMITE_JOGO_POR_MINUTO` era 60, de quando o jogo só fazia
+  long-poll (~3/min parado). Depois entraram o batimento de estado a cada 2s
+  (30/min sozinho), o long-poll devolvido na hora a cada presente (um pedido
+  novo por presente) e o `recarregar-mapa` que manda buscar mapa e look. O
+  tráfego legítimo passava de 60 com folga, a ponte respondia 429, o Roblox
+  entrava em backoff (1s → 30s) e tudo que a ponte publicava nesse meio-tempo
+  ficava no buffer ou caía no F7.
+- **Correção:** teto em 300/min (5/s sustentados, dentro dos 500/min do
+  HttpService), com a conta escrita em `config.mjs` e travada num teste. A
+  ponte passou a avisar no log quando descarta presente, comando ou empate por
+  jogo offline, e quando a sessão começa com o jogo offline — antes era silêncio.
+- **Status:** corrigido em 2026-09-04.
+- **A lição:** o comentário "o Roblox legítimo faz ~3 req/min" ficou verdadeiro
+  por um dia. Toda vez que o jogo ganha um motivo novo para falar com a ponte,
+  a conta do teto tem que ser refeita — e quem protege isso é um teste que
+  soma os motivos, não um número solto.
+
 ## Formato
 ### BUG-NNN — título
 - **Sintoma:**

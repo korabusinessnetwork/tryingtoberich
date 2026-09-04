@@ -33,13 +33,13 @@
         }
       }
     },
-    "animacaoDeVitoria": {
-      "description": "A animação que toca quando a rodada termina em vitória. Não move o boneco — vitória não tem delta — mas o momento merece o mesmo espetáculo de um presente grande. Ausente ou nula = nenhuma.",
-      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/animacaoId" }, { "type": "null" }]
+    "cutsceneDeVitoria": {
+      "description": "A cutscene que o overlay do OBS toca quando a rodada termina em vitória: o nome de um vídeo de data/cutscenes/, sem extensão (ADR-014). A pasta é a lista — não há cadastro. Ausente ou nula = nada toca, e o placar só muda.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/identificador" }, { "type": "null" }]
     },
-    "animacaoDeDerrota": {
-      "description": "A animação que toca quando a rodada termina em derrota — portal quebrado ou donate de derrota. Ausente ou nula = nenhuma.",
-      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/animacaoId" }, { "type": "null" }]
+    "cutsceneDeDerrota": {
+      "description": "A cutscene da derrota — portal quebrado ou donate de derrota. Mesma regra da vitória.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/identificador" }, { "type": "null" }]
     },
     "portal": {
       "description": "O portal do primeiro andar. Volta ao pé da torre depois de ter saído e ele se ergue: a partir dali a derrota deixa de ser automática e passa a ser DISPUTADA — só presente negativo o quebra, e enquanto ele estiver de pé dá para escapar subindo. Ausente = 2000 de vida, o padrão.",

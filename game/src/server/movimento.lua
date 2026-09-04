@@ -226,40 +226,6 @@ function Movimento.restaurar(personagem)
 	finalizar(personagem, "manual")
 end
 
---[[
-	Toca uma animação SEM mover o boneco.
-
-	Serve à vitória e à derrota: elas não têm delta — ninguém sobe nem desce por
-	ter chegado ao topo — mas merecem o mesmo espetáculo que um presente grande.
-	O `contexto` é o mesmo que a animação recebe no movimento; o que muda é que
-	origem e destino são o lugar onde o boneco já está.
-
-	Não toma o controle do personagem e não suspende nada: é efeito visual puro,
-	e a rodada logo em seguida vai teleportá-lo de qualquer jeito.
-]]
-function Movimento.tocarSolta(personagem, animacaoId, opcoes)
-	if not personagem or type(animacaoId) ~= "string" or animacaoId == "" then
-		return false
-	end
-
-	local raiz = personagem:FindFirstChild("HumanoidRootPart")
-	if not raiz then
-		return false
-	end
-
-	opcoes = opcoes or {}
-	tocarAnimacao(personagem, animacaoId, {
-		delta = opcoes.delta or 0,
-		intensidade = opcoes.intensidade or Tipos.INTENSIDADE_MAX or 5,
-		plataformaOrigem = opcoes.plataforma or 0,
-		plataformaDestino = opcoes.plataforma or 0,
-		presenteNome = opcoes.presenteNome,
-		posicaoOrigem = raiz.Position,
-		posicaoDestino = raiz.Position,
-	})
-	return true
-end
-
 function Movimento.emAnimacao(personagem)
 	local estado = estados[personagem]
 	return estado ~= nil and estado.ativo == true
