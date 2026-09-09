@@ -2,6 +2,11 @@
 
 Uma seção por rodada, mais recente no topo.
 
+**Branch de trabalho:** `claude/camada-de-produto-e-fase-0`, criada e enviada em
+2026-09-09 a pedido do dono. Ela carrega as três rodadas do ciclo mais os três
+commits do dono que também estavam sem push — a `claude/monta-b1h5fy` remota
+estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
+
 ## Rodada 3 — F0-4, o teto do long-poll — 2026-09-09
 - Spec: `specs/f0-4-teto-do-long-poll.md`
 - Resultado da review: **aprovado sem ressalvas** — 12 de 12 critérios, e a
@@ -12,8 +17,7 @@ Uma seção por rodada, mais recente no topo.
   presente seguinte esperava por ele — trinta vezes o orçamento do princípio
   nº 1, e só com a live quieta.
 - Aprendido: `memory/learnings.md` e `memory/bugs.md`
-- Commit: `9cc91ed` na branch `claude/monta-b1h5fy` — **sem push** (mesma
-  pendência das rodadas 1 e 2)
+- Commit: `9cc91ed`, enviado em `claude/camada-de-produto-e-fase-0`
 - Números: 489 testes verdes (eram 478)
 - **Pendente de decisão:** a medição continua sendo do dono, mas ficou barata —
   numa live normal o Output do Studio traz UMA vez o teto observado. Se o aviso
@@ -28,8 +32,7 @@ Uma seção por rodada, mais recente no topo.
 - Resultado da review: **aprovado sem ressalvas** — 13 de 13 critérios, com um
   desvio anotado no próprio spec (a rota devolve `{ ok, porta }`, sem `versao`)
 - Aprendido: `memory/learnings.md`
-- Commit: `3fb0191` na branch `claude/monta-b1h5fy` — **sem push** (mesma
-  pendência da rodada 1)
+- Commit: `3fb0191`, enviado em `claude/camada-de-produto-e-fase-0`
 - Números: 478 testes verdes (eram 465), 55 arquivos Luau no gate (eram 54)
 - **Pendente de decisão — e é o ponto da rodada:** a medição em si exige o
   Roblox Studio e é do dono. Rode `npm run sondar`, cole o Luau na barra de
@@ -46,14 +49,11 @@ Uma seção por rodada, mais recente no topo.
 - Resultado da review: **aprovado sem ressalvas**, depois de o próprio review
   fechar o critério 13, que o build tinha deixado passar (locale cravado)
 - Aprendido: `memory/learnings.md` e `memory/patterns.md`
-- Commit: `cb165f5` na branch `claude/monta-b1h5fy` — **sem push** (ver pendência)
+- Commit: `cb165f5`, enviado em `claude/camada-de-produto-e-fase-0`
 - Números: 627 chaves × 3 idiomas, 35 arquivos retrofitados, 465 testes verdes
   (eram 451), 3 gates verdes
-- Pendente de decisão:
-  1. **Push.** A branch de trabalho é a branch padrão do repositório, e tanto o
-     `/ciclo` quanto o harness proíbem push na padrão. Decidir: abrir branch de
-     trabalho para esta rodada, ou autorizar o push na `claude/monta-b1h5fy`.
-  2. **ADR-P06** continua Proposto e bloqueia vender. Não bloqueia código.
+- Pendente de decisão: **ADR-P06** continua Proposto e bloqueia vender. Não
+  bloqueia código.
 - Próximo item recomendado: **`F0-7`, testar se o `HttpService` do Studio
   alcança `127.0.0.1`** — cinco minutos, e é o que decide se o Cloudflare Tunnel
   sai do produto (ADR-P04). Melhor relação custo/benefício aberta no projeto.
