@@ -128,3 +128,30 @@
 - **Causa raiz:**
 - **Correção:**
 - **Status:** aberto | corrigido | não reproduz
+
+### BUG-007 — o backoff do long-poll engolia o presente numa live quieta
+- **Sintoma:** não observado ainda em live — encontrado lendo o laço na rodada 3
+  do ciclo (F0-4). O sintoma SERIA: painel piscando "Jogo offline" com a live
+  parada, e presente chegando com até 30 segundos de atraso depois de um período
+  sem eventos.
+- **Reprodução:** só acontece se o Roblox fechar o long-poll ocioso antes dos 20s
+  da ponte — que é justamente a pergunta em aberto do ADR-002 desde o Bloco 1.
+- **Causa raiz:** em `game/src/server/ponte.lua`, `requisitar` falhando levava
+  sempre ao mesmo ramo: `definirOnline(false, erro)` + `task.wait(backoffAtual)`
+  + `backoffAtual = min(backoffAtual * 2, 30)`. Uma conexão ociosa cortada pelo
+  peer é indistinguível de erro de rede **pelo código de retorno**, e era tratada
+  como erro. Numa live quieta, cada volta subia o backoff, até 30 segundos.
+- **Por que é grave:** o `CLAUDE.md` orça 1000ms do presente ao primeiro frame.
+  30 segundos é trinta vezes o orçamento inteiro. E só aparece com a live quieta,
+  que é quando ninguém está olhando o painel — o sintoma cai na live seguinte,
+  sem causa aparente.
+- **Correção:** classificar pela DURAÇÃO. Falha que aconteceu depois de metade do
+  teto esperado é o peer fechando conexão ociosa, não erro: sem backoff, sem
+  offline. Erro real de rede volta em milissegundos e continua no ramo antigo. E
+  o jogo passa a pedir `?teto=` menor à ponte, para a volta ociosa voltar a
+  terminar em 204 limpo.
+- **Status:** corrigido em 2026-09-09, com 11 testes em `test/teto-long-poll.test.mjs`.
+- **A lição:** **código de retorno não classifica falha de conexão ociosa — duração
+  classifica.** É o mesmo formato do BUG-002: um mecanismo de proteção (lá o rate
+  limit, aqui o backoff) derrubando o próprio jogo. Toda proteção com crescimento
+  exponencial precisa responder "o que acontece se o caso NORMAL cair aqui?".

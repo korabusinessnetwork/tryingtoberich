@@ -304,3 +304,32 @@ spec, no commit e no ledger. **Rodada que entrega o instrumento e deixa a
 medição explicitamente pendente é resultado correto**, não entrega pela metade —
 o que seria errado é o relatório sugerir que a pergunta do ADR-002 foi
 respondida.
+
+---
+
+## Rodada 3 do ciclo — o teto do long-poll (2026-09-09)
+
+### O item estava escrito como medição, e era um bug
+F0-4 dizia "confirmar o teto de 20s". Ler o laço antes de escrever o spec mostrou
+que o número importava menos que o que acontecia ao errá-lo: backoff de até 30
+segundos numa live quieta. **Consertar não dependia de saber o número** — e o
+número passou a aparecer sozinho, num aviso durante live normal.
+
+Vale como padrão: **antes de agendar uma medição, ler o que o sistema faz quando
+a medição dá o resultado ruim.** Se ele quebra feio, o conserto vem primeiro e a
+medição fica barata.
+
+### Duração classifica o que o código de retorno não classifica
+Conexão ociosa fechada pelo peer e erro de rede chegam iguais no `pcall`. O que
+os separa é **quanto tempo passou**: erro real volta em milissegundos, conexão
+que estava esperando morre depois de segundos. Ver BUG-007.
+
+### Todo conserto tem um custo — vale procurá-lo antes da review terminar
+Classificar corte como "não é erro" apagava a única forma de o jogo saber que a
+ponte caiu: um túnel pendurado ficaria lido como teto do Roblox para sempre, com
+o painel dizendo "Jogo online" com a live morta. A review encontrou isso e fechou
+com um discriminador de quatro linhas: **depois** de já ter negociado teto menor,
+durar muito além do pedido é a ponte não honrando, e volta a ser erro.
+
+Eu tinha escrito essa perda no spec como "limitação aceita". Aceitar foi a
+resposta errada — era barato fechar.

@@ -48,6 +48,34 @@ local THROTTLE_ESTADO = 2
 -- o HttpService aceita por servidor. Só vale para volta sem evento entregue.
 local PISO_ENTRE_VOLTAS = 0.5
 
+--[[
+	O teto de retenção da ponte, em segundos (F0-4).
+
+	Espelha `longpollTimeoutMs` de `bridge/src/config.mjs`, e um teste em
+	`test/jogo.test.mjs` compara os dois: divergência quebra no mesmo commit.
+	É a lição do BUG-001 — constante duplicada em duas linguagens só é contrato
+	se algum teste ler os dois lados.
+]]
+local TETO_DA_PONTE = 20
+
+--[[
+	A partir de quanto uma FALHA passa a ser lida como "o Roblox fechou a
+	conexão ociosa", e não como erro de verdade.
+
+	Metade do teto é folgado de propósito. Erro real de rede — conexão recusada,
+	host desconhecido, token errado — volta em milissegundos, muito longe dessa
+	linha. O que demora dez segundos e morre é conexão que estava aberta
+	esperando, e essa é exatamente a que não pode virar backoff.
+]]
+local FRACAO_PARA_SER_TETO = 0.5
+
+--[[
+	Margem abaixo do teto observado. Se o Roblox fecha em 10s, pedimos 8: a
+	volta ociosa passa a terminar em 204 limpo, do nosso lado, antes de o
+	Roblox cortar. É isso que devolve o sinal de online durante live quieta.
+]]
+local FOLGA_ABAIXO_DO_TETO = 0.8
+
 -- Estado do módulo. Não faz parte do contrato público — só Ponte.online()
 -- expõe uma leitura dele.
 local configuracao = nil
@@ -66,6 +94,12 @@ local aoComando = nil
 
 local cursorAtual = 0
 local backoffAtual = BACKOFF_INICIAL
+
+-- O teto que o Roblox realmente impôs, descoberto em execução. `nil` até a
+-- primeira volta ociosa ser cortada. `tetoRelatado` guarda que o aviso já saiu:
+-- ele é para o dono anotar o número, não para poluir o Output a cada volta.
+local tetoObservado = nil
+local tetoRelatado = false
 
 local enviandoEstado = false
 local ultimoEnvioEstado = 0
@@ -227,11 +261,84 @@ end
 	engano. 200 e 204 zeram o backoff, porque os dois provam que a ponte
 	respondeu.
 ]]
+--[[
+	Uma volta ociosa foi cortada pelo Roblox. Guarda o número e avisa UMA vez.
+
+	O aviso existe para o F0-4 sair de uma sessão normal, em vez de custar dez
+	minutos de teste dedicado: o dono lê o número no Output e anota. Repetir a
+	cada volta transformaria o Output em ruído durante a live inteira.
+]]
+local function registrarTeto(decorrido)
+	if tetoObservado == nil or decorrido < tetoObservado then
+		tetoObservado = decorrido
+	end
+
+	if tetoRelatado then
+		return
+	end
+	tetoRelatado = true
+
+	warn(string.format(
+		"[Ponte] F0-4: o Roblox fecha o long-poll em ~%.1fs, antes dos %ds da ponte. "
+			.. "Passando a pedir teto menor, e a volta ociosa volta a fechar limpa. "
+			.. "Anote esse número em memory/learnings.md e no item F0-4.",
+		decorrido,
+		TETO_DA_PONTE
+	))
+end
+
+--[[
+	O sufixo `&teto=` da próxima requisição.
+
+	Vazio enquanto não houver teto observado: sem número, o padrão da ponte é o
+	certo. Com número, pede uma folga abaixo dele — a ponte faz clamp do outro
+	lado, então um valor absurdo daqui não a obriga a nada.
+]]
+local function tetoPedido()
+	if tetoObservado == nil then
+		return nil
+	end
+	return math.max(1, math.floor(tetoObservado * FOLGA_ABAIXO_DO_TETO))
+end
+
+local function sufixoDeTeto()
+	local pedido = tetoPedido()
+	if pedido == nil then
+		return ""
+	end
+	return "&teto=" .. tostring(pedido)
+end
+
+--[[
+	Isto é mesmo o teto do Roblox, ou é a ponte pendurada?
+
+	As duas coisas são "falha depois de espera longa", e antes da negociação não
+	há como separá-las. DEPOIS da negociação, há: se pedimos 8s e a conexão
+	ainda assim morre com 15s, a ponte não está honrando o pedido — ou não está
+	respondendo. Isso é erro de verdade, e precisa voltar a marcar offline,
+	senão o painel diz "Jogo online" com a live morta.
+
+	É a única perda de observabilidade que o conserto do backoff introduziria, e
+	fechá-la custa esta função.
+]]
+local function pareceTetoDoRoblox(decorrido)
+	if decorrido < TETO_DA_PONTE * FRACAO_PARA_SER_TETO then
+		return false
+	end
+
+	local pedido = tetoPedido()
+	if pedido == nil then
+		return true
+	end
+
+	return decorrido <= pedido * 1.5
+end
+
 local function cicloEventos()
 	while rodando do
 		local comecou = os.clock()
 		local entregou = false
-		local statusCode, corpo, erro = requisitar("GET", "/jogo/eventos?desde=" .. tostring(cursorAtual))
+		local statusCode, corpo, erro = requisitar("GET", "/jogo/eventos?desde=" .. tostring(cursorAtual) .. sufixoDeTeto())
 
 		-- Ponte.parar() pode ter sido chamado enquanto a linha acima estava
 		-- presa em pé no long-poll (até 20s). Não processa nem dorme depois
@@ -241,9 +348,32 @@ local function cicloEventos()
 		end
 
 		if erro then
-			definirOnline(false, erro)
-			task.wait(backoffAtual)
-			backoffAtual = math.min(backoffAtual * 2, BACKOFF_MAXIMO)
+			--[[
+				Falha DEPOIS de uma espera longa não é erro: é o Roblox fechando
+				o long-poll ocioso antes do teto da ponte (F0-4).
+
+				Tratar isso como erro — que era o comportamento até 2026-09-09 —
+				fazia o backoff dobrar até 30 segundos numa live quieta, e o
+				presente seguinte esperava por ele. Trinta vezes o orçamento
+				inteiro do princípio nº 1, e só com a live parada, que é quando
+				ninguém está olhando o painel.
+
+				Não vira offline tampouco: conexão ociosa fechada não é prova de
+				que a ponte caiu. O que a mantém honesta é a negociação — depois
+				do primeiro corte pedimos um teto menor, as voltas ociosas voltam
+				a terminar em 204, e o 204 é que afirma "está no ar".
+
+				Erro de verdade — recusado, host desconhecido, token — volta em
+				milissegundos e continua caindo no ramo de baixo.
+			]]
+			local decorrido = os.clock() - comecou
+			if pareceTetoDoRoblox(decorrido) then
+				registrarTeto(decorrido)
+			else
+				definirOnline(false, erro)
+				task.wait(backoffAtual)
+				backoffAtual = math.min(backoffAtual * 2, BACKOFF_MAXIMO)
+			end
 		elseif statusCode == 200 then
 			definirOnline(true)
 			backoffAtual = BACKOFF_INICIAL

@@ -36,9 +36,19 @@ demais, em vez de ser uma rota aberta.
 ### `GET /jogo/eventos`
 Long-poll. O Roblox chama isso em laço infinito.
 
-Query: `?desde=<cursor>`
+Query: `?desde=<cursor>` e, opcional, `&teto=<segundos>`
 Comportamento: a ponte **segura a resposta aberta** até haver evento ou até o
 timeout de 20 segundos, o que vier primeiro.
+
+**`teto`** encurta a retenção só desta requisição, com clamp entre 1 segundo e o
+`longpollTimeoutMs` da ponte. Valor ausente, zero, negativo ou não numérico cai
+no padrão — o comportamento sem o parâmetro é exatamente o de sempre.
+
+Quem usa é o jogo, e por um motivo específico (F0-4): se o Roblox fechar o
+long-poll ocioso antes do teto da ponte, a volta morre como erro do lado do
+Luau. O jogo detecta isso, passa a pedir um teto abaixo do que observou, e as
+voltas ociosas voltam a terminar em `204` limpo — que é o sinal de que a ponte
+está viva.
 
 Resposta com evento (200):
 ```json

@@ -85,6 +85,32 @@ resposta foi "sim".
 O código já funciona dos dois jeitos: a ponte só faz bind em `127.0.0.1`, e o
 túnel, quando existe, é um encaminhador na frente. Nada muda em `bridge/`.
 
+## Nota de 2026-09-09 — o chute de 20s tinha um custo escondido
+
+Os 20 segundos continuam sendo chute até alguém medir. O que mudou é que **errar
+o chute deixou de ser caro**.
+
+Até esta data, se o Roblox fechasse o long-poll ocioso antes do teto da ponte, o
+laço em `game/src/server/ponte.lua` tratava a volta como erro: `definirOnline(false)`
+mais `task.wait(backoffAtual)`, com o backoff dobrando **até 30 segundos**. Numa
+live quieta isso acontecia a cada volta, e o presente seguinte esperava o
+backoff — trinta vezes o orçamento inteiro do princípio nº 1.
+
+O conserto (rodada 3, `specs/f0-4-teto-do-long-poll.md`):
+
+- falha depois de espera longa é classificada como **teto atingido**, sem
+  backoff e sem virar offline;
+- o jogo passa a pedir `GET /jogo/eventos?teto=<segundos>` abaixo do que
+  observou, e as voltas ociosas voltam a fechar em `204` limpo;
+- se, já tendo pedido teto menor, a conexão ainda morrer muito além do pedido,
+  volta a ser erro de verdade — senão um túnel pendurado ficaria para sempre
+  lido como "teto do Roblox", com o painel dizendo "Jogo online".
+
+**Consequência para este ADR:** o valor de `longpollTimeoutMs` deixou de ser
+crítico. Ele continua devendo ser medido (F0-4), mas o sistema agora se acomoda
+sozinho a um teto menor, e o número aparece num aviso do Output durante uma live
+normal, em vez de exigir sessão de teste.
+
 ## Notas de implementação
 - Ligar HttpService em Game Settings → Security.
 - O laço no Luau precisa de `pcall` e backoff. Erro de rede não pode matar o loop.

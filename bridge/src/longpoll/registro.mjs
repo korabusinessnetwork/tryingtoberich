@@ -47,7 +47,25 @@ export class RegistroDeLongPoll {
    * Registra uma espera. Se já houver evento novo para este cursor, responde na
    * hora — o Roblox pode ter perdido a resposta anterior por queda de rede.
    */
-  registrar(resposta, { desde = 0 } = {}, agora = this.agora()) {
+  /**
+   * O teto de retenção DESTA requisição, em milissegundos.
+   *
+   * O jogo pede um teto menor quando descobre que o Roblox fecha a conexão
+   * antes do nosso (F0-4): assim a volta ociosa volta a terminar em 204 limpo
+   * em vez de morrer como erro do lado do Luau — que é o que fazia o backoff
+   * subir até 30s e engolir o presente seguinte.
+   *
+   * Clamp nos dois lados. Sem teto máximo, um cliente faria a ponte segurar
+   * conexão pelo tempo que quisesse; sem mínimo, um zero transformaria o
+   * long-poll em polling livre contra o rate limit.
+   */
+  #tetoPedido(segundos) {
+    const numero = Number(segundos);
+    if (!Number.isFinite(numero) || numero <= 0) return this.timeoutMs;
+    return Math.min(this.timeoutMs, Math.max(1000, Math.round(numero * 1000)));
+  }
+
+  registrar(resposta, { desde = 0, tetoSegundos = null } = {}, agora = this.agora()) {
     this.#ultimoContato = agora;
 
     const atrasados = this.#recentes.filter((evento) => evento.id > desde);
@@ -59,7 +77,7 @@ export class RegistroDeLongPoll {
     const espera = {
       resposta,
       desde,
-      temporizador: setTimeout(() => this.#encerrarPorTimeout(espera), this.timeoutMs),
+      temporizador: setTimeout(() => this.#encerrarPorTimeout(espera), this.#tetoPedido(tetoSegundos)),
     };
     espera.temporizador.unref?.();
 

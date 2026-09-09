@@ -42,7 +42,13 @@ export function rotasDoJogo(nucleo) {
   /** Long-poll. A ponte segura a resposta até haver evento ou até o timeout. */
   rotas.get("/eventos", (req, res) => {
     const desde = Number.parseInt(req.query.desde ?? "0", 10);
-    nucleo.longpoll.registrar(res, { desde: Number.isFinite(desde) ? desde : 0 });
+    // `teto` é opcional e vem do jogo (F0-4): quando o Roblox fecha a conexão
+    // antes do nosso timeout, o Luau pede um teto menor para a volta ociosa
+    // terminar em 204 limpo. Ausente ou inválido, o padrão da ponte vale.
+    nucleo.longpoll.registrar(res, {
+      desde: Number.isFinite(desde) ? desde : 0,
+      tetoSegundos: req.query.teto,
+    });
   });
 
   rotas.get("/mapa", async (req, res) => {

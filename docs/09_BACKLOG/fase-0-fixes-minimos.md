@@ -63,6 +63,24 @@ voltas fecham limpas em 20s ou morrem antes.
 **Estimativa:** 15 minutos, e é o teste mais barato desta lista em relação ao
 estrago que evita.
 
+**O estrago já foi consertado** (rodada 3 do ciclo,
+`specs/f0-4-teto-do-long-poll.md`). Até 2026-09-09 a volta ociosa cortada pelo
+Roblox era tratada como ERRO: o backoff dobrava até **30 segundos**, e o
+presente seguinte esperava por ele — trinta vezes o orçamento inteiro do
+princípio nº 1, e só com a live quieta, que é quando ninguém olha o painel.
+
+Agora o jogo classifica esse corte como teto, não como erro, e passa a pedir um
+teto menor à ponte para as voltas voltarem a fechar em `204` limpo.
+
+**Você não precisa mais de uma sessão de teste dedicada.** Numa live normal, se
+o Roblox cortar antes, o Output do Studio traz UMA vez:
+
+> `[Ponte] F0-4: o Roblox fecha o long-poll em ~Xs, antes dos 20s da ponte.`
+
+Esse `X` é a resposta. Anote em `memory/learnings.md` e aqui. Se o aviso **não**
+aparecer numa live inteira, a resposta é que o Roblox aguenta os 20s e o chute
+inicial do ADR-002 estava certo — registre isso também.
+
 ### F0-5 · Vitória e reinício, no Studio
 **Por que trava:** a regra R6 existe em três processos — o jogo detecta por
 colisão, o HUD mostra o selo "TOPO", o painel decide e a ordem volta pelo
