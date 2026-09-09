@@ -217,3 +217,52 @@ Isso não aparece lendo a regra; apareceu ao rodar `resumoDaTabela` sobre o
 catálogo real. Virou linha na tela, antes da live: toda regra nova que
 multiplica valor por alguma coisa merece uma passada sobre o dado REAL, e o
 resultado dessa passada merece ficar visível para quem configura.
+
+---
+
+## Rodada 1 do ciclo de produto — i18n (2026-09-09)
+
+### Retrofit de string sobrevive ao detector ingênuo, e é aí que ele engana
+Três buracos apareceram, e todos passariam despercebidos se o teste fosse só
+"procure texto entre tags":
+
+1. **Rótulo passado como PROP.** Os 8 itens do menu principal moram em
+   `App.jsx` como `rotulo: "Ao vivo"`. Não é texto entre tags, nenhum detector
+   olhava, e nenhuma agente era dona daquele arquivo. **O menu inteiro teria
+   ido a produção em português.** `rotulo:` e `titulo:` são a convenção do
+   projeto para "isto aparece na tela" e agora têm teste próprio.
+2. **O `>` de `=>` lido como fim de tag.** `(preenchido, indice) => (` fazia o
+   nome do parâmetro ser acusado de texto de tela. Resolvido com lookbehind.
+3. **Locale cravado.** Traduzir a frase e deixar `toLocaleString("pt-BR")` é o
+   erro que ATRAVESSA o retrofit inteiro: o painel fica em inglês e mostra
+   "1.372", que um americano lê como um vírgula três. Eram 10 pontos no painel
+   e um no Luau. **A tradução do número é parte da tradução.**
+
+### Um teste que mente atrapalha mais do que ajuda
+A primeira versão do detector de chave morta exigia `t("chave")` literal, e
+acusou **38 chaves mortas que estavam vivíssimas** — o painel guarda chave em
+tabela de lookup (`{ id: "aprovado", chave: "…statusApproved" }`) e em helper
+de plural. Exigir a chamada literal **punia justamente o código bem escrito.**
+No outro sentido, o mesmo detector lia `"hud.client.lua"` — nome de arquivo —
+como chave inexistente. Regra que ficou: chave citada como literal em qualquer
+lugar conta como usada, e o que tem cara de caminho não é chave.
+
+### Namespace pré-atribuído é o que faz fan-out de texto funcionar
+35 agentes em paralelo produziram **627 chaves com zero conflito de
+nomenclatura**. O que garantiu isso foi cada agente receber o namespace pronto
+(`panel.liveMonitor`, `game.wardrobe`) em vez de inventar o próprio. E nenhuma
+agente escreveu no catálogo: cada uma DEVOLVEU as chaves, e o merge foi central.
+Trinta e cinco agentes escrevendo no mesmo JSON teriam se sobrescrito.
+
+### O limite de sessão derrubou 25 auditores, e a suíte cobriu o buraco
+Dos 31 verificadores do painel, 25 morreram no limite de uso. Os arquivos já
+estavam prontos; faltou a segunda opinião. O que sobrou de erro foi pequeno —
+1 chave órfã, 4 mortas, 5 strings cravadas em 31 arquivos — e **quem achou foi
+o teste, não o auditor**. Vale como calibragem: com contrato verificável
+escrito ANTES, o auditor por arquivo é reforço, não a rede.
+
+### Testes antigos que casam com texto literal quebram em retrofit
+Dois testes do painel falharam sem que nada estivesse errado: um cobrava
+`slot ${posicao}` na fonte do modal, outro cravava "28 componentes". Os dois
+estavam certos no dia em que foram escritos. **Teste que casa com string de
+código é dívida com juros na primeira mudança transversal.**

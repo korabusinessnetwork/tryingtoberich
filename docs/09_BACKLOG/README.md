@@ -180,7 +180,9 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
   [`fase-0-fixes-minimos.md`](./fase-0-fixes-minimos.md). Regra de corte: só
   entra o que impede rodar uma live inteira sem travar. O Bloco 4 abaixo foi
   absorvido por ela.
-- **Fase 1 — produto vendável v1.** i18n (ADR-P03) como primeiro commit, depois
+- **Fase 1 — produto vendável v1.** ~~i18n (ADR-P03) como primeiro commit~~ —
+  **feito em 2026-09-09**, rodada 1 do ciclo (`specs/_loop.md`): 627 chaves em
+  PT, ES e EN, 465 testes verdes. Depois
   Supabase (ADR-P02), instalador (ADR-P04), console v1 (ADR-P05) e venda.
 - **Fase 2 — distribuição e recorrência.**
 
