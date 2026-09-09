@@ -113,10 +113,21 @@ ou quando a referência muda.
   "quedasNaturais": 12,
   "totalPlataformas": 200,
   "sessaoAtiva": true,
-  "vitoria": false
+  "vitoria": false,
+  "portal": { "aberto": true, "vida": 1380, "vidaMaxima": 2000 },
+  "contagem": { "resultado": "derrota", "restanteMs": 7200 }
 }
 ```
 A ponte apenas repassa isso ao painel. Ela nunca calcula nem acumula posição.
+
+`portal` e `contagem` entraram quando o HUD saiu de dentro do jogo (ADR-015):
+quem desenha a barra do portal e a contagem regressiva é o overlay do OBS, e ele
+não recebe evento de Roblox — só este estado. `contagem` é ausente ou nula
+quando não há rodada contando, e `restanteMs` é o tempo QUE FALTA no instante do
+envio, não o instante em que acaba: o overlay tica sozinho a partir dele, e os
+dois relógios não precisam concordar. O jogo empurra o estado fora do intervalo
+de 2s quando uma rodada encerra e quando o portal apanha, senão a barra e a
+contagem reagiriam com até dois segundos de atraso.
 
 Este é **o mesmo objeto** que o jogo publica para os próprios clientes (evento
 `ESTADO` de `game/src/shared/eventos.lua`). O schema é `additionalProperties:
@@ -159,7 +170,7 @@ protege é o bind em `127.0.0.1` e o túnel não conhecer esta porta.
 | GET | `/api/modalidades` | Lista modalidades (Fase 1: só `escalada`) |
 | GET | `/api/presets` | Lista presets |
 | GET | `/api/presets/:id` | Um preset |
-| PUT | `/api/presets/:id` | Salva preset (valida R1 e R2). **Cria também**: grava o arquivo que ainda não existe, e preenche `streamerId` quando o corpo não traz. Se for o preset ATIVO e o `mapaId` mudou, emite `recarregar-mapa` (ADR-013) — o jogo busca o mapa uma vez só |
+| PUT | `/api/presets/:id` | Salva preset (valida R1 e R2). **Cria também**: grava o arquivo que ainda não existe, e preenche `streamerId` quando o corpo não traz. Se for o preset ATIVO e o `mapaId` mudou, emite `recarregar-mapa` (ADR-013) — o jogo busca o mapa uma vez só. 400 `preset_invalido` (schema), `presente_repetido` (R1.4) ou `posicao_repetida` (R1.7): as duas unicidades são regra cruzada, não schema |
 | DELETE | `/api/presets/:id` | Apaga preset. 409 se ele for o preset ativo de uma sessão rodando |
 | GET | `/api/catalogo` | Catálogo de presentes |
 | POST | `/api/catalogo/atualizar` | Traz os presentes de verdade: da SALA se houver live, do painel público da TikTok se não. Não exige sessão — montar preset é trabalho de antes da live. 502 `catalogo_indisponivel` quando a TikTok não responde, e o que está em disco continua valendo |
@@ -192,12 +203,16 @@ protege é o bind em `127.0.0.1` e o túnel não conhecer esta porta.
 | GET | `/api/cenarios` | Cenários de fixture, para o modo sem live |
 | GET | `/api/cutscenes` | Os vídeos em `data/cutscenes/`, para o preset escolher (ADR-014). A pasta É a lista; o que está fora do padrão de nome volta em `ignorados` |
 | GET | `/api/overlay` | As URLs dos dois overlays para colar no OBS ou no TikTok LIVE Studio (`url` das cutscenes, `urlHud` do HUD), já na forma com `.html` que o LIVE Studio aceita; os vídeos da pasta e qual está `emUso` em cada resultado do preset ativo — com `existe`, porque a cutscene falha calada |
-| GET | `/api/hud` | A legenda do HUD da live (ADR-015): os slots do preset ativo com nome, ícone e delta, o mais forte primeiro. Sem preset ativo, `slots: []` — a página abre antes da sessão |
+| GET | `/api/overlay/layout` | Onde cada elemento do HUD fica na tela (ADR-015). Devolve o que o streamer moveu **mais o catálogo dos 8 elementos** — id, rótulo legível, posição padrão, tamanho e âncora. É o catálogo que permite ao painel desenhar o Estúdio sem conhecer a geometria da página: a posição padrão é o CSS do overlay, e ele mora aqui. Sem arquivo salvo, `elementos: {}` e o catálogo inteiro |
+| PUT | `/api/overlay/layout` | Grava o layout. **Só a exceção vai para o disco**: elemento ausente vale a posição padrão da página, como as exceções do ADR-016. Valida contra `overlay-layout.schema.json` antes de gravar — 400 `layout_invalido` para id fora dos oito, `x`/`y` fora de 0..100, `escala` fora de 0,5..2 ou propriedade a mais. Publica o evento SSE `layout` |
+| GET | `/api/hud` | A legenda do HUD da live (ADR-015): os slots do preset ativo **marcados para o overlay** (`mostrarNoOverlay !== false` — ausente conta como marcado), com nome, ícone e delta, o mais forte primeiro. Slot desmarcado some da legenda e continua valendo no jogo (R1.6). Sem preset ativo, `slots: []` — a página abre antes da sessão |
 
 Fora de `/api`, na mesma porta do painel, as páginas que o OBS abre como
 Browser Source: `GET /overlay` (as cutscenes, ADR-014) e `GET /overlay/hud`
-(o HUD da live, ADR-015 — aceita `?cam=43`, `?meta=10000`, `?barra=nao` e
-`?esticar=nao`).
+(o HUD da live, ADR-015 — aceita `?cam=43` e `?esticar=nao`; `?meta=` e
+`?barra=nao` saíram com o pote de moedas e com a volta da barra da torre para
+dentro do jogo). Onde cada elemento é desenhado dentro dela não é parâmetro de
+URL: vem do `/api/overlay/layout` e se ajusta ao vivo pelo evento SSE `layout`.
 Cada uma responde também com `.html` no fim (`/overlay.html`,
 `/overlay/hud.html`), e é essa a forma que `/api/overlay` entrega: a fonte
 "Link" do TikTok LIVE Studio (1.35) só aceita URL em que apareça um
@@ -215,16 +230,23 @@ data: { "slot": 3, "presenteNome": "Galaxy", "delta": 15, "latenciaMs": 620 }
 event: estado
 data: { "live": "conectada", "jogo": "online", "plataformaAtual": 184,
         "totalPlataformas": 200, "vitoria": false, "vitorias": 2, "derrotas": 1,
-        "cutscenes": { "vitoria": "vitoria", "derrota": "derrota" } }
+        "presetId": "padrao", "presetAtualizadoEm": "2026-09-04T18:22:10.000Z",
+        "cutscenes": { "vitoria": "vitoria", "derrota": "derrota" },
+        "portal": { "aberto": true, "vida": 1380, "vidaMaxima": 2000 },
+        "contagem": null }
 
 event: rodada
 data: { "resultado": "vitoria", "cutscene": "vitoria", "vitorias": 3, "derrotas": 1 }
 
 event: hud
-data: { "moedas": 294, "ranking": [{ "nome": "julin_", "moedas": 120 }],
-        "topCombo": { "presenteId": "5655", "presenteNome": "Rose", "nome": "kelvyn", "repeticoes": 20 },
-        "topPresente": { "presenteId": "5879", "presenteNome": "Lion", "nome": "raylton", "moedas": 100 },
-        "disputa": { "subida": 70, "descida": 58 } }
+data: { "disputa": { "subida": 70, "descida": 58 } }
+
+event: layout
+data: { "elementos": { "portal": { "x": 4, "y": 78.5, "escala": 1.2, "visivel": true },
+                       "seguidor": { "x": 40, "y": 92, "escala": 1, "visivel": false } } }
+
+event: seguidor
+data: { "nome": "kelvyn_ttv" }
 
 event: naoMapeado
 data: { "presenteNome": "Rose", "presenteId": "7934", "moedas": 1, "contagem": 7 }
@@ -238,9 +260,28 @@ para o `GET /api/sessao` da abertura do painel contar a mesma história que o
 SSE — senão quem abrisse o painel no meio de uma live veria a vitória sumir até
 o próximo batimento do jogo.
 
-`hud` é o HUD da live (ADR-015): agregado em memória pela ponte, por sessão,
-publicado inteiro a cada presente e entregue de cara a quem assina o fluxo. O
-nickname só existe ali e no `presente`; nunca em disco (11_SEGURANCA, camada 4).
+`hud` é a disputa da rodada (ADR-015), publicada a cada empurrão e entregue de
+cara a quem assina o fluxo. Ela é tudo que sobrou do agregado: o ranking por
+doador, o pote de moedas, o maior combo e o maior presente saíram em 2026-09-04
+para a live não correr risco de restrição — e com eles o único acúmulo de
+nickname da ponte.
+
+`layout` é o que o Estúdio de Overlay salvou (ADR-015), publicado a cada PUT e
+**entregue de cara a quem assina o fluxo**, como o `estado` e o `hud`. É ele que
+permite arrumar a tela sem recarregar a fonte no OBS no meio da live — o
+streamer arrasta a caixa no painel, salva, e a página que já está no ar se
+ajusta. Traz só o que foi movido: elemento ausente volta para a posição do CSS
+da página, e é assim que "voltar ao padrão" também vale ao vivo.
+
+`presetId` e `presetAtualizadoEm` andam juntos no `estado`: o overlay do HUD
+compara o **par** para decidir se relê a legenda em `/api/hud`. Só o id não
+basta — mexer nos slots do preset que já está no ar não troca o id, e a legenda
+ficava anunciando o presente que o streamer acabou de tirar da live. O carimbo é
+reescrito a cada salvar, então é ele que pega a mudança POR DENTRO do preset.
+Campo que o overlay lê não é sobra: tirar um dos dois quebra a releitura.
+
+`seguidor` é o follow novo, que o overlay mostra no canto e esquece. Só o nome,
+sanitizado como o do doador, e nunca em disco (11_SEGURANCA, camada 4).
 
 `cutscenes` no `estado` é para o overlay do OBS **preparar** os vídeos (ADR-014);
 o fluxo manda um `estado` assim que a conexão abre, para ele saber qual carregar

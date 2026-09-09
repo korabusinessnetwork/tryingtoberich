@@ -71,10 +71,14 @@ after(async () => {
   servidorDoJogo.close();
   servidorDoPainel.close();
   await rm(caminhoDeDados("presets", "teste-apagavel.json"), { force: true });
-  // Devolve o acervo byte a byte: ele é versionado, e um teste que suja o
-  // repositório é um teste que ninguém roda duas vezes.
-  const { escreverJsonAtomico } = await import("../src/repos/arquivo.mjs");
-  await escreverJsonAtomico(caminhoDeDados("acervo.json"), JSON.parse(acervoOriginal));
+  //[[ Devolve o acervo BYTE A BYTE. O comentário já dizia isso e o código não
+  // fazia: ele passava por `JSON.parse` + `escreverJsonAtomico`, que reserializa
+  // e reescreve as quebras de linha. Todo `npm test` deixava `data/acervo.json`
+  // modificado no git por causa disso — e um dia a restauração falhou no meio e
+  // o assetId de VERDADE do Roblox foi para o commit trocado por um placeholder
+  // de teste. Arquivo versionado volta como estava, sem passar por parser. ]]
+  const { escreverBinarioAtomico, escreverJsonAtomico } = await import("../src/repos/arquivo.mjs");
+  await escreverBinarioAtomico(caminhoDeDados("acervo.json"), Buffer.from(acervoOriginal, "utf8"));
   await escreverJsonAtomico(caminhoDeDados("configuracao.json"), JSON.parse(configuracaoOriginal));
 });
 

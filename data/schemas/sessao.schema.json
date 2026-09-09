@@ -18,12 +18,12 @@
       "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
     },
     "plataformaReferencia": {
-      "description": "Reportada pelo jogo via POST /jogo/estado. A ponte NUNCA calcula nem acumula posição. Ver R9.",
+      "description": "Reportada pelo jogo via POST /jogo/estado. A ponte NUNCA calcula nem acumula posição. Ver R9. O teto é o mesmo de `totalPlataformas` em mapa.schema.json e estado-jogo.schema.json: sessão não pode ter teto menor que a torre que ela grava. Era 400 enquanto a torre era pequena, e o mapa no ar hoje tem 1000 — acima de 400 toda escrita da sessão passava a falhar, e o Stop derrubava a ponte antes de anular a sessão.",
       "type": "integer",
       "minimum": 0,
-      "maximum": 400
+      "maximum": 5000
     },
-    "plataformaMaxima": { "type": "integer", "minimum": 0, "maximum": 400 },
+    "plataformaMaxima": { "type": "integer", "minimum": 0, "maximum": 5000 },
     "quedasNaturais": { "type": "integer", "minimum": 0 },
     "naoMapeados": {
       "description": "Contagem de presente que chegou e não estava em nenhum slot (F2.4). Só contagem por presente, sem doador.",
@@ -70,8 +70,8 @@
       "properties": {
         "em": { "$ref": "comuns.schema.json#/$defs/instante" },
         "slot": {
-          "description": "Qual dos 6 slots disparou. NULO quando o presente veio da tabela de movimento (ADR-016): ele moveu a torre sem ocupar slot nenhum, e o resumo por slot não o conta.",
-          "oneOf": [{ "type": "integer", "minimum": 1, "maximum": 6 }, { "type": "null" }]
+          "description": "Qual slot disparou, de 1 a 24 (o teto da R1 emendada). NULO quando o presente veio da tabela de movimento (ADR-016): ele moveu a torre sem ocupar slot nenhum, e o resumo por slot não o conta. O teto acompanha o do preset de propósito: parado em 6, um presente do slot 7 gravava um evento fora do contrato e a sessão INTEIRA falhava na hora do Stop, com a live já acabada.",
+          "oneOf": [{ "type": "integer", "minimum": 1, "maximum": 24 }, { "type": "null" }]
         },
         "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
         "repeticoes": { "type": "integer", "minimum": 1 },
@@ -85,12 +85,13 @@
       "additionalProperties": false,
       "required": ["plataformaMaxima", "totalPresentes", "presentesPorSlot"],
       "properties": {
-        "plataformaMaxima": { "type": "integer", "minimum": 0, "maximum": 400 },
+        "plataformaMaxima": { "type": "integer", "minimum": 0, "maximum": 5000 },
         "totalPresentes": { "type": "integer", "minimum": 0 },
         "presentesPorSlot": {
+          "description": "Contagem por posição de slot, 1 a 24. A chave é texto porque é chave de objeto JSON; o padrão é o mesmo teto do preset, e mexer num sem mexer no outro quebra a gravação da sessão no Stop.",
           "type": "object",
           "additionalProperties": false,
-          "patternProperties": { "^[1-6]$": { "type": "integer", "minimum": 0 } }
+          "patternProperties": { "^([1-9]|1[0-9]|2[0-4])$": { "type": "integer", "minimum": 0 } }
         },
         "latenciaMediaMs": { "type": ["integer", "null"], "minimum": 0 },
         "quedasNaturais": { "type": "integer", "minimum": 0 },

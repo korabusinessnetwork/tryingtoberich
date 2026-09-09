@@ -302,3 +302,94 @@ test("urlDoFluxo devolve URL absoluta, na mesma base dos outros verbos — é o 
 
   assert.equal(api.urlDoFluxo(), `${baseCapturada}/api/sessao/stream`);
 });
+
+/* ------------------------------------------------------------------ */
+/* O estúdio de overlay                                                */
+/* ------------------------------------------------------------------ */
+
+test("layoutDoOverlay lê o catálogo e o layout da ponte, e devolve a resposta inteira", async () => {
+  // Inteira de propósito: o catálogo de elementos e a altura da cam vêm junto
+  // do layout, e o painel não guarda nenhum número de geometria do overlay.
+  // Um `.then((r) => r.elementos)` aqui apagaria o catálogo e o estúdio ficaria
+  // sem o que desenhar — sem erro, só uma tela vazia.
+  //
+  // O corpo é COPIADO da rota real (`bridge/src/http/rotas-painel.mjs`), não
+  // inventado: um corpo de mentira com as chaves que dariam certo faz o teste
+  // passar igual com a rota certa ou errada, que foi exatamente como um
+  // desencontro de formato chegou até a tela. Quem sabe ler as duas formas é
+  // `lerRespostaDoLayout`, em lib/regras.js, e ele tem teste próprio.
+  const resposta = {
+    layout: {
+      streamerId: "local",
+      atualizadoEm: "2026-09-04T12:00:00.000Z",
+      elementos: {},
+    },
+    elementos: [{ id: "placar", rotulo: "Placar", x: 2.5, y: 2, largura: 30, altura: 6, ancora: "esquerda-topo" }],
+    cam: 33,
+  };
+
+  await comFetch(
+    (url, opcoes) => {
+      assert.ok(url.endsWith("/api/overlay/layout"), `caminho errado: ${url}`);
+      assert.equal(opcoes.method, undefined, "ler layout é GET");
+      return respostaFalsa(200, resposta);
+    },
+    async () => {
+      assert.deepEqual(await api.layoutDoOverlay(), resposta);
+    },
+  );
+});
+
+test("salvarLayoutDoOverlay é PUT no mesmo caminho, com o corpo { elementos }", async () => {
+  const elementos = { placar: { x: 10, y: 20, escala: 1.25, visivel: true } };
+
+  await comFetch(
+    (url, opcoes) => {
+      assert.ok(url.endsWith("/api/overlay/layout"), `caminho errado: ${url}`);
+      assert.equal(opcoes.method, "PUT");
+      // O corpo é `{ elementos }`, não o mapa cru: a ponte valida contra o
+      // schema, e um corpo achatado viraria 400 no clique de salvar.
+      assert.deepEqual(JSON.parse(opcoes.body), { elementos });
+      return respostaFalsa(200, { elementos });
+    },
+    () => api.salvarLayoutDoOverlay(elementos),
+  );
+});
+
+test("salvar layout com a ponte fora do ar vira ErroDaPonte em português, não TypeError", async () => {
+  await comFetch(
+    () => {
+      throw new TypeError("Failed to fetch");
+    },
+    async () => {
+      await assert.rejects(
+        () => api.salvarLayoutDoOverlay({}),
+        (erro) => {
+          assert.ok(erro instanceof ErroDaPonte);
+          assert.equal(erro.codigo, "ponte_offline");
+          assert.match(erro.message, /não respondeu/);
+          return true;
+        },
+      );
+    },
+  );
+});
+
+test("layout recusado pela ponte chega ao estúdio com o código e a mensagem do contrato", async () => {
+  // O estúdio mostra `.message` numa pastilha. Se o código do contrato se
+  // perdesse aqui, o streamer veria "A ponte respondeu 400." e nada mais.
+  await comFetch(
+    () => respostaFalsa(400, { erro: "layout_invalido", mensagem: "escala fora de 0,5 a 2." }),
+    async () => {
+      await assert.rejects(
+        () => api.salvarLayoutDoOverlay({ placar: { x: 0, y: 0, escala: 3, visivel: true } }),
+        (erro) => {
+          assert.equal(erro.codigo, "layout_invalido");
+          assert.equal(erro.message, "escala fora de 0,5 a 2.");
+          assert.equal(erro.status, 400);
+          return true;
+        },
+      );
+    },
+  );
+});

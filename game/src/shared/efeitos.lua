@@ -17,6 +17,7 @@
 --     derrubar o resto do jogo nem deixar o personagem ancorado. Ver R11.
 
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Eventos = require(script.Parent.eventos)
@@ -362,12 +363,169 @@ end
 	`CFrame.lookAt`, e Z positivo é para TRÁS: é a convenção que as seis
 	animações seguem, a mesma do estudo original (nariz em +X, escape em -X).
 ]]
+--[[
+	O EFEITO VIAJA COM O BONECO.
+
+	Pedido do dono: "as animações devem seguir o boneco até ele chegar na última
+	plataforma". Elas não seguiam. Só cinco das 32 se soldavam no personagem; as
+	outras montam um pivô ANCORADO na posição de partida e penduram tudo nele —
+	e o boneco sai dali por um Tween de até 3,5s, deixando o efeito para trás.
+	Com a tabela de movimento (ADR-016) mandando presente pequeno atravessar
+	centenas de andares, o efeito ficava um prédio inteiro abaixo do boneco.
+
+	Soldar o pivô resolveria o transporte e mataria o giro: peça soldada não
+	aceita CFrame, e é o giro que faz shuriken ser shuriken (ver o cabeçalho de
+	`sub_jato_propulsor`, que é o único soldado justamente por não girar).
+
+	Então o pivô continua ancorado e um laço de Heartbeat reescreve o CFrame
+	dele a cada frame: posição da raiz mais o deslocamento guardado, vezes a
+	rotação e o giro. Um laço só para todos os pivôs, e cada um sai da lista
+	quando o Debris o leva. As peças penduradas vão junto de graça — elas estão
+	soldadas no pivô, e mover peça ancorada arrasta o que está soldado nela.
+
+	Quem arma isso é `movimento.lua`, em volta da chamada da animação: todo pivô
+	criado durante aquele ciclo acompanha aquele boneco. Nenhum dos 32 módulos
+	precisou mudar.
+]]
+local raizEmFoco = nil
+local direcaoEmFoco = nil
+local acompanhando = {}
+local lacoDeAcompanhamento = nil
+
+--[[ Quanto o efeito fica À FRENTE do boneco, no mínimo, na linha de viagem.
+
+	Muitas animações de subida nascem no PÉ do boneco: eram o empurrão que ele
+	deixava para trás ao ser lançado, e ficar para trás era o efeito. Agora que
+	o pivô acompanha, esse mesmo offset zero põe a peça dentro do corpo dele —
+	o dono viu a animação "entrando no boneco".
+
+	O boneco tem ~5 studs de altura e a raiz fica no meio dele, então 6 é o
+	primeiro valor que sai limpo do corpo em qualquer direção. Quem já nasce
+	mais à frente que isso não é tocado: a folga é um piso, não uma posição. ]]
+local FOLGA_A_FRENTE = 6
+
+local function pararLaco()
+	if lacoDeAcompanhamento then
+		lacoDeAcompanhamento:Disconnect()
+		lacoDeAcompanhamento = nil
+	end
+end
+
+local function passoDoAcompanhamento()
+	local vivos = 0
+	for pivo, seguidor in pairs(acompanhando) do
+		-- O Debris leva o pivô no fim do prazo; a entrada some junto.
+		if not pivo.Parent or not seguidor.raiz.Parent then
+			acompanhando[pivo] = nil
+		else
+			vivos = vivos + 1
+			local t = 1
+			if seguidor.duracao > 0 then
+				t = math.clamp((os.clock() - seguidor.inicio) / seguidor.duracao, 0, 1)
+			end
+			local deslocamento = seguidor.deslocamento + seguidor.avanco * t
+
+			--[[ O efeito fica de UM LADO só, e nunca atravessa o boneco.
+
+				A folga na criação não bastava: `girar` recebe um `avanco`, e a
+				varredura ao longo da linha de viagem — que é a graça de metade
+				dos efeitos — levava o pivô de um lado ao outro passando POR
+				DENTRO dele. Parado no mundo isso nunca se via, porque o boneco
+				já tinha ido embora; acompanhando, ele cruza o corpo todo frame.
+
+				O lado é decidido na criação e não muda: à frente continua à
+				frente, atrás continua atrás. O que a varredura pode fazer é
+				afastar e aproximar até a folga, nunca passar dela. ]]
+			local direcao = seguidor.direcao
+			if direcao then
+				local avanco = deslocamento:Dot(direcao)
+				local minimo = FOLGA_A_FRENTE * seguidor.lado
+				if seguidor.lado > 0 and avanco < minimo then
+					deslocamento = deslocamento + direcao * (minimo - avanco)
+				elseif seguidor.lado < 0 and avanco > minimo then
+					deslocamento = deslocamento + direcao * (minimo - avanco)
+				end
+			end
+
+			pivo.CFrame = CFrame.new(seguidor.raiz.Position + deslocamento)
+				* seguidor.rotacao
+				* CFrame.Angles(0, 0, math.pi * 2 * seguidor.voltas * t)
+		end
+	end
+	if vivos == 0 then
+		pararLaco()
+	end
+end
+
+--[[
+	Arma (ou desarma, com nil) o boneco que os próximos pivôs vão acompanhar.
+
+	Estado de módulo de propósito: a alternativa era passar a raiz em `pivo()`
+	nos 32 arquivos de animação, e a regra deste módulo é que primitiva nova
+	entra AQUI para os módulos não mudarem. O ciclo é curto e serializado — o
+	`tocarAnimacao` arma, chama a animação e desarma.
+]]
+function Efeitos.acompanharBoneco(raiz, direcao)
+	raizEmFoco = raiz
+	direcaoEmFoco = nil
+	if typeof(direcao) == "Vector3" and direcao.Magnitude > 1e-3 then
+		direcaoEmFoco = direcao.Unit
+	end
+end
+
+--[[ Põe um pivô já criado na lista de quem segue o boneco do ciclo. ]]
+local function acompanhar(pivo)
+	local raiz = raizEmFoco
+	if not raiz or not pivo then
+		return pivo
+	end
+	-- Deslocamento em MUNDO, não em espaço da raiz: durante o Tween a raiz
+	-- mantém a rotação, e seguir o CFrame dela faria o efeito balançar se o
+	-- boneco virasse.
+	local deslocamento = pivo.Position - raiz.Position
+	--[[ De que lado do boneco este efeito vive, para o resto do ciclo.
+
+		Quem nasce à frente na linha de viagem fica à frente; quem nasce atrás
+		fica atrás. Empatado — o caso das animações de subida, que nascem no pé
+		dele — conta como FRENTE: é para onde ele está indo, e é lá que o efeito
+		lê como empurrão em vez de sujeira em cima do corpo. ]]
+	local lado = 1
+	if direcaoEmFoco then
+		if deslocamento:Dot(direcaoEmFoco) < -0.01 then
+			lado = -1
+		end
+		local avanco = deslocamento:Dot(direcaoEmFoco)
+		local minimo = FOLGA_A_FRENTE * lado
+		if (lado > 0 and avanco < minimo) or (lado < 0 and avanco > minimo) then
+			deslocamento = deslocamento + direcaoEmFoco * (minimo - avanco)
+			pivo.CFrame = CFrame.new(raiz.Position + deslocamento) * (pivo.CFrame - pivo.CFrame.Position)
+		end
+	end
+
+	acompanhando[pivo] = {
+		raiz = raiz,
+		direcao = direcaoEmFoco,
+		lado = lado,
+		deslocamento = deslocamento,
+		rotacao = pivo.CFrame - pivo.CFrame.Position,
+		avanco = Vector3.zero,
+		voltas = 0,
+		duracao = 0,
+		inicio = os.clock(),
+	}
+	if not lacoDeAcompanhamento then
+		lacoDeAcompanhamento = RunService.Heartbeat:Connect(passoDoAcompanhamento)
+	end
+	return pivo
+end
+
 function Efeitos.pivo(cframe, prazo)
 	local pivo = montarPeca("Part", nil, {
 		Transparency = 1,
 		Size = Vector3.new(0.2, 0.2, 0.2),
 		CFrame = cframe or CFrame.new(),
 	})
+	acompanhar(pivo)
 	return Efeitos.limparEm(pivo, prazo)
 end
 
@@ -409,6 +567,37 @@ function Efeitos.girar(pivo, partida, chegada, voltas, duracao, passos)
 	duracao = duracao or 1
 	voltas = voltas or 1
 	if duracao <= 0 then
+		return pivo
+	end
+
+	--[[ Pivô que acompanha o boneco gira pelo LACO, nao por Tween.
+
+		A corrente de Tweens abaixo mira CFrames absolutos calculados agora. Num
+		pivô que anda, cada Tween puxaria o efeito de volta para onde o boneco
+		estava quando o passo foi agendado — o giro brigaria com a viagem e o
+		efeito ficaria tremendo atrás dele. Passando os mesmos números para o
+		seguidor, o laço faz as duas coisas no mesmo frame. ]]
+	local seguidor = acompanhando[pivo]
+	if seguidor then
+		local origem = partida.Position
+		--[[ O DESLOCAMENTO NÃO É RECALCULADO AQUI.
+
+			Ele foi medido na criação do pivô, quando a animação o pôs à frente
+			do boneco (`raiz.Position + eixo * avanço`). Recalcular a partir da
+			raiz agora parece igual e não é: entre criar o pivô e chamar `girar`
+			o Tween já andou, e se o laço ainda não tiver rodado neste frame a
+			conta dá `posiçãoDeCriação - raizJáAdiantada` — um deslocamento
+			menor que o pedido, às vezes negativo. O efeito então nascia ATRÁS e
+			terminava DENTRO do boneco, que foi o que o dono viu na tela.
+
+			O que `girar` traz é só o giro: rotação de partida, avanço próprio
+			do efeito, voltas e duração. Onde ele fica em relação ao boneco é
+			assunto de quem criou o pivô. ]]
+		seguidor.rotacao = partida - origem
+		seguidor.avanco = (typeof(chegada) == "CFrame" and chegada.Position or origem) - origem
+		seguidor.voltas = voltas
+		seguidor.duracao = duracao
+		seguidor.inicio = os.clock()
 		return pivo
 	end
 

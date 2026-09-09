@@ -23,6 +23,13 @@ data/animacoes.json
 # lógica do catálogo coletado acima.
 data/configuracao.json
 
+# A cena que o streamer montou no Estúdio de Overlay: onde ele quer o placar na
+# TELA DELE. É gosto de INSTALAÇÃO, como data/configuracao.json acima —
+# versionar renderia um diff a cada caixa arrastada, e a ausência do arquivo já
+# é o padrão da página. Se o dono preferir versionar a cena, basta apagar esta
+# linha: o schema aceita o arquivo, e o validador o confere quando ele existe.
+data/overlay-layout.json
+
 # Entrada temporária do gate do painel (scripts/verificar-painel.mjs).
 panel/src/gate-gerado.jsx
 data/acervo-previa/

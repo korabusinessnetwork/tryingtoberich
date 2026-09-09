@@ -52,6 +52,9 @@ local estado = {
 	-- "derrota"), não um booleano: é ele que diz qual condição precisa continuar
 	-- valendo para a contagem seguir. `false` quando não há contagem em curso.
 	encerrando = false,
+	-- Instante (os.clock) em que a contagem zera. Vira `restanteMs` no estado,
+	-- que é o que o overlay do OBS desenha. nil quando não há contagem.
+	contagemAte = nil,
 	-- A rodada em curso foi COMPRADA por donate de placar, não conquistada por
 	-- posição. Uma vitória comprada não depende de o streamer estar no topo —
 	-- ele não está — e por isso não pode ser cancelada por ele não estar lá.
@@ -76,8 +79,26 @@ local function personagemAtual()
 end
 
 --[[
+	A contagem regressiva do fim de rodada, para quem desenha fora do jogo.
+
+	Devolve `{ resultado, restanteMs }` ou nil. O overlay tica sozinho a partir
+	do `restanteMs`: o estado sai a cada 2s, e um número que só anda de dois em
+	dois segundos não é contagem regressiva. Mandar o tempo QUE FALTA, e não o
+	instante em que termina, evita depender de os dois relógios — o do Roblox e
+	o da máquina que abre o overlay — estarem no mesmo segundo.
+]]
+local function contagemEmCurso()
+	if not estado.encerrando or not estado.contagemAte then
+		return nil
+	end
+	local restante = math.max(0, estado.contagemAte - os.clock())
+	return { resultado = estado.encerrando, restanteMs = math.floor(restante * 1000) }
+end
+
+--[[
 	O estado que o jogo publica. Vai para dois destinos com o mesmo conteúdo:
-	a ponte (que repassa ao painel) e os clientes (HUD, câmera e vestiário).
+	a ponte (que repassa ao painel e ao overlay do OBS) e os clientes que
+	sobraram — câmera, ajustes e vestiário.
 
 	`sessaoAtiva` existe para o vestiário se trancar durante a live: o ADR-011
 	proíbe abri-lo com a sessão rodando, porque streamer parado num menu é a
@@ -101,8 +122,22 @@ local function montarEstado()
 		-- referência (R9.2) — chegar por altura, passando por cima no pulo,
 		-- não é ter subido a torre.
 		vitoria = total > 0 and Plataformas.referencia() >= total,
+		--[[ O portal e a contagem viajam no estado porque o HUD saiu do jogo.
+			Quem desenha os dois hoje é o overlay do OBS (ADR-015), e ele só
+			conhece este payload — não recebe evento de Roblox. Vão juntos do
+			resto para não abrir um segundo canal: é o mesmo POST que já sai a
+			cada 2s e a cada mudança de referência. ]]
+		portal = Portal.instantaneo(),
+		contagem = contagemEmCurso(),
 	}
 end
+
+--[[ Declaração adiantada: `encerrarRodada` e o dano ao portal empurram o estado
+	fora de banda, e vêm antes da definição. Sem esta linha o nome vira global —
+	nil — e estoura só em tempo de execução, que foi exatamente o que aconteceu
+	no fim de rodada (BUG-005). Há teste cobrando isto de toda função local do
+	arquivo. ]]
+local publicarEstado
 
 --[[ Vida do portal, mandada pela ponte junto do mapa (ela sai do preset). ]]
 local function vidaDoPortal()
@@ -136,13 +171,6 @@ local function beiradaDeCosta(indice)
 	}
 end
 
---[[ Manda o HUD desenhar a barra. Sem isto a disputa acontece sem ninguém ver. ]]
-local function publicarPortal(quebrou)
-	local instantaneo = Portal.instantaneo()
-	instantaneo.quebrou = quebrou == true
-	Eventos.obter(Eventos.PORTAL):FireAllClients(instantaneo)
-end
-
 --[[
 	Publica o estado para os clientes e para a ponte.
 
@@ -153,7 +181,15 @@ end
 --[[ Declarações adiantadas: `encerrarRodada` cobra a fila no fim, e
 	`cobrarProximaDaFila` encerra a rodada seguinte. Sem isto uma delas viraria
 	busca de global e estouraria só quando a fila existisse de verdade — o
-	mesmo tropeço que já aconteceu duas vezes no vestiário. ]]
+	mesmo tropeço que já aconteceu duas vezes no vestiário.
+
+	`publicarEstado` entrou nesta lista pelo mesmo motivo, e depois de cair no
+	tropeço: `encerrarRodada` a chamava no fim da contagem, umas 60 linhas ANTES
+	de ela ser declarada, então ali dentro o nome era global — nil. Toda rodada
+	terminava com "attempt to call a nil value" no Output, e a linha seguinte,
+	`cobrarProximaDaFila()`, nunca rodava: um donate de 6 derrotas cobrava uma e
+	perdia cinco. O erro passava por ruído porque a torre reiniciava do mesmo
+	jeito, pelo estado que `reiniciarCorrida` publica por outro caminho. ]]
 local encerrarRodada
 local cobrarProximaDaFila
 
@@ -181,7 +217,7 @@ function cobrarProximaDaFila()
 	-- inteira acontece, não só o número.
 	if fila.tipo == "derrota" and Portal.aberto() then
 		Portal.quebrar()
-		publicarPortal(true)
+		publicarEstado()
 	end
 
 	-- Forçada: a condição desta rodada é o donate, não a posição do boneco.
@@ -204,6 +240,9 @@ function encerrarRodada(resultado, forcada)
 	-- condição precisa continuar valendo para a contagem seguir de pé.
 	estado.encerrando = resultado
 	estado.encerramentoForcado = forcada == true
+	-- Quando esta contagem zera. É daqui que sai o `restanteMs` do estado, e é
+	-- por ele que o overlay desenha o número no meio da tela.
+	estado.contagemAte = os.clock() + Tipos.duracaoDaContagem()
 	estado.geracaoDaRodada = estado.geracaoDaRodada + 1
 	local minhaGeracao = estado.geracaoDaRodada
 
@@ -213,11 +252,10 @@ function encerrarRodada(resultado, forcada)
 		estado.derrotas = estado.derrotas + 1
 	end
 
-	Eventos.obter(Eventos.RODADA_ENCERRADA):FireAllClients({
-		resultado = resultado,
-		vitorias = estado.vitorias,
-		derrotas = estado.derrotas,
-	})
+
+	-- Fora de banda: o estado normal sai a cada 2s, e a contagem tem 10. Sem
+	-- este empurrão o overlay começaria a contar já pela metade.
+	publicarEstado()
 
 	--[[ O espetáculo do fim de rodada é a CUTSCENE do overlay do OBS (ADR-014),
 		e o jogo só AVISA a ponte — no instante em que o resultado é definitivo.
@@ -264,12 +302,12 @@ function encerrarRodada(resultado, forcada)
 		estado.saiuDoPrimeiro = false
 		estado.encerrando = false
 		estado.encerramentoForcado = false
+		estado.contagemAte = nil
 
 		-- Torre nova, portal novo: a vida não atravessa a rodada.
 		Portal.fechar()
-		publicarPortal(false)
-
 		publicarEstado()
+
 		cobrarProximaDaFila()
 	end)
 end
@@ -288,17 +326,12 @@ local function cancelarRodada()
 	local resultado = estado.encerrando
 	estado.encerrando = false
 	estado.encerramentoForcado = false
+	estado.contagemAte = nil
 	estado.geracaoDaRodada = estado.geracaoDaRodada + 1
 
 	-- O placar NÃO volta atrás: o ponto foi feito no instante em que o streamer
 	-- tocou a plataforma, e desfazê-lo faria o número piscar na tela por um
 	-- passo em falso.
-	Eventos.obter(Eventos.RODADA_ENCERRADA):FireAllClients({
-		resultado = "cancelado",
-		anterior = resultado,
-		vitorias = estado.vitorias,
-		derrotas = estado.derrotas,
-	})
 end
 
 --[[
@@ -328,7 +361,7 @@ local function aindaNaPlataformaDoFim(atual)
 	return estado.encerrando == "derrota"
 end
 
-local function publicarEstado()
+function publicarEstado()
 	local atual = montarEstado()
 
 	-- Saiu do pé da torre: a partir daqui, voltar ao primeiro andar é derrota.
@@ -357,21 +390,13 @@ local function publicarEstado()
 			local base = Plataformas.topoDe(1)
 			if base then
 				Portal.abrir(base, vidaDoPortal(), beiradaDeCosta(1))
-				publicarPortal(false)
+				publicarEstado()
 			end
 		end
 	end
 
 	if atual.vitoria ~= estado.venceu then
 		estado.venceu = atual.vitoria
-		Eventos.obter(Eventos.VITORIA):FireAllClients({
-			plataforma = atual.plataformaReferencia,
-			totalPlataformas = atual.totalPlataformas,
-			-- Sair da vitória só acontece por reinício: a referência não desce
-			-- sozinha, e presente de descida depois do topo é queda de novo ao
-			-- jogo, não fim do aviso.
-			reiniciou = not atual.vitoria,
-		})
 	end
 
 	Eventos.obter(Eventos.ESTADO):FireAllClients(atual)
@@ -406,7 +431,7 @@ local function aplicarPresente(evento)
 		streamer lá em cima, porque o portal não fecha quando ele escapa. ]]
 	if evento.delta < 0 and Portal.aberto() then
 		local quebrou = Portal.danificar(-evento.delta)
-		publicarPortal(quebrou)
+		publicarEstado()
 		if quebrou and not estado.encerrando then
 			encerrarRodada("derrota")
 		end
@@ -430,11 +455,18 @@ local function aplicarPresente(evento)
 		destino = pe
 	end
 
-	-- R6: delta que passaria do pé ou do topo para no limite. Se o limite comeu
-	-- o movimento inteiro, não há o que animar.
-	if destino == origem then
-		return
-	end
+	--[[ No TOPO e no PÉ o presente ainda acontece — só não anda.
+
+		Aqui havia um `return`: delta comido pelo limite era presente jogado
+		fora, sem animação nenhuma. Na torre inteira isso é raro; no topo e no
+		primeiro andar é o caso NORMAL, e é justamente onde a plateia está
+		martelando. Quem mandou via a torre parada e nada mais, como se o
+		presente não tivesse chegado.
+
+		Decisão do dono: a animação continua empurrando, com o boneco parado.
+		O ciclo roda inteiro com destino igual à origem — o Tween não sai do
+		lugar, o efeito toca por completo e o controle volta no fim. Não é caso
+		especial: é o caso geral com deslocamento zero. ]]
 
 	-- F4b.4: durante a animação quem manda é o Tween, e o detector de queda
 	-- fica calado. Sem isso, o boneco descendo 60 plataformas por Tween dispara
@@ -507,17 +539,6 @@ local function aplicarPresente(evento)
 
 	-- O cliente desenha o presente enquanto o servidor move. Os dois começam
 	-- no mesmo instante: é o que faz a causa e o efeito parecerem uma coisa só.
-	Eventos.obter(Eventos.PRESENTE):FireAllClients({
-		animacaoId = evento.animacaoId,
-		delta = evento.delta,
-		intensidade = evento.intensidade,
-		efeitoCurto = evento.efeitoCurto,
-		nomeDoador = evento.nomeDoador,
-		presenteNome = evento.presenteNome,
-		plataformaOrigem = origem,
-		plataformaDestino = destino,
-		disputa = evento.disputa,
-	})
 end
 
 --[[
@@ -697,9 +718,8 @@ function Sessao.iniciar()
 				estado.saiuDoPrimeiro = false
 				-- A torre antiga não existe mais, e o portal ficava no pé dela.
 				Portal.fechar()
-				publicarPortal(false)
-				print("[Kora] mapa recarregado: " .. tostring(novoMapa.nome))
 				publicarEstado()
+				print("[Kora] mapa recarregado: " .. tostring(novoMapa.nome))
 				return
 			end
 
@@ -755,15 +775,12 @@ function Sessao.iniciar()
 			-- mais serve.
 			estado.fila = nil
 			Portal.fechar()
-			publicarPortal(false)
-
 			publicarEstado()
 		end,
 		aoCombateAnulado = function(disputa)
 			-- Não move ninguém, mas precisa aparecer: empate sem nada na tela
 			-- lê como travamento no exato momento em que mais gente mandou
 			-- presente ao mesmo tempo. Ver ADR-012.
-			Eventos.obter(Eventos.COMBATE_ANULADO):FireAllClients(disputa)
 		end,
 	})
 	if not ok then

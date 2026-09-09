@@ -52,9 +52,14 @@ presente de espectadores.
 Regras:
 - **Nada de nickname em log persistido.** O nome do doador vai para a tela do
   jogo e para o SSE do painel, ambos em memória e efêmeros.
-- **O ranking do HUD da live (ADR-015) é o único agregado por nickname**, e
-  segue a mesma regra: vive em `dominio/hud.mjs`, em memória, nasce na sessão
-  e morre no Stop. Nunca entra no arquivo da sessão nem no resumo.
+- **Nenhum agregado por nickname existe na ponte.** O HUD da live chegou a ter
+  um ranking de doadores em `dominio/hud.mjs`; ele saiu em 2026-09-04 por
+  decisão do dono, para a live não correr risco de restrição na TikTok, e com
+  ele foi o único acúmulo de nome de espectador do sistema. Há teste cobrando
+  que ele não volte.
+- O nome de espectador atravessa a ponte em dois eventos do SSE e some em
+  segundos na tela: o `presente` (que o overlay já nem mostra) e o `seguidor`,
+  que é o aviso de follow novo. Nenhum dos dois toca disco.
 - O log de evento da sessão guarda tipo de presente, valor, delta e latência.
   Não guarda quem enviou.
 - Ao encerrar a sessão (F5), o arquivo em `data/sessoes/` é reduzido ao resumo

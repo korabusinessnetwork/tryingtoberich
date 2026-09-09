@@ -12,7 +12,8 @@ import assert from "node:assert/strict";
 
 import {
   MOVIMENTO_PADRAO,
-  SLOTS,
+  SLOTS_MAX,
+  SLOTS_PADRAO,
   comExcecao,
   deltaDaRegra,
   linhasDeMovimento,
@@ -24,6 +25,14 @@ import {
   avisoDeDirecao,
   contarAposentadas,
   combateDoEvento,
+  ehSlotExtra,
+  avisoDeAncora,
+  invadeACam,
+  layoutComElemento,
+  lerRespostaDoLayout,
+  prenderNoPalco,
+  semElemento,
+  proximaPosicaoLivre,
   corDaFaixa,
   faixaDeMoedas,
   formatarDelta,
@@ -32,6 +41,7 @@ import {
   medianaDeLatencia,
   opcoesDeCutscene,
   presentesRepetidos,
+  primeiroPresenteLivre,
   saudeDaLatencia,
   slotsDoPreset,
 } from "../src/lib/regras.js";
@@ -180,14 +190,81 @@ test("a inversão avisa mas nunca bloqueia (R2, ADR-007): entrada incompleta nã
 });
 
 /* -------------------------------------------------------------- */
-/* R1 — seis slots, e slot vazio é válido                          */
+/* R1 emendada — 6 é o PADRÃO, 24 é o teto, e slot vazio é válido  */
 /* -------------------------------------------------------------- */
 
-test("o preset sempre tem 6 posições, mesmo vazio", () => {
-  assert.equal(SLOTS, 6);
+test("o preset sempre tem pelo menos 6 posições, mesmo vazio", () => {
+  assert.equal(SLOTS_PADRAO, 6, "o número de desejos que a TikTok exibe");
+  assert.equal(SLOTS_MAX, 24, "o maxItems de data/schemas/preset.schema.json");
   assert.equal(slotsDoPreset(null).length, 6);
   assert.equal(slotsDoPreset({ slots: [] }).length, 6);
   assert.ok(slotsDoPreset(null).every((s) => s.vazio));
+});
+
+test("os extras entram depois dos 6, e os 6 continuam de pé mesmo vazios", () => {
+  // O piso é 6 e não a contagem real: os seis primeiros são o painel de
+  // desejos da TikTok e continuam existindo na tela sem presente nenhum.
+  const preset = { slots: [{ posicao: 9, presenteId: "nono", delta: 5 }] };
+  const slots = slotsDoPreset(preset);
+
+  assert.equal(slots.length, 9, "vai até a maior posição usada");
+  assert.deepEqual(slots.map((s) => s.posicao), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(slots[8].presenteId, "nono");
+  assert.ok(slots.slice(0, 8).every((s) => s.vazio), "os buracos, dentro e fora dos 6, vêm marcados vazio");
+});
+
+test("um preset só com o slot 20 desenha as 20 posições", () => {
+  const slots = slotsDoPreset({ slots: [{ posicao: 20, presenteId: "vinte", delta: 1 }] });
+
+  assert.equal(slots.length, 20);
+  assert.equal(slots[19].presenteId, "vinte");
+  assert.ok(slots[0].vazio && slots[6].vazio);
+});
+
+test("posição impossível não vira cartão", () => {
+  // O preset é editado à mão em disco (ADR-003). O que preocupa não é o valor
+  // negativo — ele nunca casaria com o índice —, é o `posicao: 5000`: sem
+  // teto, ele pediria cinco mil cartões e travaria a aba antes de alguém ver
+  // que o JSON estava errado.
+  const preset = {
+    slots: [
+      { posicao: 5000, presenteId: "absurdo" },
+      { posicao: -3, presenteId: "negativo" },
+      { posicao: 2.5, presenteId: "fracionario" },
+      { posicao: 7, presenteId: "valido" },
+    ],
+  };
+  const slots = slotsDoPreset(preset);
+
+  assert.equal(slots.length, 7, "só o slot 7 conta para o tamanho da grade");
+  assert.equal(slots[6].presenteId, "valido");
+});
+
+test("extra é o que passou dos 6 — é ele que ganha o botão de remover", () => {
+  assert.equal(ehSlotExtra(6), false);
+  assert.equal(ehSlotExtra(7), true);
+  assert.equal(ehSlotExtra(24), true);
+  assert.equal(ehSlotExtra(undefined), false);
+});
+
+test("a próxima posição livre tapa o buraco dos 6 antes de abrir um sétimo", () => {
+  // Cartão vazio à vista com uma linha nova embaixo é a mesma informação
+  // ocupando o dobro da tela.
+  const comBuraco = { slots: [1, 2, 4, 5, 6].map((posicao) => ({ posicao, presenteId: `p${posicao}` })) };
+  assert.equal(proximaPosicaoLivre(comBuraco), 3);
+
+  const cheios = { slots: Array.from({ length: 6 }, (_, i) => ({ posicao: i + 1, presenteId: `p${i}` })) };
+  assert.equal(proximaPosicaoLivre(cheios), 7);
+
+  assert.equal(proximaPosicaoLivre(null), 1);
+});
+
+test("no teto de 24 não há posição livre, e o painel não oferece a 25ª", () => {
+  const noTeto = {
+    slots: Array.from({ length: SLOTS_MAX }, (_, i) => ({ posicao: i + 1, presenteId: `p${i + 1}` })),
+  };
+  assert.equal(proximaPosicaoLivre(noTeto), null);
+  assert.equal(slotsDoPreset(noTeto).length, SLOTS_MAX);
 });
 
 test("as posições preenchidas ficam no lugar certo, e o resto vem vazio", () => {
@@ -543,4 +620,189 @@ test("o resumo conta o que a lista longa esconde, inclusive quem varre a torre s
   assert.equal(resumoDaTabela(semSlot, 1000).varremATorre, 1);
   // Sem mapa gerado não há torre para comparar: a conta não é inventada.
   assert.equal(resumoDaTabela(semSlot, null).varremATorre, null);
+});
+
+/* -------------------------------------------------------------- */
+/* Estúdio de overlay — a caixa arrastável                         */
+/* -------------------------------------------------------------- */
+
+test("prenderNoPalco não deixa a caixa sair por nenhum dos quatro lados", () => {
+  const tamanho = { largura: 30, altura: 10 };
+
+  // Esquerda e topo: arrastar para fora vira zero, nunca negativo. Elemento
+  // com x negativo é desenhado fora da cena e simplesmente não aparece no OBS.
+  assert.deepEqual(prenderNoPalco({ x: -12, y: -3, ...tamanho }), { x: 0, y: 0 });
+
+  // Direita e base: o teto é 100 menos o TAMANHO, porque x/y são o canto
+  // superior esquerdo. Prender só a origem deixaria a caixa pendurada fora.
+  assert.deepEqual(prenderNoPalco({ x: 140, y: 200, ...tamanho }), { x: 70, y: 90 });
+
+  // Quem cabe fica exatamente onde foi solto.
+  assert.deepEqual(prenderNoPalco({ x: 12.3, y: 41.6, ...tamanho }), { x: 12.3, y: 41.6 });
+});
+
+test("prenderNoPalco arredonda a uma casa — o arquivo não guarda ruído de pixel", () => {
+  // O x vem de uma conta de pixel do ponteiro dividida pela largura do palco.
+  // Sem arredondar, o JSON guardaria 37.41999999999996.
+  assert.deepEqual(prenderNoPalco({ x: 37.41999999999996, y: 8.06, largura: 10, altura: 5 }), {
+    x: 37.4,
+    y: 8.1,
+  });
+
+  // Caixa maior que o palco fica em 0 em vez de virar teto negativo.
+  assert.deepEqual(prenderNoPalco({ x: 40, y: 40, largura: 140, altura: 130 }), { x: 0, y: 0 });
+
+  // Sem número não há posição: NaN viraria `left: NaN%` e a caixa sumiria.
+  assert.deepEqual(prenderNoPalco({ x: Number.NaN, y: undefined, largura: 10, altura: 10 }), {
+    x: 0,
+    y: 0,
+  });
+});
+
+test("voltar ao padrão APAGA a chave do elemento, não grava a posição padrão nela", () => {
+  // É o que mantém o arquivo com só as exceções, como a tabela do ADR-016.
+  // Gravar a posição padrão congelaria o desenho de hoje: no dia em que a
+  // página do OBS mudasse um elemento de lugar, quem clicou "voltar ao padrão"
+  // uma vez ficaria preso no padrão velho sem nada dizendo por quê.
+  const elementos = {
+    placar: { x: 10, y: 20, escala: 1, visivel: true },
+    portal: { x: 60, y: 70, escala: 1.5, visivel: false },
+  };
+
+  const semPlacar = semElemento(elementos, "placar");
+  assert.equal("placar" in semPlacar, false, "voltar ao padrão tem que APAGAR a chave");
+  assert.deepEqual(Object.keys(semPlacar), ["portal"]);
+
+  // Sem mutar o original: o estado do React compara referência.
+  assert.deepEqual(Object.keys(elementos).sort(), ["placar", "portal"]);
+
+  // Apagar quem nunca foi mexido não inventa chave nem quebra.
+  assert.deepEqual(semElemento({}, "vs"), {});
+});
+
+test("layoutComElemento escreve um elemento sem perder o que já havia nele", () => {
+  const so_escala = layoutComElemento({}, "vs", { x: 5, y: 5, escala: 2 });
+  assert.deepEqual(so_escala.vs, { x: 5, y: 5, escala: 2, visivel: true });
+
+  // Mexer na visibilidade não pode apagar a posição já arrastada — seria o
+  // elemento pulando de volta para o padrão a cada clique na caixinha.
+  const depois = layoutComElemento(so_escala, "vs", { visivel: false });
+  assert.deepEqual(depois.vs, { x: 5, y: 5, escala: 2, visivel: false });
+
+  // E não mexe nos vizinhos.
+  const comOutro = layoutComElemento(depois, "portal", { x: 1, y: 2 });
+  assert.deepEqual(comOutro.vs, { x: 5, y: 5, escala: 2, visivel: false });
+  assert.equal(comOutro.portal.x, 1);
+});
+
+test("invadeACam acusa a caixa que encosta na faixa da cam, e só ela (ADR-015)", () => {
+  // Nada é desenhado sobre a cam de propósito: ali o elemento fica atrás do
+  // rosto do streamer e a live inteira passa com o placar escondido.
+  assert.equal(invadeACam({ y: 0, altura: 6 }, 33), true, "colado no topo está dentro da cam");
+  assert.equal(invadeACam({ y: 30, altura: 6 }, 33), true, "encostar de raspão também vale aviso");
+  assert.equal(invadeACam({ y: 33, altura: 6 }, 33), false, "logo abaixo da faixa está livre");
+  assert.equal(invadeACam({ y: 80, altura: 6 }, 33), false);
+
+  // Sem cam declarada não há faixa proibida, e o aviso não pode aparecer do nada.
+  assert.equal(invadeACam({ y: 0, altura: 6 }, 0), false);
+  assert.equal(invadeACam({ y: 0, altura: 6 }, null), false);
+});
+
+test("lerRespostaDoLayout acha o catálogo e as exceções nas DUAS formas da rota", () => {
+  // O corpo que `GET /api/overlay/layout` devolve hoje: o catálogo em
+  // `elementos` (lista) e as exceções dentro de `layout`. Lendo `elementos`
+  // como exceção, o estúdio abria com o palco vazio e "8 fora do padrão" sem
+  // ninguém ter arrastado nada — e sem erro nenhum na tela.
+  const comoARotaResponde = {
+    layout: {
+      streamerId: "local",
+      atualizadoEm: "2026-09-04T12:00:00.000Z",
+      elementos: { placar: { x: 10, y: 40, escala: 1, visivel: true } },
+    },
+    elementos: [
+      { id: "placar", rotulo: "Placar (V / D)", x: 2.5, y: 34.1, largura: 16, altura: 2.25, ancora: "esquerda-topo" },
+      { id: "vs", rotulo: "Disputa da rodada (VS)", x: 27, y: 34.1, largura: 46, altura: 2.25, ancora: "centro-topo" },
+    ],
+    cam: 33,
+  };
+
+  const daRota = lerRespostaDoLayout(comoARotaResponde);
+  assert.equal(daRota.catalogo.length, 2, "o catálogo não pode chegar vazio: é o que se arrasta");
+  assert.deepEqual(daRota.elementos, { placar: { x: 10, y: 40, escala: 1, visivel: true } });
+
+  // A forma que o 07_APIS descreve, e que prevalece: `elementos` é o que o
+  // streamer moveu, o catálogo vem ao lado. As duas leituras têm que dar no
+  // mesmo, senão alinhar a rota à doc quebraria a tela de novo.
+  const comoADocDescreve = {
+    elementos: { placar: { x: 10, y: 40, escala: 1, visivel: true } },
+    catalogo: comoARotaResponde.elementos,
+    cam: 33,
+  };
+
+  const daDoc = lerRespostaDoLayout(comoADocDescreve);
+  assert.equal(daDoc.catalogo.length, 2);
+  assert.deepEqual(daDoc.elementos, daRota.elementos);
+
+  // Quem nunca abriu o estúdio tem exceção nenhuma, e isso é `{}` — não nulo,
+  // que quebraria o `Object.keys` do contador de "fora do padrão".
+  assert.deepEqual(lerRespostaDoLayout({ elementos: [], cam: 33 }).elementos, {});
+  assert.deepEqual(lerRespostaDoLayout(null), { catalogo: null, elementos: {} });
+});
+
+test("avisoDeAncora fala só de quem troca de âncora e pula no primeiro arrastar", () => {
+  // A promessa é do catálogo da ponte ("o painel avisa quem é assim") e do
+  // 02_DESIGN_SYSTEM, seção C. Sem isto o pulo acontece na cara do streamer e
+  // ele acha que o estúdio errou o lugar.
+  assert.equal(avisoDeAncora("direita-topo"), "à direita");
+  assert.equal(avisoDeAncora("direita-base"), "à direita e à base");
+  assert.equal(avisoDeAncora("esquerda-base"), "à base");
+  assert.equal(avisoDeAncora("centro-topo"), "pelo centro");
+  assert.equal(avisoDeAncora("faixa-topo"), "pela largura inteira");
+
+  // Quem já nasce preso pela esquerda e pelo topo não pula: aviso aqui seria
+  // ruído em quatro dos oito elementos.
+  assert.equal(avisoDeAncora("esquerda-topo"), null);
+  // Âncora nova ou ausente não vira aviso inventado.
+  assert.equal(avisoDeAncora(undefined), null);
+  assert.equal(avisoDeAncora("diagonal-inedita"), null);
+});
+
+test("primeiroPresenteLivre pula quem já está em slot E quem já está no placar (R1.4)", () => {
+  const catalogo = [
+    { presenteId: "rose", nome: "Rosa" },
+    { presenteId: "leao", nome: "Leão" },
+    { presenteId: "foguete", nome: "Foguete" },
+  ];
+
+  // O caso que estourava no Salvar: o único presente fora dos slots é o de
+  // vitória, que vive no placar. A ponte varre as duas listas na mesma passada
+  // e devolveria `presente_repetido` falando de dois SLOTS — enquanto a colisão
+  // real está no placar, que o editor de slots nem mostra ao lado.
+  const preset = {
+    slots: [{ posicao: 1, presenteId: "rose" }],
+    placar: [{ presenteId: "leao", efeito: "vitoria" }],
+  };
+  assert.equal(primeiroPresenteLivre(catalogo, preset)?.presenteId, "foguete");
+
+  // Sem placar, é o primeiro fora dos slots, como antes.
+  assert.equal(primeiroPresenteLivre(catalogo, { slots: preset.slots })?.presenteId, "leao");
+
+  // Preset zerado: o primeiro do catálogo, e nada de estourar sem slots.
+  assert.equal(primeiroPresenteLivre(catalogo, null)?.presenteId, "rose");
+
+  // Tudo vinculado devolve null — é o que vira o aviso na tela em vez de um
+  // slot com `presenteId: undefined`, que o schema recusaria no Salvar.
+  const cheio = {
+    slots: [{ posicao: 1, presenteId: "rose" }, { posicao: 2, presenteId: "foguete" }],
+    placar: [{ presenteId: "leao", efeito: "derrota" }],
+  };
+  assert.equal(primeiroPresenteLivre(catalogo, cheio), null);
+
+  // Id numérico de um lado e texto do outro é o normal do catálogo da TikTok:
+  // a comparação é por texto, senão o repetido passaria batido.
+  assert.equal(
+    primeiroPresenteLivre([{ presenteId: 5655 }, { presenteId: 6064 }], { slots: [{ presenteId: "5655" }] })
+      ?.presenteId,
+    6064,
+  );
 });

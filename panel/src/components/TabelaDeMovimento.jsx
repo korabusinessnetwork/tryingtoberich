@@ -168,8 +168,8 @@ export function TabelaDeMovimento({
 
       <p className="movimento-explicacao">
         Quanto a torre anda com cada presente da live. O número sai de uma conta — moedas do
-        presente × multiplicador — e você muda o que quiser, um por um. Os 6 presentes dos slots
-        não entram nesta conta: eles têm animação e delta próprios, na página Ao vivo.
+        presente × multiplicador — e você muda o que quiser, um por um. Os presentes que estão
+        nos slots não entram nesta conta: eles têm animação e delta próprios, na página Ao vivo.
       </p>
 
       <div className="movimento-regra">

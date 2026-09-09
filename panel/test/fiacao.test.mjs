@@ -51,7 +51,7 @@ test("todo componente do painel é montado por alguém", async () => {
   // os cartões de slot, e o cartão monta o aviso de curva. O que este teste
   // proíbe é componente que ninguém monta — código morto que passa no build.
   const arquivos = (await readdir(COMPONENTES)).filter((f) => f.endsWith(".jsx"));
-  assert.equal(arquivos.length, 27, "o 06_COMPONENTES lista os 27 componentes do painel");
+  assert.equal(arquivos.length, 28, "o 06_COMPONENTES lista os 28 componentes do painel");
 
   const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
   const fontes = await Promise.all(arquivos.map(lerComponente));
@@ -151,5 +151,65 @@ test("o montador de mundo distingue 'vazio' de 'ainda não escolhi'", async () =
     fonte,
     /formato \?\? mapa\?\.plataformas\?\.formato/,
     "o formato do mundo no ar tem que semear a tela",
+  );
+});
+
+test("o estúdio de overlay não guarda a altura da cam: ela vem da ponte ou não se sombreia nada", async () => {
+  //[[ O 33 estava escrito dentro do componente e era a TERCEIRA cópia do --cam
+  // da página do OBS (a página, o catálogo da ponte e aqui). Mudar o padrão lá
+  // deixaria o estúdio sombreando a faixa errada e o aviso "encostando na faixa
+  // da cam" mentindo, sem teste nenhum quebrar. Sem número, a tela diz que não
+  // sabe — o mesmo tratamento que ela já dá ao catálogo ausente. ]]
+  const fonte = await lerComponente("EstudioDeOverlay.jsx");
+
+  assert.match(
+    fonte,
+    /Number\.isFinite\(dados\?\.cam\) \? dados\.cam : null/,
+    "sem cam na resposta o estúdio não pode chutar um número de geometria da página",
+  );
+  assert.match(fonte, /cam === null \? \[\]/, "sem faixa da cam não há invasão para acusar");
+
+  // Uma casa decimal no que é LIDO: `prenderNoPalco` só arredonda o que foi
+  // arrastado, e a posição vinda do catálogo saía como "x 38.0625%" no rótulo
+  // acessível e na linha de controle.
+  assert.match(fonte, /caixa\.x\.toFixed\(1\)/, "a posição é lida de canto de olho, não com quatro decimais");
+  assert.match(fonte, /caixa\.y\.toFixed\(1\)/, "a posição é lida de canto de olho, não com quatro decimais");
+
+  //[[ E o que fica guardado como "salvo" é o que a PONTE devolveu: o
+  // repositório descarta elemento com objeto vazio antes de gravar, e comparar
+  // com a cópia local deixaria o botão Salvar desabilitado por cima de uma
+  // diferença real entre a tela e o disco. ]]
+  assert.match(
+    fonte,
+    /const salvo = await api\.salvarLayoutDoOverlay\(elementos\);[\s\S]{0,120}definirSalvos\(salvo\?\.elementos/,
+    "o layout salvo é o da resposta, não o que o painel mandou",
+  );
+});
+
+test("o modal de presente diz QUAL slot está editando", async () => {
+  //[[ Enquanto ele só abria pelo clique no cartão, o contexto vinha do clique.
+  // O botão "+ Acrescentar presente" o abre do cabeçalho e preenche a primeira
+  // posição LIVRE — com um buraco no meio dos 6, o slot 3, e não um sétimo
+  // cartão. Sem o número no título, o streamer troca na live o conteúdo de um
+  // slot que achava estar criando. ]]
+  const fonte = await lerComponente("SeletorDePresente.jsx");
+  const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
+
+  assert.match(fonte, /slot \$\{posicao\}/, "o título do modal precisa da posição");
+  assert.match(app, /<SeletorDePresente[\s\S]{0,200}posicao=/, "o App é quem sabe qual slot está aberto");
+});
+
+test("acrescentar presente separa catálogo VAZIO de catálogo esgotado", async () => {
+  //[[ Instalação nova, antes do primeiro "Atualizar da TikTok", chega no botão
+  // com zero slots preenchidos. A mensagem de "todo presente já está num slot"
+  // mandava o streamer trocar o presente de um slot que não existe, e escondia
+  // a única ação que resolve. O painel já tem a frase certa em outros dois
+  // lugares para o mesmo estado. ]]
+  const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
+
+  assert.match(
+    app,
+    /presentes\.length === 0[\s\S]{0,200}O catálogo está vazio\./,
+    "catálogo vazio precisa mandar buscar a lista, não trocar slot",
   );
 });

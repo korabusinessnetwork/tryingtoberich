@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/overlay-layout.schema.json",
+  "title": "Layout do overlay",
+  "description": "Onde cada elemento do HUD da live fica na tela, quando o streamer mexeu nele no Estúdio de Overlay. O arquivo guarda EXCEÇÃO, nunca o layout inteiro: elemento ausente vale a posição padrão que a página já desenha, e campo ausente vale o padrão daquele campo (mesma ideia das exceções do ADR-016). É por isso que a instalação que nunca abriu o estúdio não tem arquivo nenhum e mesmo assim tem overlay — e é o que impede uma mudança de padrão na página de ser congelada por um arquivo velho. Nasce com streamerId para a Fase 3 não exigir migração (ADR-003).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["streamerId", "elementos"],
+  "properties": {
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "atualizadoEm": {
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    },
+    "elementos": {
+      "description": "Só o que o streamer mexeu. As chaves são fixas: são os mesmos oito contêineres que a página do HUD desenha (data-el em bridge/src/http/overlay-hud.mjs). additionalProperties false porque id inventado no painel viraria uma caixa que nunca aparece no OBS, e ninguém descobriria durante a live.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "placar": { "$ref": "#/$defs/elemento" },
+        "vs": { "$ref": "#/$defs/elemento" },
+        "legendaSubida": { "$ref": "#/$defs/elemento" },
+        "legendaDescida": { "$ref": "#/$defs/elemento" },
+        "portal": { "$ref": "#/$defs/elemento" },
+        "presente": { "$ref": "#/$defs/elemento" },
+        "centro": { "$ref": "#/$defs/elemento" },
+        "seguidor": { "$ref": "#/$defs/elemento" }
+      }
+    }
+  },
+  "$defs": {
+    "elemento": {
+      "description": "A exceção de UM elemento. Nenhum campo é obrigatório — mover sem escalar é o caso comum — mas o objeto vazio não entra: ele é a forma de dizer 'voltar ao padrão', e quem grava o descarta em vez de gravar um elemento que não diz nada.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "x": {
+          "description": "Distância do canto ESQUERDO do palco 9:16 até o canto superior esquerdo do elemento, em % da LARGURA do palco. Do palco, e não da área do jogo: assim a posição salva cai onde o estúdio mostrou com qualquer ?cam=, que muda de cena para cena.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "y": {
+          "description": "Distância do TOPO do palco 9:16 até o canto superior esquerdo do elemento, em % da ALTURA do palco. O topo do palco é o topo do vídeo, acima da faixa da cam — a página desconta o ?cam= ao aplicar.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "escala": {
+          "description": "Multiplicador do tamanho do elemento, aplicado por transform: scale(). Preso entre 0,5 e 2 porque fora disso o elemento ou some da leitura de quem assiste no celular, ou cobre a tela inteira e engole o jogo.",
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2
+        },
+        "visivel": {
+          "description": "false esconde o elemento no overlay. Existe porque nem toda cena quer o HUD inteiro — quem não usa portal não quer a barra ocupando o canto — e apagar é mais honesto do que empurrar para fora da tela.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

@@ -10,10 +10,10 @@ import "./PainelDeOverlay.css";
  *
  *   - as cutscenes de vitória e derrota (ADR-014), que tocam o vídeo quando a
  *     rodada acaba;
- *   - o HUD da live (ADR-015), que replica o layout de referência do dono:
- *     pote de moedas, ranking dos três maiores doadores, maior combo, maior
- *     presente, a barra "VS" da disputa, a legenda dos presentes e a barra da
- *     torre.
+ *   - o HUD da live (ADR-015): placar, legenda dos presentes, a barra "VS" da
+ *     disputa, portal, contagem regressiva e o aviso de seguidor. O ranking de
+ *     doadores e o pote de moedas saíram por risco de restrição na live, e a
+ *     barra da torre voltou para dentro do jogo, onde ela anda a cada degrau.
  *
  * Elas já funcionavam do lado da ponte — o que faltava era um lugar que
  * dissesse a URL. "Abre uma fonte de navegador apontando para ..." não é
@@ -52,15 +52,13 @@ const FONTES = [
     chave: "urlHud",
     titulo: "HUD da live",
     descricao:
-      "Pote de moedas, ranking dos 3 maiores doadores, maior combo, maior presente, a disputa subida × descida da rodada, a legenda dos presentes do preset e a barra da torre.",
+      "Placar, legenda dos presentes, disputa subida × descida da rodada, portal, contagem regressiva e o aviso de seguidor novo. A barra da torre é a única coisa que o jogo ainda desenha, porque ela precisa andar a cada degrau. Nada de doador nem de moeda aqui — o que aparece é o presente e o que ele faz com a torre.",
   },
 ];
 
 /** Os ajustes do HUD viajam na própria URL: cada cena tem uma proporção de cam. */
 const PARAMETROS_DO_HUD = [
-  ["?cam=43", "altura da área da cam, em % da tela; o resto é o jogo"],
-  ["?meta=10000", "a meta de moedas que enche o pote"],
-  ["?barra=nao", "esconde a barra da torre, para quem prefere a do jogo"],
+  ["?cam=33", "altura da área da cam, em % da tela; o resto é o jogo. Nada é desenhado sobre a cam, então errar aqui desloca o conjunto e nunca cobre o seu rosto"],
   [
     "?esticar=nao",
     "desliga o pré-estique. A página é 9:16; se a fonte a renderiza em paisagem (a “Link” do LIVE Studio faz isso) e o item é esticado para preencher a cena, ela se pré-estica sozinha para sair certa. Só desligue se a sua fonte já for 9:16",
@@ -163,6 +161,12 @@ export function PainelDeOverlay() {
         <li>Deixe as duas <strong>acima</strong> da captura do Roblox e da cam na lista.</li>
         <li>Nada de marcar “desligar quando não estiver visível”: elas precisam estar ouvindo.</li>
       </ol>
+
+      <p className="overlay-explicacao">
+        Onde cada peça do HUD aparece na tela se arruma na página <strong>Estúdio</strong>: lá o
+        placar, as legendas e o resto se arrastam pela cena. Salvar lá ajusta a fonte que já está
+        aberta no OBS — não é preciso recarregá-la.
+      </p>
 
       <h3 className="overlay-subtitulo">Ajustes do HUD, na URL</h3>
       <ul className="overlay-parametros">

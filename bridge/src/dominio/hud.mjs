@@ -1,66 +1,27 @@
 /**
- * O HUD da live para o overlay do OBS (ADR-015): o que o espectador vê por
- * cima da cam e do jogo — ranking de doadores, maior combo, maior presente, a
- * disputa subida × descida da rodada e o total de moedas.
+ * O HUD da live para o overlay do OBS (ADR-015): a disputa subida × descida da
+ * rodada, e a legenda dos presentes do preset.
  *
- * Só memória, só sessão. O nickname entra porque vai para a tela e some no
- * Stop, e nunca é gravado (11_SEGURANCA, camada 4): este módulo não conhece
- * disco, e quem o guarda é o núcleo, que o joga fora junto com a sessão.
+ * **Não existe mais agregação por doador aqui.** O overlay mostrava um ranking
+ * dos três que mais gastaram, com nome e total de moedas, e o dono mandou tirar
+ * para a live não correr risco de restrição na TikTok. Junto com o ranking
+ * saíram o pote de moedas, o maior combo e o maior presente — tudo que media
+ * quanto alguém pagou.
+ *
+ * O efeito colateral é bom: com o ranking foi embora o único lugar da ponte que
+ * acumulava nickname de espectador (11_SEGURANCA, camada 4). Hoje o nome do
+ * doador aparece no evento que atravessa e some, e em lugar nenhum mais.
  *
  * Funções puras sobre um objeto de estado, para o teste não precisar de
  * despachante nem de núcleo. Tudo aqui é caminho FRIO: é chamado depois que o
  * long-poll já respondeu (CLAUDE.md, Princípio nº1).
  */
 
-/** Quantos doadores o overlay mostra. A referência do dono mostra três. */
-export const TOPO_DO_RANKING = 3;
-
 export function criarHud() {
-  return {
-    moedas: 0,
-    porDoador: new Map(),
-    topCombo: null,
-    topPresente: null,
-    disputa: { subida: 0, descida: 0 },
-  };
+  return { disputa: { subida: 0, descida: 0 } };
 }
 
 const inteiro = (valor) => (Number.isFinite(valor) && valor > 0 ? Math.floor(valor) : 0);
-
-const nomeDe = (evento) => {
-  const nome = typeof evento.nomeDoador === "string" ? evento.nomeDoador.trim() : "";
-  return nome || null;
-};
-
-/**
- * Todo presente que chega, mapeado ou não: moedas, ranking, combo e maior
- * presente. Não mapeado conta de propósito — o espectador pagou, e o ranking
- * é sobre quem pagou, não sobre o que o preset aproveitou.
- *
- * `moedas` do evento é o valor UNITÁRIO; a rajada multiplica. Sem nome
- * (sanitizado até sumir), o presente conta no total e não conta no ranking.
- */
-export function registrarPresente(hud, evento) {
-  if (!hud || !evento) return hud;
-
-  const unitario = inteiro(evento.moedas);
-  const repeticoes = Math.max(1, inteiro(evento.repeticoes));
-  const total = unitario * repeticoes;
-  const nome = nomeDe(evento);
-  const presenteNome = evento.presenteNome ?? String(evento.presenteId ?? "");
-
-  hud.moedas += total;
-  if (nome && total > 0) hud.porDoador.set(nome, (hud.porDoador.get(nome) ?? 0) + total);
-
-  // Combo é rajada: x1 não é combo. Empate fica com quem chegou primeiro.
-  if (repeticoes > 1 && (!hud.topCombo || repeticoes > hud.topCombo.repeticoes)) {
-    hud.topCombo = { presenteId: evento.presenteId ?? null, presenteNome, nome, repeticoes };
-  }
-  if (unitario > 0 && (!hud.topPresente || unitario > hud.topPresente.moedas)) {
-    hud.topPresente = { presenteId: evento.presenteId ?? null, presenteNome, nome, moedas: unitario };
-  }
-  return hud;
-}
 
 /** Um empurrão que chegou ao jogo sozinho: entra na disputa da rodada pelo sinal. */
 export function registrarEmpurrao(hud, delta) {
@@ -82,43 +43,38 @@ export function registrarDisputa(hud, { somaSubida, somaDescida } = {}) {
   return hud;
 }
 
-/** A rodada acabou: a disputa recomeça do zero. O resto é da sessão inteira. */
+/** A rodada acabou: a disputa recomeça do zero. */
 export function zerarDisputa(hud) {
   if (hud) hud.disputa = { subida: 0, descida: 0 };
   return hud;
 }
 
-/**
- * O que vai para o SSE. Ranking já ordenado e cortado; nada de Map lá fora.
- * Empate em moedas desempata pelo nome, para a lista não pular de ordem a
- * cada presente entre dois doadores iguais.
- */
-export function instantaneoDoHud(hud, topo = TOPO_DO_RANKING) {
-  if (!hud) return { moedas: 0, ranking: [], topCombo: null, topPresente: null, disputa: { subida: 0, descida: 0 } };
-
-  const ranking = [...hud.porDoador.entries()]
-    .map(([nome, moedas]) => ({ nome, moedas }))
-    .sort((a, b) => b.moedas - a.moedas || a.nome.localeCompare(b.nome))
-    .slice(0, topo);
-
-  return {
-    moedas: hud.moedas,
-    ranking,
-    topCombo: hud.topCombo ? { ...hud.topCombo } : null,
-    topPresente: hud.topPresente ? { ...hud.topPresente } : null,
-    disputa: { ...hud.disputa },
-  };
+/** O que vai para o SSE. Cópia, para quem recebe não mexer no estado da ponte. */
+export function instantaneoDoHud(hud) {
+  if (!hud) return { disputa: { subida: 0, descida: 0 } };
+  return { disputa: { ...hud.disputa } };
 }
 
 /**
- * A legenda dos 6 slots para o overlay: presente, ícone e delta, sem slot
- * vazio. Ordenada por força — o maior empurrão primeiro — porque é assim que
- * a referência do dono lê: o presente caro no alto, o barato embaixo.
+ * A legenda dos slots MARCADOS para o overlay: presente, ícone e delta, sem
+ * slot vazio. Ordenada por força — o maior empurrão primeiro — porque é assim
+ * que a referência do dono lê: o presente caro no alto, o barato embaixo.
+ *
+ * Deixou de ser "a legenda dos 6": com o preset podendo ter até 24 slots, a
+ * faixa do overlay 9:16 cobriria o boneco se todos entrassem. Quem manda é o
+ * `mostrarNoOverlay` do slot, e a AUSÊNCIA dele vale como true — preset já
+ * gravado em disco não tem o campo e continua com a legenda de sempre. Só um
+ * `false` explícito esconde, e esconde só a tela: o presente segue valendo no
+ * jogo, com o mesmo delta e a mesma animação.
+ *
+ * É a única coisa do HUD que fala de presente, e fala do PRESENTE: o que ele
+ * faz com a torre. Nunca quanto ele custa nem quem mandou.
  */
 export function legendaDoPreset(preset, catalogo) {
   const porId = new Map((catalogo?.presentes ?? []).map((p) => [String(p.presenteId), p]));
   return (preset?.slots ?? [])
     .filter((slot) => slot && Number.isFinite(slot.delta) && slot.delta !== 0)
+    .filter((slot) => slot.mostrarNoOverlay !== false)
     .map((slot) => {
       const presente = porId.get(String(slot.presenteId));
       return {

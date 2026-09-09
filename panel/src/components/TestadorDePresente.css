@@ -54,6 +54,11 @@
   color: var(--painel-texto-secundario);
 }
 
+/* A lista era de 6 linhas e crescia à vontade. Com o preset aceitando até 24
+   slots (R1 emendada) ela passaria de 700px e empurraria para fora da tela o
+   que vem depois do testador. O teto com rolagem PRÓPRIA é o oposto da regra
+   da seção A: lá o proibido é rolar a tela principal; aqui a caixa rola dentro
+   de si e o resto do painel fica onde estava. */
 .testador-slots {
   list-style: none;
   margin: 0;
@@ -61,6 +66,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .testador-slot { display: flex; }

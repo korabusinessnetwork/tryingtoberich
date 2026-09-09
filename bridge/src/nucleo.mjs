@@ -30,7 +30,6 @@ import {
   legendaDoPreset,
   registrarDisputa,
   registrarEmpurrao,
-  registrarPresente,
   zerarDisputa,
 } from "./dominio/hud.mjs";
 import { desenharCeu, desenharTextura } from "./acervo/desenho.mjs";
@@ -38,6 +37,8 @@ import { carregarAnimacoes, indexarAnimacoes } from "./repos/animacoes.mjs";
 import { carregarAcervo, miniaturaDaPeca, resolverAssetsDoMapa } from "./repos/acervo.mjs";
 import { VIDA_PADRAO_DO_PORTAL, comFormato, problemasDeJogabilidade } from "./dominio/regras.mjs";
 import { carregarConfiguracao, salvarConfiguracao } from "./repos/configuracao.mjs";
+import { carregarLayout, salvarLayout } from "./repos/overlay.mjs";
+import { LAYOUT_VAZIO } from "./dominio/overlay-layout.mjs";
 import { carregarCatalogo, salvarColeta } from "./repos/catalogo.mjs";
 import { carregarPreset, listarPresets, salvarPreset } from "./repos/presets.mjs";
 // Apelidado: a classe tem um método com o mesmo nome, e ler `apagarMapa` no
@@ -87,13 +88,24 @@ export class Nucleo {
    * quem abrisse o painel no meio de uma live veria a vitória sumir até o
    * próximo batimento do jogo.
    */
-  #doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0 };
+  #doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0, portal: null, contagem: null };
   /**
-   * O HUD da live para o overlay do OBS (ADR-015): ranking, combo, maior
-   * presente, disputa da rodada. Só memória: nasce e morre com a sessão, e é
-   * o único lugar da ponte onde nickname vira agregado (11_SEGURANCA, camada 4).
+   * O HUD da live para o overlay do OBS (ADR-015): hoje só a disputa da rodada.
+   * O ranking por doador saiu a pedido do dono, para a live não correr risco de
+   * restrição — e levou junto o único acúmulo de nickname da ponte.
    */
   #hud = criarHud();
+  /**
+   * O layout do Estúdio de Overlay, em memória para o SSE poder mandá-lo na
+   * assinatura. Nasce vazio — nunca `null` — porque a página do OBS assina
+   * antes de qualquer `restaurar()`, e um evento sem resposta a deixaria com o
+   * layout de ninguém.
+   *
+   * Fica velho se alguém editar `data/overlay-layout.json` à mão com a ponte
+   * de pé: o GET lê o disco, o SSE serve isto, e os dois só voltam a contar a
+   * mesma história no próximo salvar. Aceito: o estúdio é o caminho normal.
+   */
+  #layoutDoOverlay = LAYOUT_VAZIO();
   #ouvintes = new Set();
   #catalogoEmMemoria = null;
   #animacoesEmMemoria = null;
@@ -143,6 +155,11 @@ export class Nucleo {
     return instantaneoDoHud(this.#hud);
   }
 
+  /** A cena que o streamer montou no Estúdio de Overlay. Vazio = tudo no padrão da página. */
+  get layoutDoOverlay() {
+    return this.#layoutDoOverlay;
+  }
+
   /** Estado que o painel mostra em destaque: live, jogo e sessão. */
   get estado() {
     return {
@@ -150,6 +167,17 @@ export class Nucleo {
       jogo: this.#longpoll.jogoOnline() ? "online" : "offline",
       sessao: this.#sessao ? "rodando" : "parada",
       presetId: this.#preset?.presetId ?? null,
+      //[[ O carimbo do preset, para quem desenha saber que ele MUDOU POR DENTRO.
+      //
+      // O overlay do OBS relia a legenda dos presentes só quando o `presetId`
+      // trocava. Mexer nos 6 slots do preset que já está no ar não troca o id:
+      // o streamer tirava um presente da live, punha outro, e o overlay
+      // continuava anunciando o antigo até alguém recarregar a fonte no OBS.
+      //
+      // `atualizadoEm` já existe e é reescrito a cada salvar (repos/presets), e
+      // o PUT do preset ATIVO relê o preset — então este campo anda sozinho.
+      // Comparar os dois é o que separa "trocou de preset" de "mexeu neste". ]]
+      presetAtualizadoEm: this.#preset?.atualizadoEm ?? null,
       plataformaAtual: this.#sessao?.instantaneo.plataformaReferencia ?? 0,
       totalPlataformas: this.#doJogo.totalPlataformas,
       // R6 — o topo não reinicia sozinho. Enquanto isto for verdadeiro, o
@@ -166,6 +194,11 @@ export class Nucleo {
         vitoria: this.#preset?.cutsceneDeVitoria ?? null,
         derrota: this.#preset?.cutsceneDeDerrota ?? null,
       },
+      // O portal e a contagem regressiva, como o jogo os reporta. Estão aqui
+      // porque o HUD saiu de dentro do jogo: quem desenha os dois é o overlay
+      // do OBS, e ele só conhece este estado.
+      portal: this.#doJogo.portal,
+      contagem: this.#doJogo.contagem,
     };
   }
 
@@ -181,11 +214,19 @@ export class Nucleo {
   /** Síncrono e sem disco. Etapas 2 e 3 do caminho crítico de `docs/01_ARQUITETURA`. */
   #aoEventoDaLive(evento) {
     this.#despachante.receber(evento);
-    // Daqui para baixo é caminho frio: o long-poll já foi respondido dentro de
-    // `receber`. O HUD do OBS conta TODO presente, mapeado ou não (ADR-015) —
-    // o ranking é sobre quem pagou, não sobre o que o preset aproveitou.
-    registrarPresente(this.#hud, evento);
-    this.#publicarHud();
+  }
+
+  /**
+   * Alguém seguiu a live. Vai direto para o overlay e some de lá em segundos.
+   *
+   * Não é presente: não tem moeda, não casa com slot, não move a torre e não
+   * entra em sessão nenhuma. Por isso não passa pelo despachante e não toca
+   * disco — o nome atravessa a ponte, aparece na tela e é esquecido
+   * (11_SEGURANCA, camada 4).
+   */
+  #aoSeguidor({ nome }) {
+    if (!nome) return;
+    this.#publicar("seguidor", { nome });
   }
 
   #aoDespachar(despachado) {
@@ -256,6 +297,10 @@ export class Nucleo {
     // O HUD de agora também: o overlay do OBS abre no meio da live e precisa
     // do ranking que já existe, não só do próximo presente.
     ouvinte("hud", this.hud);
+    // E o layout: a fonte do OBS é aberta uma vez e fica meses aberta. Sem isto
+    // ela desenharia no padrão até o streamer salvar algo no estúdio, e o que
+    // ele arrumou ontem só voltaria recarregando a fonte no programa de captura.
+    ouvinte("layout", this.layoutDoOverlay);
 
     // O log vai junto pelo mesmo fluxo: quando algo falha durante a live, o
     // streamer precisa ver no painel, não no terminal do Node atrás da janela.
@@ -310,7 +355,7 @@ export class Nucleo {
     // começa sem os dois, e o jogo republica no primeiro batimento — senão a
     // live que acabou no topo abriria a próxima já com o aviso de vitória na
     // tela e um botão de reiniciar que não tem o que reiniciar.
-    this.#doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0 };
+    this.#doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0, portal: null, contagem: null };
     // Ranking, combo e disputa são desta live. A anterior já foi embora.
     this.#hud = criarHud();
 
@@ -326,6 +371,7 @@ export class Nucleo {
           aoEvento: (e) => this.#aoEventoDaLive(e),
           aoEstado: (e) => this.#aoEstadoDaLive(e),
           aoCatalogo: (presentes) => this.#aoCatalogo(presentes),
+          aoSeguidor: (s) => this.#aoSeguidor(s),
         });
 
     await this.prepararCatalogoEmMemoria();
@@ -378,6 +424,25 @@ export class Nucleo {
     return salva;
   }
 
+  /**
+   * O Estúdio de Overlay salvou: grava, guarda em memória e avisa o OBS.
+   *
+   * O `layout` no SSE é o que permite ao streamer arrastar uma caixa no painel
+   * e ver a fonte do OBS se ajustar sem tocar no programa de captura — mexer na
+   * fonte durante a live é justamente o que ninguém consegue fazer.
+   *
+   * Isto escreve em disco, e por isso vale dizer o óbvio: é caminho FRIO. Quem
+   * chega aqui é um clique no painel, nunca um presente. O `#aoEventoDaLive`
+   * não encosta neste método, e não pode passar a encostar (Princípio nº 1).
+   */
+  async definirLayoutDoOverlay(mudancas = {}) {
+    const salvo = await salvarLayout(mudancas, { streamerId: mudancas?.streamerId });
+    this.#layoutDoOverlay = salvo;
+    this.#publicar("layout", salvo);
+    log.info("layout_do_overlay_salvo", { elementos: Object.keys(salvo.elementos).length });
+    return salvo;
+  }
+
   async encerrarSessao() {
     if (!this.#sessao) throw new ErroDeDominio("sem_sessao", "Não há sessão rodando.", { status: 409 });
 
@@ -388,20 +453,43 @@ export class Nucleo {
     this.#longpoll.fecharTodos();
     this.#despachante.limpar();
 
-    const resumo = await this.#sessao.encerrar();
+    //[[ A sessão é SOLTA antes do await que pode falhar.
+    //
+    // As linhas acima já derrubaram a live: conector desconectado, long-polls
+    // fechados, relógio parado, despachante limpo. Se `encerrar()` estourasse
+    // com `this.#sessao` ainda preenchido, a ponte ficava num estado
+    // impossível — nada rodando, e `estado.sessao` dizendo "rodando" para
+    // sempre. Stop de novo repetia o mesmo erro, Start respondia 409
+    // `sessao_em_andamento`, e só matar o processo resolvia.
+    //
+    // Aconteceu de verdade: o schema da sessão travava em 400 andares contra
+    // uma torre de 1000, e passar do andar 400 bastava. O teto foi corrigido,
+    // mas a ordem aqui é o que impede a PRÓXIMA falha de gravação — disco
+    // cheio, OneDrive segurando o arquivo — de levar a ponte junto.
+    const sessao = this.#sessao;
     this.#sessao = null;
     // Idem no Stop: o jogo não tem como avisar que a corrida acabou (os
     // long-polls já foram fechados na linha acima), então quem esquece a
     // vitória é a ponte. Sem isto o aviso do R6 fica na tela por cima do
     // resumo da live, oferecendo reiniciar uma corrida que não existe mais.
-    this.#doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0 };
+    this.#doJogo = { totalPlataformas: 0, vitoria: false, vitorias: 0, derrotas: 0, portal: null, contagem: null };
     // O ranking morre com a sessão (11_SEGURANCA, camada 4) — e o overlay
-    // fica sabendo, senão mostraria os nomes da live que acabou.
+    // fica sabendo, senão mostraria os nomes da live que acabou. Fica ANTES do
+    // await pelo mesmo motivo: gravação que falha não pode deixar nickname de
+    // espectador vivo no SSE depois do Stop.
     this.#hud = criarHud();
-    this.#publicar("estado", this.estado);
-    this.#publicarHud();
-    log.info("sessao_encerrada", { sessaoId: resumo.sessaoId, totalPresentes: resumo.resumo.totalPresentes });
-    return resumo;
+
+    try {
+      const resumo = await sessao.encerrar();
+      log.info("sessao_encerrada", { sessaoId: resumo.sessaoId, totalPresentes: resumo.resumo.totalPresentes });
+      return resumo;
+    } finally {
+      // Publicado nos dois caminhos: mesmo com o resumo perdido, o painel
+      // precisa saber que a sessão acabou — senão a barra fica dizendo
+      // "rodando" sobre uma live que já morreu.
+      this.#publicar("estado", this.estado);
+      this.#publicarHud();
+    }
   }
 
   /** Cutuca o despachante para fechar combate vencido mesmo sem evento novo chegando. */
@@ -619,6 +707,12 @@ export class Nucleo {
       vitoria: estado.vitoria === true,
       vitorias: inteiro(estado.vitorias, this.#doJogo.vitorias),
       derrotas: inteiro(estado.derrotas, this.#doJogo.derrotas),
+      // Portal e contagem passam DIRETO, sem valor anterior de reserva: os dois
+      // têm o estado "não existe agora" (portal fechado, nenhuma rodada
+      // contando), e guardar o último faria o overlay desenhar uma barra de
+      // portal que já caiu e um número que já zerou.
+      portal: estado.portal ?? null,
+      contagem: estado.contagem ?? null,
     };
     // Só na transição: o jogo republica o estado a cada 2s, e uma linha de log
     // por batimento afogaria o painel justo no momento de mais atenção.
@@ -774,6 +868,16 @@ export class Nucleo {
    * recebia `sem_mapa` — mundo vazio, HUD funcionando, e nada explicando.
    */
   async restaurar() {
+    // Antes de abrir as portas: a primeira fonte do OBS a assinar o SSE já
+    // recebe a cena montada. Layout quebrado no disco vira aviso e nada mais —
+    // impedir a ponte de subir por causa de um arquivo opcional deixaria o
+    // streamer sem painel, que é onde ele arrumaria o problema.
+    try {
+      this.#layoutDoOverlay = await carregarLayout();
+    } catch (erro) {
+      log.aviso("layout_do_overlay_nao_restaurado", { motivo: erro.message });
+    }
+
     const { presetAtivo } = await carregarConfiguracao(this.config.usuarioTiktok);
 
     // Nada persistido e existe UM preset só: ativa ele. É instalação nova, e a

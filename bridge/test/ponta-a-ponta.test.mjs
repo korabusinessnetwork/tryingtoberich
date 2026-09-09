@@ -130,14 +130,19 @@ test("o painel acompanha a mesma sessão pelo SSE", async () => {
       "o contador de não mapeado não carrega nickname de quem mandou",
     );
 
+    // O HUD publicado não carrega NINGUÉM: só a disputa da rodada. O ranking
+    // por doador saiu a pedido do dono, para a live não correr risco de
+    // restrição, e levou junto o único acúmulo de nickname da ponte.
     const huds = recebidos.filter((r) => r.evento === "hud");
-    const ultimoHud = huds.at(-1).dados;
-    assert.ok(
-      ultimoHud.ranking.some((d) => d.nome === "Terceiro Espectador"),
-      "o Doughnut não está em slot nenhum, mas quem pagou 3000 por ele entra no ranking",
+    assert.ok(huds.length > 0, "o overlay precisa receber a disputa");
+    for (const { dados } of huds) {
+      assert.deepEqual(Object.keys(dados), ["disputa"], "campo novo no HUD é superfície nova de dado de espectador");
+    }
+    assert.equal(
+      JSON.stringify(huds).includes("Espectador"),
+      false,
+      "nenhum nome de espectador pode viajar no HUD do overlay",
     );
-    assert.ok(ultimoHud.ranking.some((d) => d.nome === "Quarto Espectador"), "o Galaxy também conta");
-    assert.equal(ultimoHud.topPresente.presenteNome, "Doughnut Gigante", "o maior presente é o de 3000");
 
     // A disputa da rodada só conta o que CHEGOU ao jogo: o Galaxy é +40 no
     // preset; o Doughnut não mapeado não empurra ninguém. O HUD publicado logo
@@ -169,6 +174,41 @@ test("com o jogo sem fazer long-poll, o evento é descartado e não acumulado (F
     "aplicar uma pilha de deltas de uma vez quando o Roblox voltasse seria pior que perder",
   );
   assert.equal(sozinho.longpoll.cursor, 0, "nada ficou guardado esperando o jogo aparecer");
+
+  const resumo = await sozinho.encerrarSessao();
+  await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));
+});
+
+test("gravação que falha no Stop não deixa sessão fantasma: a ponte tem que aceitar um Start depois", async () => {
+  //[[ Bug real, achado na auditoria de 2026-09-04.
+  //
+  // `encerrarSessao` desconectava o conector, fechava os long-polls, parava o
+  // relógio e limpava o despachante — e SÓ DEPOIS fazia
+  // `await this.#sessao.encerrar()`, com `this.#sessao = null` na linha
+  // seguinte. Se a gravação estourasse, aquela linha nunca rodava: nada mais
+  // funcionava e o estado continuava dizendo "rodando" para sempre. Stop de
+  // novo repetia o erro, Start respondia 409, e só matar o Node resolvia.
+  //
+  // O gatilho de então era o teto de 400 andares no schema da sessão (já
+  // corrigido). Este teste usa um valor fora de contrato de propósito, porque
+  // o que ele protege não é o teto: é a ORDEM. Disco cheio ou o OneDrive
+  // segurando o arquivo levariam a ponte junto do mesmo jeito.
+  const sozinho = new Nucleo({ config });
+  await sozinho.carregarAnimacoesNaMemoria();
+  await sozinho.iniciarSessao({ presetId: PRESET_ID, cenario: "01-presente-unico" });
+
+  // Fora do contrato de sessao.schema.json: a gravação vai recusar.
+  sozinho.aplicarEstadoDoJogo({ plataformaReferencia: 999_999, plataformaMaxima: 999_999, emAnimacao: false });
+
+  await assert.rejects(() => sozinho.encerrarSessao(), "a falha de gravação tem que subir, não sumir");
+
+  assert.equal(sozinho.sessaoAtiva, null, "a sessão precisa ser solta mesmo com o resumo perdido");
+  assert.equal(sozinho.estado.sessao, "parada", "o painel não pode continuar mostrando uma live que já morreu");
+  assert.deepEqual(sozinho.hud, { disputa: { subida: 0, descida: 0 } }, "o HUD recomeça zerado depois do Stop");
+
+  // E a prova que importa para o streamer: dá para recomeçar sem reiniciar o Node.
+  const segunda = await sozinho.iniciarSessao({ presetId: PRESET_ID, cenario: "01-presente-unico" });
+  assert.ok(segunda.sessaoId, "Start depois de um Stop que falhou tem que funcionar");
 
   const resumo = await sozinho.encerrarSessao();
   await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));

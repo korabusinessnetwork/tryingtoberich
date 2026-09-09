@@ -1,25 +1,48 @@
 /**
- * O HUD da live, para entrar como Browser Source no OBS (ADR-015).
+ * O HUD da live, para entrar como Browser Source no OBS ou no TikTok LIVE
+ * Studio (ADR-015).
  *
- * Replica o layout que o dono mandou de referência — a live do CTFps7: cam em
- * cima, jogo embaixo, e por cima de tudo o pote de moedas, o ranking dos três
- * maiores doadores, o maior combo, o maior presente, a barra "VS" da disputa,
- * a legenda dos presentes e a barra da torre.
+ * O `hud.client.lua` foi apagado e quase tudo que ele mostrava mora aqui:
+ * placar, barra do portal, contagem regressiva, presente que chegou, selo de
+ * vitória. Dois HUDs desenhando as mesmas coisas em cima um do outro era o que
+ * o dono via na tela, e não havia como alinhá-los: um vive dentro da captura do
+ * Roblox e o outro por cima dela.
  *
- * Por que é do OBS e não do Roblox: ícone de presente da TikTok não entra no
- * jogo (não há como subir asset por presente), o ranking por nome não pode
- * sair da memória da ponte (11_SEGURANCA), e a metade de cima da tela é a CAM
- * — o jogo não desenha ali. O que o jogo já desenha (o número da plataforma,
- * o selo TOPO, o presente que acabou de chegar) fica no jogo.
+ * A EXCEÇÃO é a barra da torre, que voltou para dentro do jogo
+ * (`game/src/client/torre.client.lua`) por decisão do dono. O motivo é
+ * contagem: aqui ela só andaria quando um estado chegasse da ponte, e o estado
+ * sai no máximo a cada 2s — o streamer subia três degraus e a barra ficava
+ * parada. Lá ela ouve o mesmo evento que o servidor publica a cada TOQUE de
+ * plataforma.
  *
- * Tudo vem do SSE que o painel já usa: `hud` traz os agregados, `estado` traz
- * a posição na torre e o preset ativo, e `/api/hud` traz a legenda. Nada é
- * calculado aqui — a página só desenha.
+ * Por que o overlay ganhou a disputa em vez do jogo: ícone de presente da
+ * TikTok não entra no Roblox (não há como subir um asset por presente do
+ * catálogo), a metade de cima da tela é a CAM, onde o jogo não alcança, e o
+ * aviso de seguidor vem da ponte, que é quem fala com a TikTok.
+ *
+ * O que NÃO existe aqui, por decisão do dono: ranking de doadores, pote de
+ * moedas, maior combo e maior presente. Tudo que media quanto alguém pagou
+ * saiu, para a live não correr risco de restrição. O que sobrou fala do
+ * PRESENTE — o que ele faz com a torre — e nunca de quem mandou.
+ *
+ * Tudo vem do SSE que o painel já usa: `estado` traz posição, placar, portal e
+ * contagem; `hud` traz a disputa da rodada; `presente` e `combateAnulado`, o
+ * que acabou de acontecer; `seguidor`, o follow novo; `layout`, a cena que o
+ * estúdio salvou. `/api/hud` traz a legenda dos slots. Nada é calculado aqui —
+ * a página só desenha.
+ *
+ * O fim de rodada chega pelo `estado.contagem`, e NÃO pelo evento `rodada`: a
+ * página não assina esse canal. Estava listado aqui e mandava o próximo leitor
+ * procurar bug num evento que ela nunca recebe.
+ *
+ * TUDO fica na área do JOGO, nada sobre a cam. É de propósito: a proporção da
+ * cam varia por cena, e um `?cam=` errado colocava o TOP COMBO e a barra VS em
+ * cima do rosto do streamer. Com a cam livre, errar o parâmetro só desloca um
+ * pouco o conjunto, e nunca cobre a pessoa.
  *
  * Parâmetros na URL, para caber na cena de cada um:
- *   ?cam=43      altura da área da cam, em % da tela (o resto é o jogo)
- *   ?meta=10000  a meta de moedas que enche o pote
- *   ?barra=nao   esconde a barra da torre, para quem prefere a do jogo
+ *   ?cam=33      altura da área da cam, em % da tela (o resto é o jogo)
+ *   ?esticar=nao desliga o pré-estique (ver o palco 9:16, abaixo)
  *
  * Nenhuma cor literal: as variáveis vêm de data/tokens.json (repos/tokens).
  */
@@ -44,11 +67,14 @@ const PAGINA_ESTILO = `
      janela que já é 9:16. Nunca vw direto: a fonte "Link" do LIVE Studio
      renderiza em paisagem e estica para a cena vertical (02_DESIGN_SYSTEM, C). */
   --u: 1vw;
-  --cam: 43%;
+  --cam: 33%;
   --sombra: 0 calc(0.15 * var(--u)) calc(0.5 * var(--u)) var(--hud-contorno);
+  /* O sinal vai DENTRO do calc(). Um menos ANTES do calc() não existe em CSS:
+     invalida a declaração inteira e o text-shadow some sem erro nenhum, que foi
+     como o texto do HUD ficou sem contorno sobre a captura (BUG-006). */
   --contorno:
-    -calc(0.12 * var(--u)) -calc(0.12 * var(--u)) 0 var(--hud-contorno),  calc(0.12 * var(--u)) -calc(0.12 * var(--u)) 0 var(--hud-contorno),
-    -calc(0.12 * var(--u))  calc(0.12 * var(--u)) 0 var(--hud-contorno),  calc(0.12 * var(--u))  calc(0.12 * var(--u)) 0 var(--hud-contorno),
+    calc(-0.12 * var(--u)) calc(-0.12 * var(--u)) 0 var(--hud-contorno),  calc(0.12 * var(--u)) calc(-0.12 * var(--u)) 0 var(--hud-contorno),
+    calc(-0.12 * var(--u))  calc(0.12 * var(--u)) 0 var(--hud-contorno),  calc(0.12 * var(--u))  calc(0.12 * var(--u)) 0 var(--hud-contorno),
      0 calc(0.25 * var(--u)) calc(0.6 * var(--u)) var(--hud-contorno);
 }
 html, body {
@@ -59,21 +85,22 @@ html, body {
   color: var(--hud-texto);
   -webkit-font-smoothing: antialiased;
 }
-/* O palco 9:16. Largura = 100 unidades; altura = 16/9 disso. Fica colado à
-   esquerda e centrado na vertical; o script aplica scaleX quando a janela é
-   mais larga que o palco. */
+
+/* O palco 9:16. Largura = 100 unidades; altura = 16/9 disso. Colado à esquerda
+   e centrado na vertical; o script aplica scaleX quando a janela é mais larga
+   que o palco. */
 .hud {
   position: absolute; left: 0; top: calc((100vh - 177.78 * var(--u)) / 2);
   width: calc(100 * var(--u)); height: calc(177.78 * var(--u));
   transform-origin: 0 0;
   pointer-events: none;
 }
-.cam { position: absolute; left: 0; right: 0; top: 0; height: var(--cam); }
+
+/* A cam fica LIVRE. Nada é desenhado aqui — ver o cabeçalho. */
 .jogo { position: absolute; left: 0; right: 0; top: var(--cam); bottom: 0; }
+
 .texto { text-shadow: var(--contorno); }
 
-/* Caixa escura translúcida. O fundo fica num ::before com opacity para o
-   texto por cima continuar 100% opaco. */
 .caixa { position: absolute; border-radius: calc(1.4 * var(--u)); }
 .caixa::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit;
@@ -81,159 +108,197 @@ html, body {
 }
 .caixa > * { position: relative; }
 
-/* ---- pote de moedas (canto superior esquerdo da cam) ---- */
-.pote { left: calc(2.5 * var(--u)); top: 22%; width: calc(20 * var(--u)); padding: calc(1.2 * var(--u)); display: flex; flex-direction: column; align-items: center; gap: calc(0.8 * var(--u)); }
-/* A boca do pote: um aro mais largo que o copo, para ler como pote e não
-   como caixa. */
-.pote-tampa {
-  width: calc(15 * var(--u)); height: calc(1.6 * var(--u)); border-radius: 999px;
-  background: var(--faixa-5); box-shadow: var(--sombra);
-  margin-bottom: calc(-0.6 * var(--u));
-}
-.pote-copo {
-  width: calc(13 * var(--u)); height: calc(15 * var(--u)); border-radius: calc(1.5 * var(--u)) calc(1.5 * var(--u)) calc(4 * var(--u)) calc(4 * var(--u));
-  border: calc(0.35 * var(--u)) solid var(--faixa-5); overflow: hidden; position: relative;
-  box-shadow: inset 0 0 calc(1.5 * var(--u)) var(--hud-contorno);
-}
-.pote-nivel {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
-  background: var(--faixa-5); opacity: 0.85;
-  transition: height 600ms ease-out;
-}
-.pote-total { font-size: calc(2.6 * var(--u)); line-height: 1; }
-.pote-total small { font-size: calc(1.3 * var(--u)); color: var(--painel-texto-secundario); font-weight: 700; }
-.pote-meta { font-size: calc(1.2 * var(--u)); color: var(--painel-texto-secundario); font-weight: 700; }
+/* A ESCALA do Estúdio de Overlay, em cada um dos oito contêineres.
+   Por variável dentro do transform, e nunca por transform inline: o .vs
+   depende do translateX que o centraliza e o .seguidor do translateX que o
+   faz deslizar para dentro da tela. Um transform inline apagaria os dois, e o
+   sintoma seria o VS colado à esquerda e o aviso de seguidor entrando parado.
+   Sem layout salvo, --escala não existe e o fallback 1 deixa tudo como estava. */
 
-/* ---- ranking (canto superior direito da cam) ---- */
-.ranking { position: absolute; right: calc(2.5 * var(--u)); top: 12%; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: calc(1 * var(--u)); }
-.ranking li { display: flex; align-items: center; gap: calc(1 * var(--u)); font-size: calc(2.1 * var(--u)); line-height: 1; white-space: nowrap; }
-.ranking-vazio { color: var(--painel-texto-secundario); font-size: calc(1.6 * var(--u)); }
-.medalha {
-  width: calc(3.4 * var(--u)); height: calc(3.4 * var(--u)); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-  font-size: calc(1.8 * var(--u)); color: var(--hud-contorno); box-shadow: var(--sombra);
+/* ---- faixa de cima do jogo: placar à esquerda, VS no meio ---- */
+.placar {
+  left: calc(2.5 * var(--u)); top: calc(2 * var(--u));
+  transform: scale(var(--escala, 1)); transform-origin: 0 0;
+  display: flex; align-items: center; gap: calc(1.2 * var(--u));
+  padding: calc(0.6 * var(--u)) calc(1.6 * var(--u)) calc(0.8 * var(--u));
+  font-size: calc(2.4 * var(--u)); line-height: 1;
 }
-.medalha-1 { background: var(--faixa-5); }
-.medalha-2 { background: var(--faixa-1); }
-.medalha-3 { background: var(--faixa-4); }
-.ranking-nome { max-width: calc(22 * var(--u)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ranking-moedas { color: var(--faixa-5); }
+.placar-v { color: var(--hud-subida); }
+.placar-d { color: var(--hud-descida); }
 
-/* ---- destaques: TOP COMBO e TOP PRESENTE (base da cam, cantos) ---- */
-.destaque { bottom: 9%; width: calc(24 * var(--u)); padding: calc(1 * var(--u)) calc(1.2 * var(--u)); display: flex; flex-direction: column; gap: calc(0.6 * var(--u)); }
-.destaque-esquerda { left: calc(2.5 * var(--u)); }
-.destaque-direita { right: calc(2.5 * var(--u)); }
-.destaque-rotulo { font-size: calc(1.25 * var(--u)); letter-spacing: 0.12em; color: var(--painel-texto-secundario); text-align: center; }
-.destaque-corpo { display: flex; align-items: center; gap: calc(1 * var(--u)); }
-.destaque-icone { width: calc(6 * var(--u)); height: calc(6 * var(--u)); object-fit: contain; filter: drop-shadow(var(--sombra)); }
-.destaque-icone[hidden] { display: none; }
-.destaque-texto { display: flex; flex-direction: column; gap: calc(0.3 * var(--u)); min-width: 0; }
-.destaque-nome { font-size: calc(1.8 * var(--u)); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.destaque-valor { font-size: calc(2.4 * var(--u)); line-height: 1; color: var(--faixa-5); }
-.destaque-presente { font-size: calc(1.3 * var(--u)); color: var(--painel-texto-secundario); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ---- VS (base da cam, centro) ---- */
+/* Centralizado na TELA, não no espaço que sobra à direita do placar: a disputa
+   é o que a plateia acompanha, e o eixo dela é o meio do vídeo. O placar fica
+   antes, no canto, porque é consulta e não acontecimento. */
 .vs {
-  left: 50%; bottom: 1.5%; transform: translateX(-50%);
-  width: calc(56 * var(--u));
+  /* O --desloc é o que o estúdio zera ao MOVER o VS: com um x salvo, o left
+     passa a ser a borda esquerda de verdade, e o -50% herdado o jogaria meia
+     largura para a esquerda do lugar que o streamer escolheu. */
+  left: 50%; transform: translateX(var(--desloc, -50%)) scale(var(--escala, 1)); transform-origin: 50% 0;
+  top: calc(2 * var(--u));
+  width: calc(46 * var(--u));
   display: flex; align-items: center; justify-content: space-between;
-  padding: calc(0.7 * var(--u)) calc(2.6 * var(--u)) calc(1.3 * var(--u)); border-radius: 999px;
-  font-size: calc(2.6 * var(--u)); line-height: 1;
+  padding: calc(0.6 * var(--u)) calc(2 * var(--u)) calc(1.2 * var(--u)); border-radius: 999px;
+  font-size: calc(2.2 * var(--u)); line-height: 1;
   overflow: hidden;
 }
-/* O medidor da disputa: a fatia vermelha cresce com a descida, o resto é a
-   subida. É a barra da referência, e diz de relance quem está ganhando. */
-.vs-medidor {
-  position: absolute; left: 0; right: 0; bottom: 0; height: calc(0.7 * var(--u));
-  background: var(--hud-subida); display: flex; opacity: 0.9;
-}
-.vs-medidor-descida { width: 50%; background: var(--hud-descida); transition: width 400ms ease-out; }
 .vs-descida { color: var(--hud-descida); }
 .vs-subida { color: var(--hud-subida); }
 .vs-selo {
-  font-size: calc(1.4 * var(--u)); color: var(--hud-contorno); background: var(--hud-combate);
-  padding: calc(0.4 * var(--u)) calc(0.9 * var(--u)); border-radius: calc(0.6 * var(--u));
+  font-size: calc(1.2 * var(--u)); color: var(--hud-contorno); background: var(--hud-combate);
+  padding: calc(0.3 * var(--u)) calc(0.8 * var(--u)); border-radius: calc(0.5 * var(--u));
 }
+/* O medidor: a fatia vermelha cresce com a descida, o resto é a subida. */
+.vs-medidor {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(0.6 * var(--u));
+  background: var(--hud-subida); display: flex; opacity: 0.9;
+}
+.vs-medidor-descida { width: 50%; background: var(--hud-descida); transition: width 400ms ease-out; }
 
-/* ---- legenda dos presentes (topo do jogo, cantos) ---- */
-.legenda { position: absolute; top: 2%; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: calc(1.2 * var(--u)); }
+/* ---- legenda dos presentes (o que cada um faz com a torre) ---- */
+.legenda {
+  position: absolute; top: calc(9 * var(--u)); margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: calc(1.2 * var(--u));
+  transform: scale(var(--escala, 1)); transform-origin: 0 0;
+  /* O TETO da faixa, no código e não na disciplina de quem monta o preset.
+     Cada item mede ~7,2u (ícone 6u + gap 1,2u) e o preset agora vai a 24 slots
+     (R1 emendada), com o "ausente = true" da legenda valendo para todo preset
+     que já está em disco: um arquivo editado à mão (ADR-003) manda os 24 para
+     cá, a coluna passa dos 170u e desce por cima do portal, do presente e do
+     boneco — o que o 02_DESIGN_SYSTEM, C proíbe. Em % de .jogo, e não num
+     número de unidades, porque a faixa do jogo encolhe com o ?cam= da cena. O
+     corte cai nos ÚLTIMOS itens, que são os de menor delta: a ponte manda a
+     legenda ordenada pela força do empurrão. */
+  max-height: calc(100% - 12 * var(--u)); overflow: hidden;
+}
 .legenda-esquerda { left: calc(2.5 * var(--u)); align-items: flex-start; }
-.legenda-direita { right: calc(2.5 * var(--u)); align-items: flex-end; }
+/* Origem à direita nos que nascem colados a ela: escalar cresce para DENTRO da
+   tela, e não para fora dela, onde o OBS corta sem avisar. */
+.legenda-direita { right: calc(2.5 * var(--u)); align-items: flex-end; transform-origin: 100% 0; }
 .legenda-item { display: flex; align-items: center; gap: calc(0.8 * var(--u)); }
 .legenda-direita .legenda-item { flex-direction: row-reverse; }
-.legenda-icone { width: calc(6.5 * var(--u)); height: calc(6.5 * var(--u)); object-fit: contain; filter: drop-shadow(var(--sombra)); }
+.legenda-icone { width: calc(6 * var(--u)); height: calc(6 * var(--u)); object-fit: contain; filter: drop-shadow(var(--sombra)); }
 .legenda-icone[hidden] { display: none; }
 .legenda-nome { font-size: calc(1.4 * var(--u)); max-width: calc(12 * var(--u)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.legenda-delta { font-size: calc(3 * var(--u)); line-height: 1; }
+.legenda-delta { font-size: calc(2.8 * var(--u)); line-height: 1; }
 .subida { color: var(--hud-subida); }
 .descida { color: var(--hud-descida); }
 
-/* ---- barra da torre (lateral direita do jogo) ---- */
-.barra { position: absolute; right: calc(4 * var(--u)); top: 26%; bottom: 20%; width: calc(8 * var(--u)); display: flex; flex-direction: column; align-items: center; gap: calc(1 * var(--u)); }
-.barra[hidden] { display: none; }
-.barra-bandeira { font-size: calc(4 * var(--u)); line-height: 1; filter: drop-shadow(var(--sombra)); }
-.barra-trilho {
-  flex: 1; width: calc(5.5 * var(--u)); border-radius: calc(1.2 * var(--u)); overflow: hidden; position: relative;
-  border: calc(0.35 * var(--u)) solid var(--hud-contorno); background: var(--painel-borda);
+
+/* ---- portal do primeiro andar: a barra que segura a derrota ---- */
+.portal {
+  left: calc(2.5 * var(--u)); bottom: calc(14 * var(--u)); width: calc(40 * var(--u));
+  transform: scale(var(--escala, 1)); transform-origin: 0 0;
+  padding: calc(0.8 * var(--u)) calc(1.2 * var(--u)) calc(1 * var(--u));
+  display: flex; flex-direction: column; gap: calc(0.5 * var(--u));
 }
-.barra-nivel {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
-  background: var(--hud-subida); transition: height 400ms ease-out;
+.portal[hidden] { display: none; }
+.portal-rotulo {
+  font-size: calc(1.2 * var(--u)); letter-spacing: 0.12em; color: var(--painel-texto-secundario);
+  display: flex; justify-content: space-between;
 }
-.barra-numero { font-size: calc(2.2 * var(--u)); line-height: 1; white-space: nowrap; }
+.portal-trilho {
+  height: calc(1.6 * var(--u)); border-radius: 999px; overflow: hidden;
+  border: calc(0.25 * var(--u)) solid var(--hud-contorno); background: var(--painel-borda);
+}
+.portal-nivel { height: 100%; width: 100%; background: var(--hud-descida); transition: width 300ms ease-out; }
+
+/* ---- presente que acabou de chegar (o presente, nunca quem mandou) ---- */
+.presente {
+  left: calc(2.5 * var(--u)); top: calc(46 * var(--u)); max-width: calc(44 * var(--u));
+  transform: scale(var(--escala, 1)); transform-origin: 0 0;
+  padding: calc(1 * var(--u)) calc(1.4 * var(--u)) calc(1.2 * var(--u));
+  display: flex; flex-direction: column; gap: calc(0.3 * var(--u));
+  opacity: 0; transition: opacity 160ms linear;
+}
+.presente.aparecendo { opacity: 1; }
+.presente-delta { font-size: calc(4 * var(--u)); line-height: 1; }
+.presente-nome { font-size: calc(1.8 * var(--u)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.presente-disputa { font-size: calc(1.3 * var(--u)); color: var(--hud-combate); }
+.presente-disputa[hidden] { display: none; }
+
+/* ---- contagem regressiva e selo de fim de rodada, no centro ---- */
+.centro {
+  /* A largura vai EXPLÍCITA, e não só por left/right: ao mover a caixa, o
+     aoLayout escreve right: auto — e o estúdio sempre grava x, mesmo quando o
+     streamer só arrasta na vertical. Sem a largura, a faixa vira shrink-to-fit
+     e o align-items passa a centrar dentro do conteúdo, não dentro do vídeo: o
+     número de 16u sai do meio da tela e cola na esquerda. Sem layout salvo o
+     resultado é idêntico ao de antes. */
+  position: absolute; left: 0; right: 0; width: calc(100 * var(--u)); top: calc(56 * var(--u));
+  display: flex; flex-direction: column; align-items: center; gap: calc(0.5 * var(--u));
+  /* Origem no meio porque esta faixa ocupa a largura toda e centraliza o texto:
+     escalar pela esquerda empurraria a contagem regressiva para o canto. Ao
+     mover, o estúdio troca a origem por 0 0, que é quando ela vira caixa. */
+  transform: scale(var(--escala, 1)); transform-origin: 50% 0;
+  opacity: 0; transition: opacity 200ms linear;
+}
+.centro.aparecendo { opacity: 1; }
+.centro-resultado { font-size: calc(5 * var(--u)); line-height: 1; letter-spacing: 0.04em; }
+.centro-numero { font-size: calc(16 * var(--u)); line-height: 0.95; font-variant-numeric: tabular-nums; }
+.centro-numero[hidden] { display: none; }
+
+/* ---- aviso de seguidor, canto inferior direito ---- */
+.seguidor {
+  right: calc(2.5 * var(--u)); bottom: calc(3 * var(--u)); max-width: calc(52 * var(--u));
+  padding: calc(1 * var(--u)) calc(1.6 * var(--u)) calc(1.2 * var(--u));
+  border-left: calc(0.5 * var(--u)) solid var(--estado-vitoria);
+  display: flex; flex-direction: column; gap: calc(0.2 * var(--u));
+  /* A escala entra NA MESMA declaração do deslize. Em declarações separadas a
+     última venceria e mataria a entrada — o aviso apareceria parado. */
+  opacity: 0; transform: translateX(calc(4 * var(--u))) scale(var(--escala, 1)); transform-origin: 100% 0;
+  transition: opacity 240ms ease-out, transform 240ms ease-out;
+}
+.seguidor.aparecendo { opacity: 1; transform: translateX(0) scale(var(--escala, 1)); }
+.seguidor-nome {
+  font-size: calc(2.4 * var(--u)); line-height: 1.1; color: var(--estado-vitoria);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.seguidor-frase { font-size: calc(1.7 * var(--u)); line-height: 1.2; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="hud">
-  <section class="cam">
-    <div class="pote caixa" id="pote">
-      <div class="pote-tampa"></div>
-      <div class="pote-copo"><div class="pote-nivel" id="pote-nivel"></div></div>
-      <div class="pote-total texto"><span id="pote-moedas">0</span> <small>moedas</small></div>
-      <div class="pote-meta">meta <span id="pote-alvo">0</span></div>
+  <section class="jogo">
+
+    <div class="placar caixa" data-el="placar">
+      <span class="placar-v texto"><span id="placar-vitorias">0</span> V</span>
+      <span class="placar-d texto"><span id="placar-derrotas">0</span> D</span>
     </div>
 
-    <ol class="ranking" id="ranking"><li class="ranking-vazio texto">sem doadores ainda</li></ol>
-
-    <div class="destaque destaque-esquerda caixa" id="top-combo">
-      <div class="destaque-rotulo">TOP COMBO</div>
-      <div class="destaque-corpo">
-        <img class="destaque-icone" id="top-combo-icone" alt="" hidden>
-        <div class="destaque-texto">
-          <div class="destaque-nome texto" id="top-combo-nome">—</div>
-          <div class="destaque-valor texto" id="top-combo-valor">x0</div>
-          <div class="destaque-presente" id="top-combo-presente"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="destaque destaque-direita caixa" id="top-presente">
-      <div class="destaque-rotulo">TOP PRESENTE</div>
-      <div class="destaque-corpo">
-        <img class="destaque-icone" id="top-presente-icone" alt="" hidden>
-        <div class="destaque-texto">
-          <div class="destaque-nome texto" id="top-presente-nome">—</div>
-          <div class="destaque-valor texto" id="top-presente-valor">0 coins</div>
-          <div class="destaque-presente" id="top-presente-presente"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="vs caixa">
+    <div class="vs caixa" data-el="vs">
       <span class="vs-descida texto" id="vs-descida">-0</span>
       <span class="vs-selo">VS</span>
       <span class="vs-subida texto" id="vs-subida">+0</span>
       <div class="vs-medidor"><div class="vs-medidor-descida" id="vs-medidor-descida"></div></div>
     </div>
-  </section>
 
-  <section class="jogo">
-    <ul class="legenda legenda-esquerda" id="legenda-subida"></ul>
-    <ul class="legenda legenda-direita" id="legenda-descida"></ul>
-    <div class="barra" id="barra">
-      <div class="barra-bandeira" aria-hidden="true">&#127937;</div>
-      <div class="barra-trilho"><div class="barra-nivel" id="barra-nivel"></div></div>
-      <div class="barra-numero texto"><span id="barra-atual">0</span> / <span id="barra-total">0</span></div>
+    <ul class="legenda legenda-esquerda" id="legenda-subida" data-el="legendaSubida"></ul>
+    <ul class="legenda legenda-direita" id="legenda-descida" data-el="legendaDescida"></ul>
+
+
+    <div class="portal caixa" id="portal" data-el="portal" hidden>
+      <div class="portal-rotulo"><span>PORTAL</span><span id="portal-numero">0</span></div>
+      <div class="portal-trilho"><div class="portal-nivel" id="portal-nivel"></div></div>
     </div>
+
+    <div class="presente caixa" id="presente" data-el="presente">
+      <span class="presente-delta texto" id="presente-delta">+0</span>
+      <span class="presente-nome texto" id="presente-nome"></span>
+      <span class="presente-disputa" id="presente-disputa" hidden></span>
+    </div>
+
+    <div class="centro" id="centro" data-el="centro">
+      <span class="centro-resultado texto" id="centro-resultado"></span>
+      <span class="centro-numero texto" id="centro-numero" hidden></span>
+    </div>
+
+    <div class="seguidor caixa" id="seguidor" data-el="seguidor">
+      <span class="seguidor-nome texto" id="seguidor-nome"></span>
+      <span class="seguidor-frase texto">se tornou um vil&atilde;o</span>
+    </div>
+
   </section>
 </div>
 
@@ -242,20 +307,21 @@ html, body {
   var params = new URLSearchParams(location.search);
   var cam = Number(params.get("cam"));
   if (cam > 0 && cam < 100) document.documentElement.style.setProperty("--cam", cam + "%");
-  var meta = Number(params.get("meta"));
-  if (!(meta > 0)) meta = 10000;
-  if (params.get("barra") === "nao") document.getElementById("barra").hidden = true;
+  // Guardado NUMA VARIAVEL, e nao so no CSS: o layout do estudio chega em % do
+  // palco inteiro, e converter para dentro de .jogo exige saber onde a cam
+  // termina. 33 e o mesmo padrao do --cam do CSS e do catalogo da ponte.
+  else cam = 33;
   var preEsticar = params.get("esticar") !== "nao";
 
   //[[ O palco 9:16, e o pré-estique.
   //
   // A fonte "Link" do LIVE Studio renderiza a página em paisagem (16:9) e o
   // streamer estica o item para preencher a cena vertical: com tamanhos em vw
-  // o pote saía 3× mais alto que largo. Aqui a página monta um palco 9:16 pela
+  // tudo saía 3x mais alto que largo. Aqui a página monta um palco 9:16 pela
   // altura da janela, mede tudo em centésimos da largura dele (--u), e — se a
   // janela for mais larga que o palco — estica em X na mesma razão, para o
   // estique da fonte devolver a proporção certa. Numa fonte 9:16 (OBS com
-  // 1080×1920) a razão é 1 e nada acontece. ]]
+  // 1080x1920) a razão é 1 e nada acontece. ]]
   var PROPORCAO = 9 / 16;
   var palco = document.querySelector(".hud");
   function ajustar() {
@@ -269,69 +335,19 @@ html, body {
   ajustar();
   window.addEventListener("resize", ajustar);
 
-  var presetId = null;
-  var legenda = {};   // presenteId -> iconeUrl, para os destaques acharem o ícone
+  // Qual preset está no ar E em que versão dele. Os dois, porque trocar de
+  // preset e mexer nos slots do mesmo preset são coisas diferentes e as duas
+  // mudam a legenda.
+  var presetNoAr = null;
 
   var formatar = function (n) {
     return new Intl.NumberFormat("pt-BR").format(Math.max(0, Math.round(Number(n) || 0)));
   };
   function texto(id, valor) { document.getElementById(id).textContent = valor; }
-  function icone(id, url) {
-    var img = document.getElementById(id);
-    if (!url) { img.hidden = true; img.removeAttribute("src"); return; }
-    img.hidden = false;
-    img.onerror = function () { img.hidden = true; };
-    if (img.getAttribute("src") !== url) img.src = url;
-  }
 
-  texto("pote-alvo", formatar(meta));
-
-  function desenharDestaque(prefixo, dado, valor) {
-    if (!dado) {
-      texto(prefixo + "-nome", "—");
-      texto(prefixo + "-valor", valor(null));
-      texto(prefixo + "-presente", "");
-      icone(prefixo + "-icone", null);
-      return;
-    }
-    texto(prefixo + "-nome", dado.nome || "anônimo");
-    texto(prefixo + "-valor", valor(dado));
-    texto(prefixo + "-presente", dado.presenteNome || "");
-    icone(prefixo + "-icone", legenda[dado.presenteId] || null);
-  }
-
+  /* ---- disputa da rodada ---- */
   function aoHud(hud) {
     if (!hud) return;
-    texto("pote-moedas", formatar(hud.moedas));
-    document.getElementById("pote-nivel").style.height = Math.min(100, (hud.moedas / meta) * 100) + "%";
-
-    var lista = document.getElementById("ranking");
-    lista.textContent = "";
-    var ranking = hud.ranking || [];
-    if (ranking.length === 0) {
-      var vazio = document.createElement("li");
-      vazio.className = "ranking-vazio texto";
-      vazio.textContent = "sem doadores ainda";
-      lista.appendChild(vazio);
-    }
-    ranking.forEach(function (doador, indice) {
-      var li = document.createElement("li");
-      var medalha = document.createElement("span");
-      medalha.className = "medalha medalha-" + (indice + 1);
-      medalha.textContent = String(indice + 1);
-      var nome = document.createElement("span");
-      nome.className = "ranking-nome texto";
-      nome.textContent = doador.nome;
-      var moedas = document.createElement("span");
-      moedas.className = "ranking-moedas texto";
-      moedas.textContent = "🪙 " + formatar(doador.moedas);
-      li.appendChild(medalha); li.appendChild(nome); li.appendChild(moedas);
-      lista.appendChild(li);
-    });
-
-    desenharDestaque("top-combo", hud.topCombo, function (d) { return d ? "x" + formatar(d.repeticoes) : "x0"; });
-    desenharDestaque("top-presente", hud.topPresente, function (d) { return (d ? formatar(d.moedas) : "0") + " coins"; });
-
     var disputa = hud.disputa || { subida: 0, descida: 0 };
     texto("vs-descida", "-" + formatar(disputa.descida));
     texto("vs-subida", "+" + formatar(disputa.subida));
@@ -340,19 +356,129 @@ html, body {
       (total > 0 ? (disputa.descida / total) * 100 : 50) + "%";
   }
 
-  function aoEstado(estado) {
-    if (!estado) return;
-    var atual = Number(estado.plataformaAtual) || 0;
-    var total = Number(estado.totalPlataformas) || 0;
-    texto("barra-atual", formatar(atual));
-    texto("barra-total", formatar(total));
-    document.getElementById("barra-nivel").style.height = (total > 0 ? Math.min(100, (atual / total) * 100) : 0) + "%";
+  /* ---- contagem regressiva: tica sozinha entre um estado e outro ---- */
+  var contagem = null;      // { resultado, terminaEm } em relógio LOCAL
+  var tiquetaque = null;
+  var centro = document.getElementById("centro");
 
-    // Preset trocado no meio da live (R7): a legenda muda junto.
-    var id = estado.presetId || null;
-    if (id !== presetId) { presetId = id; carregarLegenda(); }
+  function pintarCentro() {
+    if (!contagem) { centro.classList.remove("aparecendo"); return; }
+    var restante = Math.max(0, contagem.terminaEm - Date.now());
+    texto("centro-resultado", contagem.resultado === "vitoria" ? "TOPO!" : "CAIU!");
+    document.getElementById("centro-resultado").style.color =
+      contagem.resultado === "vitoria" ? "var(--hud-subida)" : "var(--hud-descida)";
+    var numero = document.getElementById("centro-numero");
+    numero.hidden = false;
+    numero.textContent = String(Math.ceil(restante / 1000));
+    centro.classList.add("aparecendo");
+    if (restante <= 0) pararContagem();
   }
 
+  function pararContagem() {
+    contagem = null;
+    clearInterval(tiquetaque);
+    tiquetaque = null;
+    centro.classList.remove("aparecendo");
+  }
+
+  function aoContagem(dados) {
+    if (!dados || typeof dados.restanteMs !== "number") { pararContagem(); return; }
+    // O estado manda o tempo QUE FALTA; o relógio de quem desenha é o daqui.
+    contagem = { resultado: dados.resultado, terminaEm: Date.now() + dados.restanteMs };
+    if (!tiquetaque) tiquetaque = setInterval(pintarCentro, 200);
+    pintarCentro();
+  }
+
+  /* ---- estado do jogo: torre, placar, portal, contagem ---- */
+  function aoEstado(estado) {
+    if (!estado) return;
+
+    texto("placar-vitorias", formatar(estado.vitorias));
+    texto("placar-derrotas", formatar(estado.derrotas));
+
+    var portal = estado.portal;
+    var caixaPortal = document.getElementById("portal");
+    if (portal && portal.aberto && Number(portal.vidaMaxima) > 0) {
+      caixaPortal.hidden = false;
+      var vida = Math.max(0, Number(portal.vida) || 0);
+      texto("portal-numero", formatar(vida));
+      document.getElementById("portal-nivel").style.width = (vida / portal.vidaMaxima) * 100 + "%";
+    } else {
+      caixaPortal.hidden = true;
+    }
+
+    aoContagem(estado.contagem);
+
+    //[[ A legenda segue o preset que está no ar, e as MEXIDAS nele.
+    //
+    // Preset trocado no meio da live é o R7. Mas o streamer também troca os
+    // presentes DENTRO do preset que já está rodando, e isso não muda o id —
+    // a legenda ficava anunciando o presente que ele acabou de tirar. O
+    // carimbo presetAtualizadoEm anda a cada salvar, e é ele que pega o
+    // segundo caso. ]]
+    var assinatura = (estado.presetId || "") + "@" + (estado.presetAtualizadoEm || "");
+    if (assinatura !== presetNoAr) {
+      presetNoAr = assinatura;
+      carregarLegenda();
+    }
+  }
+
+  /* ---- presente que chegou: o PRESENTE, nunca quem mandou ---- */
+  var caixaPresente = document.getElementById("presente");
+  var sumirPresente = null;
+
+  function aoPresente(dados) {
+    if (!dados) return;
+    var delta = Number(dados.delta) || 0;
+    var rotulo = document.getElementById("presente-delta");
+    rotulo.textContent = (delta > 0 ? "+" : "-") + formatar(Math.abs(delta));
+    rotulo.className = "presente-delta texto " + (delta > 0 ? "subida" : "descida");
+    texto("presente-nome", dados.presenteNome || "");
+
+    var disputa = dados.disputa;
+    var linha = document.getElementById("presente-disputa");
+    if (disputa && disputa.contestado) {
+      linha.hidden = false;
+      linha.textContent = "DISPUTA  +" + formatar(disputa.somaSubida) + "  /  -" + formatar(disputa.somaDescida);
+    } else {
+      linha.hidden = true;
+    }
+
+    caixaPresente.classList.add("aparecendo");
+    clearTimeout(sumirPresente);
+    sumirPresente = setTimeout(function () { caixaPresente.classList.remove("aparecendo"); }, 3000);
+  }
+
+  function aoCombateAnulado(dados) {
+    if (!dados) return;
+    var rotulo = document.getElementById("presente-delta");
+    rotulo.textContent = "EMPATE";
+    rotulo.className = "presente-delta texto";
+    rotulo.style.color = "var(--hud-combate)";
+    texto("presente-nome", "+" + formatar(dados.somaSubida) + " contra -" + formatar(dados.somaDescida));
+    document.getElementById("presente-disputa").hidden = true;
+    caixaPresente.classList.add("aparecendo");
+    clearTimeout(sumirPresente);
+    sumirPresente = setTimeout(function () {
+      caixaPresente.classList.remove("aparecendo");
+      rotulo.style.color = "";
+    }, 3000);
+  }
+
+  /* ---- seguidor novo ---- */
+  var caixaSeguidor = document.getElementById("seguidor");
+  var sumirSeguidor = null;
+
+  function aoSeguidor(dados) {
+    if (!dados || typeof dados.nome !== "string" || !dados.nome) return;
+    // textContent, nunca innerHTML: o nome vem da TikTok e não é confiável.
+    texto("seguidor-nome", dados.nome);
+    caixaSeguidor.classList.add("aparecendo");
+    clearTimeout(sumirSeguidor);
+    sumirSeguidor = setTimeout(function () { caixaSeguidor.classList.remove("aparecendo"); }, 6000);
+  }
+
+  /* ---- legenda dos slots ---- */
   function itemDaLegenda(slot) {
     var li = document.createElement("li");
     li.className = "legenda-item";
@@ -380,9 +506,7 @@ html, body {
     var subida = document.getElementById("legenda-subida");
     var descida = document.getElementById("legenda-descida");
     subida.textContent = ""; descida.textContent = "";
-    legenda = {};
     (dados && dados.slots ? dados.slots : []).forEach(function (slot) {
-      legenda[slot.presenteId] = slot.iconeUrl || null;
       (slot.delta > 0 ? subida : descida).appendChild(itemDaLegenda(slot));
     });
   }
@@ -391,17 +515,77 @@ html, body {
     fetch("/api/hud")
       .then(function (r) { return r.json(); })
       .then(desenharLegenda)
-      .catch(function (erro) { console.warn("[kora] legenda não carregou:", erro); });
+      .catch(function (erro) { console.warn("[kora] legenda nao carregou:", erro); });
+  }
+
+  //[[ O layout do Estudio de Overlay.
+  //
+  // Chega pelo SSE, tanto na assinatura quanto a cada salvar do painel: e isso
+  // que deixa o streamer arrastar uma caixa e ver a fonte do OBS se ajustar sem
+  // tocar no programa de captura, que e justamente o que ninguem consegue fazer
+  // no meio de uma live.
+  //
+  // O elemento AUSENTE do layout fica onde o CSS o pos. Por isso cada volta
+  // LIMPA o inline antes de aplicar: sem isso, "voltar ao padrao" so valeria
+  // depois de recarregar a fonte, porque o left de ontem continuaria escrito no
+  // atributo style, que vence qualquer folha de estilo.
+  //
+  // A conversao do y: ele vem em % da ALTURA DO PALCO, contado do topo do
+  // video, mas estes elementos moram dentro de .jogo, que comeca onde a cam
+  // termina. Descontar o cam REAL desta URL e o que faz a caixa cair onde o
+  // estudio mostrou em qualquer cena, e nao so na de quem salvou. 1,7778 e a
+  // altura do palco em unidades --u dividida por 100 (177,78 / 100). ]]
+  var caixasDoLayout = null;
+
+  function aoLayout(layout) {
+    if (!caixasDoLayout) caixasDoLayout = document.querySelectorAll("[data-el]");
+    var elementos = (layout && layout.elementos) || {};
+
+    for (var i = 0; i < caixasDoLayout.length; i += 1) {
+      var caixa = caixasDoLayout[i];
+      var ajuste = elementos[caixa.getAttribute("data-el")] || {};
+
+      caixa.style.left = "";
+      caixa.style.right = "";
+      caixa.style.top = "";
+      caixa.style.bottom = "";
+      caixa.style.display = "";
+      caixa.style.transformOrigin = "";
+      caixa.style.removeProperty("--escala");
+      caixa.style.removeProperty("--desloc");
+
+      if (typeof ajuste.x === "number") {
+        // Quem nascia colado a direita passa a ser ancorado pela esquerda: e o
+        // pulo do primeiro arrastar, e o estudio mostra isso na hora.
+        caixa.style.left = ajuste.x + "%";
+        caixa.style.right = "auto";
+        caixa.style.transformOrigin = "0 0";
+        caixa.style.setProperty("--desloc", "0px");
+      }
+      if (typeof ajuste.y === "number") {
+        caixa.style.top = "calc(" + ((ajuste.y - cam) * 1.7778).toFixed(3) + " * var(--u))";
+        caixa.style.bottom = "auto";
+      }
+      if (typeof ajuste.escala === "number") caixa.style.setProperty("--escala", String(ajuste.escala));
+      // display inline, e nao o atributo hidden: estes elementos tem display
+      // proprio no CSS (flex), e o [hidden] do navegador perde para ele.
+      if (ajuste.visivel === false) caixa.style.display = "none";
+    }
   }
 
   function ligar() {
     var fonte = new EventSource("/api/sessao/stream");
-    fonte.addEventListener("estado", function (evento) {
-      try { aoEstado(JSON.parse(evento.data)); } catch (e) { /* quadro solto */ }
-    });
-    fonte.addEventListener("hud", function (evento) {
-      try { aoHud(JSON.parse(evento.data)); } catch (e) { /* quadro solto */ }
-    });
+    var ouvir = function (nome, fn) {
+      fonte.addEventListener(nome, function (evento) {
+        try { fn(JSON.parse(evento.data)); } catch (e) { /* quadro solto */ }
+      });
+    };
+    ouvir("estado", aoEstado);
+    ouvir("hud", aoHud);
+    ouvir("presente", aoPresente);
+    ouvir("combateAnulado", aoCombateAnulado);
+    ouvir("seguidor", aoSeguidor);
+    ouvir("layout", aoLayout);
     fonte.onerror = function () { console.warn("[kora] fluxo caiu; o EventSource vai reconectar"); };
   }
 

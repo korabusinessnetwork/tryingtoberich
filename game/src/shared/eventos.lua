@@ -15,11 +15,16 @@ local Eventos = {}
 
 Eventos.PASTA = "KoraEventos"
 
--- Servidor → cliente
-Eventos.PRESENTE = "Presente"
+--[[ Servidor → cliente.
+
+	PRESENTE, COMBATE_ANULADO, VITORIA, RODADA_ENCERRADA e PORTAL saíram daqui
+	quando o HUD saiu do jogo (ADR-015): eles existiam só para alimentar
+	`hud.client.lua`, e quem desenha essas cinco coisas hoje é o overlay do OBS,
+	que não fala Roblox — ele lê o estado pela ponte. RemoteEvent que ninguém
+	escuta é feature morta sem erro nenhum, e há teste cobrando os dois lados.
+
+	ESTADO ficou: a câmera e os ajustes ao vivo continuam ouvindo. ]]
 Eventos.ESTADO = "Estado"
-Eventos.COMBATE_ANULADO = "CombateAnulado"
-Eventos.VITORIA = "Vitoria"
 Eventos.TREMOR = "Tremor"
 Eventos.CAMERA = "Camera"
 Eventos.FLASH = "Flash"
@@ -38,22 +43,6 @@ Eventos.VESTIARIO_SALVAR = "VestiarioSalvar"
 Eventos.AJUSTAR_MAPA = "AjustarMapa"
 
 --[[
-	Fim de rodada: chegou ao topo (vitória) ou voltou ao primeiro andar depois
-	de ter saído dele (derrota). Leva o placar acumulado e dispara a contagem
-	regressiva antes do reinício automático.
-]]
-Eventos.RODADA_ENCERRADA = "RodadaEncerrada"
-
---[[
-	O portal do primeiro andar: abriu, apanhou, quebrou.
-
-	Sem isto o HUD não teria como mostrar a barra de vida, e uma disputa que o
-	espectador não vê acontecer não é disputa — é o boneco parado no chão. Leva
-	`vida` e `vidaMaxima` a cada golpe, e `quebrou` no último.
-]]
-Eventos.PORTAL = "Portal"
-
---[[
 	Galeria de skins: o vestiário pede a lista de nicks curada no painel, ou a
 	skin de um deles para vestir como base. Cliente → servidor, e a resposta
 	volta pelo mesmo remoto.
@@ -61,34 +50,29 @@ Eventos.PORTAL = "Portal"
 Eventos.VESTIARIO_GALERIA = "VestiarioGaleria"
 
 --[[
-	Formato de cada evento, para os dois lados escreverem contra a mesma coisa:
-
-	PRESENTE (servidor → cliente), a cada disparo aplicado
-	  { animacaoId, delta, intensidade, efeitoCurto, nomeDoador, presenteNome,
-	    plataformaOrigem, plataformaDestino, disputa }
-	  `disputa` é nil quando o presente disparou sozinho, e uma tabela
-	  { participantes, somaSubida, somaDescida, liquido, contestado } quando o
-	  disparo é resultado de um combate (ADR-012).
+	Formato de cada evento, para os dois lados escreverem contra a mesma coisa.
+	É o único lugar onde este contrato está escrito, e o teste que lê este
+	arquivo confere só as declarações `Eventos.X = "Y"` — o bloco abaixo ninguém
+	verifica por fora, então ele desatualiza calado. Quem mexer em `montarEstado`
+	(game/src/server/sessao.lua) mexe aqui e em estado-jogo.schema.json: os três
+	descrevem o MESMO objeto, e campo que existe num e falta no schema derruba o
+	payload inteiro na entrada da ponte.
 
 	ESTADO (servidor → cliente), no máximo a cada 2s ou quando muda
-	  { plataformaReferencia, plataformaMaxima, emAnimacao, totalPlataformas,
-	    sessaoAtiva }
+	  { plataformaReferencia, plataformaMaxima, quedasNaturais, emAnimacao,
+	    totalPlataformas, sessaoAtiva, aoVivo, vitorias, derrotas, vitoria,
+	    portal, contagem }
 	  `sessaoAtiva` existe para o vestiário saber quando se trancar: o ADR-011
 	  proíbe abri-lo com a sessão rodando, porque streamer parado num menu é a
 	  tela estática que o ADR-009 evita. Sem este campo, o cliente só poderia
-	  adivinhar por heurística de tempo, e adivinhar erra.
-
-	COMBATE_ANULADO (servidor → cliente)
-	  { somaSubida, somaDescida, participantes }
-	  Líquido zero: ninguém anda. Sem isto na tela, empate parece travamento.
-
-	VITORIA (servidor → cliente)
-	  { plataforma, totalPlataformas, reiniciou }
-	  R6: chegou ao topo. `reiniciou` verdadeiro é o outro lado do mesmo
-	  evento — a corrida voltou ao pé da torre por ordem do painel — e existe
-	  para o HUD tirar o aviso da tela pelo mesmo caminho que o pôs, em vez de
-	  adivinhar por tempo. O jogo NÃO reinicia sozinho: quem decide é o
-	  streamer, e a ordem chega pelo long-poll (ADR-013).
+	  adivinhar por heurística de tempo, e adivinhar erra. `aoVivo` é outra
+	  coisa: sessão rodando E live conectada — no Studio a sessão roda sem live.
+	  `vitorias`, `derrotas` e `vitoria` são o placar da SESSÃO (R6).
+	  `portal` é { aberto, vida, vidaMaxima } e `contagem` é
+	  { resultado, restanteMs } ou nil. Os dois viajam aqui porque quem os
+	  desenha hoje é o overlay do OBS (ADR-015), que não fala Roblox e só
+	  conhece este payload — `restanteMs` é o tempo QUE FALTA, para os dois
+	  relógios não precisarem concordar.
 
 	TREMOR (servidor → cliente)
 	  { intensidade, duracao }
@@ -145,11 +129,9 @@ end
 --[[ Cria todos de uma vez. O servidor chama antes de qualquer cliente entrar. ]]
 function Eventos.criarTodos()
 	local nomes = {
-		Eventos.PRESENTE, Eventos.ESTADO, Eventos.COMBATE_ANULADO, Eventos.VITORIA,
-		Eventos.TREMOR, Eventos.CAMERA, Eventos.FLASH,
+		Eventos.ESTADO, Eventos.TREMOR, Eventos.CAMERA, Eventos.FLASH,
 		Eventos.VESTIARIO_BUSCAR, Eventos.VESTIARIO_EQUIPAR, Eventos.VESTIARIO_SALVAR,
-		Eventos.AJUSTAR_MAPA, Eventos.RODADA_ENCERRADA, Eventos.VESTIARIO_GALERIA,
-		Eventos.PORTAL,
+		Eventos.AJUSTAR_MAPA, Eventos.VESTIARIO_GALERIA,
 	}
 	for _, nome in ipairs(nomes) do
 		Eventos.obter(nome)

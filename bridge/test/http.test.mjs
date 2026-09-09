@@ -13,10 +13,19 @@ import { criarAppDoJogo, criarAppDoPainel } from "../src/http/servidor.mjs";
 import { limitarTaxa } from "../src/http/guardas.mjs";
 import { Nucleo } from "../src/nucleo.mjs";
 import { REGRAS } from "../src/config.mjs";
-import { apagar, caminhoDeDados } from "../src/repos/arquivo.mjs";
+import { apagar, caminhoDeDados, escreverJsonAtomico, lerJsonOuPadrao } from "../src/repos/arquivo.mjs";
 import { carregarConfiguracao, salvarConfiguracao } from "../src/repos/configuracao.mjs";
 import { carregarExemplo } from "../src/repos/fixtures.mjs";
 import { salvarPreset } from "../src/repos/presets.mjs";
+import { carregarLayout, salvarLayout } from "../src/repos/overlay.mjs";
+import { criarValidador } from "../src/repos/schemas.mjs";
+import {
+  CAM_PADRAO,
+  ELEMENTOS_DO_OVERLAY,
+  ESCALA_MAX,
+  ESCALA_MIN,
+  LAYOUT_VAZIO,
+} from "../src/dominio/overlay-layout.mjs";
 
 const TOKEN = "t".repeat(32);
 
@@ -32,6 +41,9 @@ let basePainel;
 let servidorDoJogo;
 let servidorDoPainel;
 let nucleo;
+/** A cena do Estúdio de Overlay do dono, se ele já montou uma: volta no fim. */
+let cenaDoOverlay = null;
+const ARQUIVO_DO_LAYOUT = caminhoDeDados("overlay-layout.json");
 
 const escutar = (app) =>
   new Promise((resolve) => {
@@ -39,6 +51,7 @@ const escutar = (app) =>
   });
 
 before(async () => {
+  cenaDoOverlay = await lerJsonOuPadrao(ARQUIVO_DO_LAYOUT);
   nucleo = new Nucleo({ config });
   await nucleo.carregarAnimacoesNaMemoria();
   servidorDoJogo = await escutar(criarAppDoJogo(nucleo, { token: TOKEN }));
@@ -47,10 +60,14 @@ before(async () => {
   basePainel = `http://127.0.0.1:${servidorDoPainel.address().port}`;
 });
 
-after(() => {
+after(async () => {
   nucleo.longpoll.fecharTodos();
   servidorDoJogo.close();
   servidorDoPainel.close();
+  // A máquina que roda o teste é a mesma que roda a live: o PUT abaixo escreve
+  // o arquivo de verdade, como o de configuração.
+  if (cenaDoOverlay) await escreverJsonAtomico(ARQUIVO_DO_LAYOUT, cenaDoOverlay);
+  else await apagar(ARQUIVO_DO_LAYOUT);
 });
 
 const comToken = { "x-bridge-token": TOKEN };
@@ -253,12 +270,40 @@ test("/api/overlay também entrega a URL do HUD da live, e /overlay/hud é a pá
   // As cores vêm de data/tokens.json, injetadas como variáveis — é o único
   // hex da página, e o que garante que o overlay e o painel são a mesma marca.
   assert.match(html, /--hud-subida: #[0-9A-Fa-f]{6};/, "os tokens não chegaram à página");
-  assert.match(html, /--faixa-5: #[0-9A-Fa-f]{6};/, "as faixas não chegaram à página");
-  assert.match(html, /addEventListener\("hud"/, "a página não ouve o HUD");
+  assert.match(html, /--estado-vitoria: #[0-9A-Fa-f]{6};/, "os tokens de estado não chegaram à página");
+  assert.match(html, /ouvir\("hud", aoHud\)/, "a página não ouve a disputa da rodada");
+  assert.match(html, /ouvir\("seguidor", aoSeguidor\)/, "a página não ouve o aviso de seguidor");
   assert.match(html, /fetch\("\/api\/hud"\)/, "a página não busca a legenda");
+  //[[ A legenda tem TETO no CSS, e não na disciplina de quem monta o preset.
+  // O preset vai a 24 slots (R1 emendada) e a legenda vale "ausente = true":
+  // um arquivo editado à mão em disco (ADR-003) manda os 24 para a faixa, cada
+  // item mede ~7,2u, e a coluna desce por cima do portal e do boneco — o que o
+  // 02_DESIGN_SYSTEM, C proíbe. Em % de .jogo, porque a faixa do jogo encolhe
+  // com o ?cam= da cena. ]]
+  assert.match(
+    html,
+    /\.legenda \{[^}]*max-height: calc\(100% - 12 \* var\(--u\)\);\s*overflow: hidden;/,
+    "sem teto, 24 slots marcados cobrem o boneco na live",
+  );
   // A fonte "Link" do LIVE Studio renderiza em 16:9 e estica para 9:16: sem o
   // palco e o pré-estique, o pote saía 3× mais alto que largo (02_DESIGN_SYSTEM, C).
   assert.match(html, /scaleX\(/, "sem o pré-estique a página deforma no LIVE Studio");
+
+  //[[ `-calc(...)` não existe em CSS, e o navegador não reclama: ele descarta a
+  // declaração inteira em silêncio. Aconteceu com o `--contorno` do texto —
+  // trocar `vw` pela unidade do palco com uma substituição cega transformou
+  // `-0.12vw` em `-calc(0.12 * var(--u))` — e o ranking, a legenda e a barra
+  // ficaram com texto branco sem contorno em cima da captura da cam, ilegíveis
+  // em cena clara. O sinal vai DENTRO do calc. ]]
+  // Sem os comentários, como em componentesSemRede.test.mjs e pelo mesmo
+  // motivo: o comentário que documenta a forma ERRADA a contém, e a checagem
+  // acusaria a explicação da conformidade como se fosse a violação.
+  const semComentarios = html.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(
+    !/[^\w)]-calc\(/.test(semComentarios),
+    "menos antes de calc() invalida a declaração inteira; o sinal vai dentro: calc(-x * …)",
+  );
+  assert.match(semComentarios, /--contorno:[\s\S]{0,400}?var\(--hud-contorno\)/, "o texto do HUD precisa do contorno escuro");
   // O único vw permitido é o fallback da própria unidade (`--u: 1vw`), que
   // vale até o script medir a janela. Comentários não contam.
   const semFallback = html.replace(/--u:\s*1vw;/, "").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -305,14 +350,277 @@ test("/api/hud sem preset ativo é lista vazia, não erro — a página abre ant
   assert.deepEqual(corpo, { presetId: null, slots: [] });
 });
 
+/* ---------------------------------------------------------------- */
+/* Estúdio de Overlay                                                */
+/*                                                                   */
+/* O REPOSITÓRIO é testado AQUI, e não em overlay-layout.test.mjs, de */
+/* propósito: os dois arquivos escreviam o MESMO data/overlay-layout. */
+/* json de verdade, e `node --test` roda arquivo em paralelo. Um      */
+/* apagava o arquivo e lia esperando vazio enquanto o outro gravava   */
+/* pelo PUT — flake estreito, do tipo que só aparece em máquina mais  */
+/* lenta. Pior: o backup da cena do dono só existe na memória do      */
+/* processo, o arquivo está no .gitignore, e um Ctrl+C no meio apaga  */
+/* de vez a cena que ele montou. Um processo só encosta no arquivo.   */
+/* ---------------------------------------------------------------- */
+
+test("arquivo ausente devolve layout vazio, e não erro: é o estado de quem nunca abriu o estúdio", async () => {
+  await apagar(ARQUIVO_DO_LAYOUT);
+  assert.deepEqual(await carregarLayout(), LAYOUT_VAZIO("local"));
+});
+
+test("o que o estúdio salva volta inteiro na releitura", async () => {
+  const salvo = await salvarLayout(
+    { elementos: { placar: { x: 12.5, y: 40, escala: 1.5 }, seguidor: { visivel: false } } },
+    { streamerId: "local" },
+  );
+  assert.equal(salvo.streamerId, "local");
+  assert.ok(salvo.atualizadoEm, "sem carimbo não há como saber qual cena é a mais nova");
+
+  const relido = await carregarLayout();
+  assert.deepEqual(relido.elementos, {
+    placar: { x: 12.5, y: 40, escala: 1.5 },
+    seguidor: { visivel: false },
+  });
+});
+
+test("elemento com objeto vazio SOME do arquivo: 'voltar ao padrão' é ausência, não uma cópia do CSS", async () => {
+  //[[ É o que permite mudar o padrão da página depois.
+  //
+  // Se "voltar ao padrão" gravasse os números de hoje, toda instalação ficaria
+  // congelada no padrão do dia em que o streamer abriu o estúdio — e mexer no
+  // CSS da página não mudaria a tela de mais ninguém. ]]
+  await salvarLayout({ elementos: { placar: { x: 1, y: 2 }, portal: { escala: 2 } } });
+  const depois = await salvarLayout({ elementos: { placar: {}, portal: { escala: 2 } } });
+
+  assert.deepEqual(Object.keys(depois.elementos), ["portal"]);
+  assert.equal("placar" in (await carregarLayout()).elementos, false);
+});
+
+test("layout fora do contrato é recusado com 400, antes de encostar no disco", async () => {
+  const antes = await carregarLayout();
+  const recusa = { name: "ErroDeDominio", codigo: "layout_invalido", status: 400 };
+
+  const fora = [
+    ["id que a página não desenha", { topcombo: { x: 10 } }],
+    ["x fora do palco", { placar: { x: 120 } }],
+    ["y fora do palco", { placar: { y: -1 } }],
+    ["escala além do teto", { placar: { escala: 3 } }],
+    ["escala abaixo do piso", { placar: { escala: 0.2 } }],
+    ["campo que ninguém lê", { placar: { x: 10, girar: 90 } }],
+  ];
+
+  for (const [porque, elementos] of fora) {
+    await assert.rejects(() => salvarLayout({ elementos }), recusa, porque);
+  }
+
+  assert.deepEqual(
+    (await carregarLayout()).elementos,
+    antes.elementos,
+    "uma recusa não pode ter gravado metade da cena",
+  );
+});
+
+test("id fora do catálogo é descartado na LEITURA, senão todo 'Salvar' seguinte tomaria 400", async () => {
+  //[[ O painel devolve no PUT exatamente o objeto que leu.
+  //
+  // Uma chave que não está mais no catálogo — id removido numa versão nova, ou
+  // edição a mão, que o ADR-003 prevê — entrava inteira no estado do estúdio e
+  // voltava no PUT seguinte. Resultado: TODO "Salvar" respondia 400 sem nada na
+  // tela dizer qual chave era a culpada, e a única saída era "voltar ao
+  // padrão", que joga a cena boa fora junto. A página do OBS sempre tolerou
+  // isso (só percorre os data-el que existem); agora quem lê tolera igual. ]]
+  await escreverJsonAtomico(ARQUIVO_DO_LAYOUT, {
+    streamerId: "local",
+    atualizadoEm: new Date().toISOString(),
+    elementos: { placar: { x: 10, y: 40 }, topcombo: { x: 5, y: 50 } },
+  });
+
+  const lido = await carregarLayout();
+  assert.deepEqual(Object.keys(lido.elementos), ["placar"], "o id fora do catálogo tinha que sumir na leitura");
+
+  // E o que sobrou volta a ser aceito: é a ida-e-volta que o estúdio faz.
+  assert.deepEqual((await salvarLayout({ elementos: lido.elementos })).elementos, { placar: { x: 10, y: 40 } });
+});
+
+test("os limites de escala do domínio são os mesmos do schema", () => {
+  // Dois números escritos em dois lugares. O painel prende a barra por estes;
+  // o schema recusa por aqueles. Se um andar sozinho, o streamer arrasta a
+  // barra até o fim e o salvar responde 400 sem ele entender por quê.
+  assert.equal(ESCALA_MIN, 0.5);
+  assert.equal(ESCALA_MAX, 2);
+});
+
+test("/api/overlay/layout entrega o CATÁLOGO dos elementos junto do que o streamer mexeu", async () => {
+  //[[ Os NOMES das chaves SÃO o contrato, e ele já esteve quebrado.
+  //
+  // `catalogo` e `elementos` são lidos assim em EstudioDeOverlay.jsx: o
+  // catálogo em `dados?.catalogo`, a exceção salva em `resposta?.elementos`. A
+  // rota já mandou o catálogo dentro de `elementos` e o layout dentro de
+  // `layout`: nada quebrava, todos os testes passavam, e o estúdio inteiro caía
+  // no estado vazio "a ponte não mandou o catálogo" — nenhuma caixa desenhada,
+  // a feature não existia na tela. O teste da ponte afirmava uma forma e o do
+  // painel mockava a oposta, os dois verdes, nenhum cruzando a fronteira.
+  //
+  // O catálogo vai na resposta porque o painel não pode ter uma segunda cópia
+  // da geometria da página: duas escritas dos mesmos números divergem caladas. ]]
+  await salvarLayout({ elementos: { placar: { x: 12.5, y: 40 } } });
+  const corpo = await (await fetch(`${basePainel}/api/overlay/layout`)).json();
+
+  assert.deepEqual(Object.keys(corpo).sort(), ["cam", "catalogo", "elementos"]);
+  assert.ok(Array.isArray(corpo.catalogo), "o catálogo é a LISTA do que existe");
+  assert.equal(typeof corpo.elementos, "object", "`elementos` é a exceção salva: um objeto por id");
+  assert.equal(Array.isArray(corpo.elementos), false, "array aqui viraria { 0: ..., 1: ... } no PUT seguinte");
+  assert.deepEqual(corpo.elementos.placar, { x: 12.5, y: 40 }, "a cena de ontem tem que voltar para o estúdio");
+
+  assert.equal(corpo.cam, CAM_PADRAO, "sem a cam o estúdio não sabe onde sombrear (ADR-015)");
+  assert.equal(corpo.catalogo.length, 8);
+  assert.deepEqual(
+    corpo.catalogo.map((e) => e.id),
+    ELEMENTOS_DO_OVERLAY.map((e) => e.id),
+  );
+  for (const elemento of corpo.catalogo) {
+    assert.ok(elemento.rotulo, `${elemento.id} sem nome legível para o streamer`);
+    assert.equal(typeof elemento.x, "number", `${elemento.id} sem posição padrão`);
+    assert.equal(typeof elemento.largura, "number", `${elemento.id} sem retângulo para arrastar`);
+  }
+});
+
+test("o corpo que o estúdio MONTA passa no schema: o clique de salvar não pode ser o primeiro encontro", async () => {
+  //[[ O `mudar()` do EstudioDeOverlay escreve os QUATRO campos sempre, mesmo
+  // quando o streamer só arrastou na vertical ou só mexeu na escala. Se o
+  // schema recusasse essa forma, o erro apareceria no primeiro clique de salvar
+  // de uma live — e não aqui. É a mesma ida-e-volta, sem o navegador no meio. ]]
+  const elementos = Object.fromEntries(
+    ELEMENTOS_DO_OVERLAY.map((item) => [item.id, { x: item.x, y: item.y, escala: 1, visivel: true }]),
+  );
+
+  const { validar } = await criarValidador();
+  assert.deepEqual(
+    validar("overlay-layout", { streamerId: "local", atualizadoEm: null, elementos }),
+    [],
+    "o objeto que o estúdio produz tem que ser válido para o schema que a ponte usa",
+  );
+
+  const resposta = await fetch(`${basePainel}/api/overlay/layout`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ elementos }),
+  });
+  assert.equal(resposta.status, 200, "e a rota tem que aceitar o mesmo corpo");
+  assert.deepEqual((await resposta.json()).elementos, elementos);
+});
+
+test("o PUT do estúdio grava, o GET seguinte confirma, e o SSE avisa o OBS sem recarregar a fonte", async () => {
+  const recebidos = [];
+  const parar = nucleo.ouvir((evento, dados) => recebidos.push({ evento, dados }));
+  try {
+    const resposta = await fetch(`${basePainel}/api/overlay/layout`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ elementos: { presente: { x: 33.5, y: 70, escala: 1.25 } } }),
+    });
+    assert.equal(resposta.status, 200);
+    const salvo = await resposta.json();
+    // O streamerId é preenchido pela ROTA: o painel não conhece o tenant (ADR-003).
+    assert.equal(salvo.streamerId, REGRAS.STREAMER_ID);
+    assert.deepEqual(salvo.elementos.presente, { x: 33.5, y: 70, escala: 1.25 });
+
+    const relido = await (await fetch(`${basePainel}/api/overlay/layout`)).json();
+    assert.deepEqual(relido.elementos.presente, { x: 33.5, y: 70, escala: 1.25 });
+
+    //[[ É este evento que dispensa o streamer de mexer no OBS.
+    //
+    // A fonte de navegador fica aberta durante a live inteira, e recarregar uma
+    // fonte no meio da transmissão é justamente o que ninguém consegue fazer.
+    // Sem o `layout` no SSE, arrastar uma caixa no painel não mudaria nada na
+    // tela até a próxima abertura do programa de captura. ]]
+    const aviso = recebidos.filter((r) => r.evento === "layout");
+    assert.equal(aviso.length, 2, "um na assinatura, um depois do PUT");
+    assert.deepEqual(aviso.at(-1).dados.elementos.presente, { x: 33.5, y: 70, escala: 1.25 });
+  } finally {
+    parar();
+  }
+});
+
+test("o streamerId do CORPO não vence o da ponte: quem manda o tenant é a rota (ADR-003)", async () => {
+  // O spread do corpo ficava DEPOIS do streamerId da ponte, então qualquer
+  // requisição gravava o tenant que quisesse em disco — enquanto o resto da
+  // Fase 1 assume "local". Só morderia na Fase 3, e calado.
+  const resposta = await fetch(`${basePainel}/api/overlay/layout`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ streamerId: "outro-canal", elementos: { placar: { x: 5 } } }),
+  });
+  assert.equal(resposta.status, 200);
+  assert.equal((await resposta.json()).streamerId, REGRAS.STREAMER_ID);
+  assert.equal((await lerJsonOuPadrao(ARQUIVO_DO_LAYOUT)).streamerId, REGRAS.STREAMER_ID);
+});
+
+test("PUT sem `elementos` é recusado: corpo truncado não pode significar 'apague a cena'", async () => {
+  //[[ A gravação é substituição TOTAL por decisão documentada, então um corpo
+  // `{}` — truncado, bug no painel, retry de um fetch abortado — apagaria a
+  // cena inteira com escrita atômica e sem confirmação. Como o repositório não
+  // pode salvar parcial sem tornar impossível apagar uma exceção, quem exige a
+  // intenção é a rota. Apagar continua possível, mas dito. ]]
+  await salvarLayout({ elementos: { placar: { x: 7, y: 42 } } });
+
+  for (const corpoRuim of [{}, { elementos: null }, { elementos: [] }, { elementos: "tudo" }]) {
+    const resposta = await fetch(`${basePainel}/api/overlay/layout`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(corpoRuim),
+    });
+    assert.equal(resposta.status, 400, `${JSON.stringify(corpoRuim)} tinha que ser recusado`);
+    assert.equal((await resposta.json()).erro, "layout_invalido");
+  }
+
+  assert.deepEqual(
+    (await carregarLayout()).elementos,
+    { placar: { x: 7, y: 42 } },
+    "nenhuma das recusas pode ter encostado na cena",
+  );
+
+  // E o pedido EXPLÍCITO de apagar continua passando: é o "voltar ao padrão".
+  const limpo = await fetch(`${basePainel}/api/overlay/layout`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ elementos: {} }),
+  });
+  assert.equal(limpo.status, 200);
+  assert.deepEqual((await limpo.json()).elementos, {});
+});
+
+test("PUT com layout fora do contrato responde o contrato de erro, sem stack trace", async () => {
+  const resposta = await fetch(`${basePainel}/api/overlay/layout`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ elementos: { placar: { x: 120 } } }),
+  });
+  const corpo = await resposta.json();
+
+  assert.equal(resposta.status, 400);
+  assert.deepEqual(Object.keys(corpo).sort(), ["erro", "mensagem"]);
+  assert.equal(corpo.erro, "layout_invalido");
+  assert.equal(JSON.stringify(corpo).includes("at "), false, "nada de stack trace na resposta");
+});
+
 test("quem assina o SSE recebe o HUD de cara, para o overlay aberto no meio da live não começar vazio", async () => {
   const recebidos = [];
   const parar = nucleo.ouvir((evento, dados) => recebidos.push({ evento, dados }));
   try {
     const inicial = recebidos.find((r) => r.evento === "hud");
     assert.ok(inicial, "sem HUD na assinatura");
-    assert.deepEqual(Object.keys(inicial.dados).sort(), ["disputa", "moedas", "ranking", "topCombo", "topPresente"]);
-    assert.equal(inicial.dados.moedas, 0, "nenhum presente passou pela ponte ainda");
+    // Só a disputa: o ranking de doadores saiu por decisão do dono, e com ele
+    // o único acúmulo de nickname da ponte (11_SEGURANCA, camada 4).
+    assert.deepEqual(Object.keys(inicial.dados), ["disputa"]);
+    assert.deepEqual(inicial.dados.disputa, { subida: 0, descida: 0 });
+
+    // E o layout junto, pelo mesmo motivo: a fonte do OBS é aberta uma vez e
+    // fica meses aberta. Sem isto ela desenharia no padrão até o streamer
+    // salvar algo no estúdio, perdendo o que ele arrumou ontem.
+    const layout = recebidos.find((r) => r.evento === "layout");
+    assert.ok(layout, "sem layout na assinatura");
+    assert.equal(typeof layout.dados.elementos, "object");
   } finally {
     parar();
   }
@@ -354,6 +662,26 @@ test("preset com o mesmo presente em dois slots é recusado (R1.4)", async () =>
 
   assert.equal(resposta.status, 400);
   assert.equal((await resposta.json()).erro, "presente_repetido");
+});
+
+test("preset com dois slots na mesma posição é recusado com posicao_repetida (R1)", async () => {
+  //[[ Prova que o código de erro novo atravessa até o painel.
+  //
+  // A checagem deixou de ser do schema e virou regra cruzada; se ela ficasse só
+  // no repositório sem a rota devolver o motivo, o painel mostraria "erro ao
+  // salvar" genérico e o streamer não saberia qual caixa arrumar. ]]
+  const slot = (posicao, presenteId) => ({ posicao, presenteId, animacaoId: "sub_pulo", delta: 2, intensidade: 1 });
+  const resposta = await fetch(`${basePainel}/api/presets/teste-posicao`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      streamerId: "local", nome: "Colidido", modalidade: "escalada",
+      slots: [slot(2, "sem-rose"), slot(2, "sem-galaxy")],
+    }),
+  });
+
+  assert.equal(resposta.status, 400);
+  assert.equal((await resposta.json()).erro, "posicao_repetida");
 });
 
 test("gerar mapa sem GEMINI_API_KEY diz que quem chama é a ponte", async () => {
@@ -475,6 +803,34 @@ test("com preset ativo, o evento `rodada` já traz o id da cutscene resolvido", 
     assert.equal(legenda.presetId, PRESET_ID);
     assert.equal(legenda.slots.length, 6);
     assert.deepEqual(legenda.slots[0], { posicao: 6, presenteId: "sem-lion", nome: "sem-lion", iconeUrl: null, delta: -60 });
+
+    //[[ Mexer nos presentes do preset QUE JÁ ESTÁ NO AR muda a legenda.
+    //
+    // O overlay relia `/api/hud` só quando o `presetId` trocava. Trocar os
+    // presentes dentro do mesmo preset não troca o id: o streamer tirava um
+    // presente da live, punha outro, e o overlay seguia anunciando o antigo até
+    // alguém recarregar a fonte no OBS. O carimbo é o que o pega.
+    //
+    // Por último no teste porque MUTA o preset: as asserções acima contam com
+    // os 6 slots do exemplo. ]]
+    const carimboAntes = nucleo.estado.presetAtualizadoEm;
+    assert.ok(carimboAntes, "o estado precisa carregar o carimbo do preset");
+
+    const preset = await (await fetch(`${basePainel}/api/presets/${PRESET_ID}`)).json();
+    await fetch(`${basePainel}/api/presets/${PRESET_ID}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...preset, slots: preset.slots.slice(0, 2) }),
+    });
+
+    const depois = await (await fetch(`${basePainel}/api/hud`)).json();
+    assert.equal(depois.slots.length, 2, "a legenda tem que seguir os slots que o streamer deixou");
+    assert.notEqual(
+      nucleo.estado.presetAtualizadoEm,
+      carimboAntes,
+      "sem o carimbo andar, o overlay não tem como saber que o preset mudou por dentro",
+    );
+    assert.equal(nucleo.estado.presetId, PRESET_ID, "e o preset continua o mesmo: só o conteúdo mudou");
   } finally {
     parar();
     // definirPresetAtivo persiste em segundo plano: espera a escrita cair antes

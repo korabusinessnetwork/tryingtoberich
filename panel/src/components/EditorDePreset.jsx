@@ -1,21 +1,34 @@
 import { useMemo } from "react";
 
-import { listaDePresentes, presentesRepetidos, slotsDoPreset } from "../lib/regras.js";
+import {
+  ehSlotExtra,
+  listaDePresentes,
+  presentesRepetidos,
+  proximaPosicaoLivre,
+  slotsDoPreset,
+  SLOTS_MAX,
+} from "../lib/regras.js";
 import { CartaoDeSlot } from "./CartaoDeSlot.jsx";
 import "./EditorDePreset.css";
 
 /**
- * Container dos 6 slots (`docs/06_COMPONENTES`). É a tela principal do produto:
- * **os 6 ficam lado a lado, sempre visíveis, sem scroll** — está literal na
- * seção A do design system, e por isso a grade é fixa em 6 colunas e os
- * cartões encolhem em vez de a linha quebrar ou rolar.
+ * Container dos slots (`docs/06_COMPONENTES`). É a tela principal do produto:
+ * **os 6 primeiros ficam lado a lado, sempre visíveis, sem scroll** — está
+ * literal na seção A do design system, e por isso a grade é fixa em 6 colunas e
+ * os cartões encolhem em vez de a linha quebrar ou rolar.
+ *
+ * O 6 virou PADRÃO e não teto (R1 emendada): o streamer acrescenta presentes
+ * até 24. Os extras caem em LINHAS NOVAS, embaixo, e não roubam coluna da
+ * primeira — a regra da seção A vale para os seis do painel de desejos da
+ * TikTok, que são os que o espectador enxerga na live.
  *
  * Este componente não busca nada e não conhece rota: preset, catálogo e
  * animações chegam por prop, e toda edição sai por callback.
  *
  * Contrato com quem monta a tela:
  *   aoMudarSlot(posicao, camposParciais)  ex.: (3, { delta: 12 })
- *   aoLimparSlot(posicao)
+ *   aoLimparSlot(posicao)                 nos extras é o "Remover" — ver abaixo
+ *   aoAcrescentarSlot()                   cria o próximo slot livre
  *   aoEditarPresente(posicao) / aoEditarAnimacao(posicao)  abrem os modais
  *   aoSalvar()                            com `salvando` controlando o botão
  */
@@ -57,6 +70,7 @@ export function EditorDePreset({
   salvando,
   aoMudarSlot,
   aoLimparSlot,
+  aoAcrescentarSlot,
   aoSalvar,
   aoEditarPresente,
   aoEditarAnimacao,
@@ -71,15 +85,20 @@ export function EditorDePreset({
     [animacoes],
   );
 
-  // Sempre 6, com as posições vazias incluídas (R1.1 e R1.3).
+  // Os 6 do padrão mais os extras deste preset, com as posições vazias
+  // incluídas (R1.1 e R1.3).
   const slots = useMemo(() => slotsDoPreset(preset), [preset]);
   const repetidos = useMemo(() => resumoDeRepetidos(preset, porPresenteId), [preset, porPresenteId]);
   const preenchidos = slots.filter((slot) => slot.vazio !== true && slot.presenteId != null).length;
 
+  // O teto é o do schema, não a contagem de cartões: com um buraco no meio dos
+  // 6 ainda há posição livre mesmo com a grade grande.
+  const noTeto = proximaPosicaoLivre(preset) === null;
+
   if (!preset) {
     return (
       <section className="editor-preset editor-preset-sem-dado" aria-label="Preset">
-        <p className="secundario">Nenhum preset carregado. Escolha ou crie um para montar os 6 slots.</p>
+        <p className="secundario">Nenhum preset carregado. Escolha ou crie um para montar os slots.</p>
       </section>
     );
   }
@@ -94,15 +113,36 @@ export function EditorDePreset({
             {preset.modalidade ? ` · ${preset.modalidade}` : ""}
           </p>
         </div>
-        <button
-          type="button"
-          className="editor-preset-salvar"
-          onClick={aoSalvar}
-          disabled={Boolean(salvando)}
-        >
-          {salvando ? "Salvando…" : "Salvar preset"}
-        </button>
+        {/* Fora da grade, de propósito: um cartão de "acrescentar" dentro dela
+            roubaria uma das 6 colunas da primeira linha e encolheria os slots
+            que o espectador vê na live. */}
+        <div className="editor-preset-acoes">
+          <button
+            type="button"
+            className="editor-preset-acrescentar"
+            onClick={aoAcrescentarSlot}
+            disabled={noTeto}
+          >
+            + Acrescentar presente
+          </button>
+          <button
+            type="button"
+            className="editor-preset-salvar"
+            onClick={aoSalvar}
+            disabled={Boolean(salvando)}
+          >
+            {salvando ? "Salvando…" : "Salvar preset"}
+          </button>
+        </div>
       </header>
+
+      {/* Botão desabilitado sem motivo à vista vira "o painel travou". */}
+      {noTeto && (
+        <p className="editor-preset-teto secundario">
+          O preset chegou nos {SLOTS_MAX} slots que a ponte aceita. Remova um extra para
+          acrescentar outro presente.
+        </p>
+      )}
 
       {/* Avisa, não bloqueia: o botão continua clicável, mas o problema aparece
           antes do salvar, com nome e posição, e não como erro devolvido pela
@@ -130,6 +170,7 @@ export function EditorDePreset({
             aoEditarAnimacao={() => aoEditarAnimacao?.(slot.posicao)}
             aoMudar={(camposParciais) => aoMudarSlot?.(slot.posicao, camposParciais)}
             aoLimpar={() => aoLimparSlot?.(slot.posicao)}
+            ehExtra={ehSlotExtra(slot.posicao)}
           />
         ))}
       </div>

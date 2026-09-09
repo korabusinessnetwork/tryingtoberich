@@ -38,9 +38,9 @@ slots continuam mandando no que está neles.**
   o catálogo mudam; o caminho quente faz um `Map.get` e nada mais (Princípio
   nº1). Presente que o catálogo local não conhece — exclusivo da sala, lançado
   hoje — cai na regra pelo valor que vem no próprio evento.
-- **O slot vence a tabela.** Presente que está num dos 6 dispara com a animação,
+- **O slot vence a tabela.** Presente que está num slot dispara com a animação,
   o delta, a intensidade e o cooldown que o streamer escolheu. É a linha que
-  separa este ADR do ADR-007: os 6 continuam sendo escolha, não conta.
+  separa este ADR do ADR-007: o slot continua sendo escolha, não conta.
 - **A regra só sobe.** Descida é decisão, e decisão vira exceção. Ninguém deduz
   do preço de uma rosa que ela deveria empurrar para baixo.
 - **Delta 0 vale, e quer dizer "não mexe".** É como se silencia um presente sem
@@ -95,6 +95,12 @@ contador já dizia o tamanho do buraco; o que faltava era o que fazer com ele.
 
 ## O que isto NÃO autoriza
 
-Aumentar os 6 slots (R1.2 continua exigindo decisão explícita do dono). Nem
-fazer o valor escolher animação, intensidade ou cutscene. A tabela responde uma
-pergunta só — **quanto a torre anda** — e o resto continua sendo escolha.
+Aumentar os 6 slots. Nem fazer o valor escolher animação, intensidade ou
+cutscene. A tabela responde uma pergunta só — **quanto a torre anda** — e o
+resto continua sendo escolha.
+
+> **2026-09-04, no mesmo dia:** os slots passaram a ir até 24, mas **não por
+> este ADR** — foi decisão separada do dono, registrada no ADR-007 e na R1. A
+> frase acima continua valendo como escrita: a tabela de movimento não é, e
+> nunca foi, argumento para mexer no número de slots. Quem cresce o preset é o
+> streamer clicando, presente a presente.

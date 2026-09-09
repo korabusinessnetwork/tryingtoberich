@@ -111,12 +111,47 @@ export function presentesRepetidos(preset) {
   // Slots e placar na MESMA varredura: um presente em ambos seria ambíguo —
   // anima o boneco ou encerra a rodada? — e a resposta dependeria da ordem em
   // que o código consultasse as duas listas, que é o pior tipo de regra.
-  const vinculos = [...(preset.slots ?? []), ...(preset.placar ?? [])];
+  //[[ Entrada nula é PULADA, não confiada ao schema.
+  //
+  // Em `salvarPreset` o schema roda antes e lança, mas em
+  // scripts/validar-contratos.mjs o erro de schema é só COLETADO e as regras
+  // cruzadas rodam em seguida sobre o preset possivelmente inválido. Um
+  // `slots: [null]` num JSON editado a mão (ADR-003 prevê isso) fazia o
+  // `npm run validar` morrer com stack trace em vez de imprimir o relatório de
+  // contratos quebrados, que é exatamente para o que ele existe. ]]
+  const vinculos = [...(preset?.slots ?? []), ...(preset?.placar ?? [])];
   for (const vinculo of vinculos) {
+    if (vinculo == null) continue;
     if (vistos.has(vinculo.presenteId)) repetidos.add(vinculo.presenteId);
     vistos.add(vinculo.presenteId);
   }
   return [...repetidos];
+}
+
+/**
+ * R1 — duas posições iguais no mesmo preset.
+ *
+ * Isto MOROU no JSON Schema, como seis pares contains/maxContains, um por
+ * posição. Com o teto subindo para 24 aquilo viraria vinte e quatro blocos
+ * iguais e ilegíveis, então a regra desceu para cá — o mesmo lugar de onde a
+ * ponte e o `npm run validar` já leem a R1.4, e o único jeito de as duas não
+ * divergirem.
+ *
+ * Só os slots: o placar não tem posicao, e por isso não entra na varredura como
+ * entra na de presenteId.
+ */
+export function posicoesRepetidas(preset) {
+  const vistas = new Set();
+  const repetidas = new Set();
+
+  // Mesma guarda de presentesRepetidos, e pela mesma razão: no `npm run validar`
+  // esta varredura roda depois de um erro de schema apenas coletado.
+  for (const slot of preset?.slots ?? []) {
+    if (slot == null) continue;
+    if (vistas.has(slot.posicao)) repetidas.add(slot.posicao);
+    vistas.add(slot.posicao);
+  }
+  return [...repetidas];
 }
 
 /**

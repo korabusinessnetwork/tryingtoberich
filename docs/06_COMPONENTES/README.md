@@ -7,12 +7,12 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 |---|---|---|
 | `ControleDaPartida` | Reiniciar, zerar placar e recarregar mapa, com a sessão de pé | estado do jogo |
 | `ContaDaLive` | O @ do TikTok: define em qual live a sessão vai rodar | configuração |
-| `NavegacaoDePaginas` | Troca entre as 7 páginas do painel, com contador de problemas | página atual |
+| `NavegacaoDePaginas` | Troca entre as 8 páginas do painel, com contador de problemas | página atual |
 | `BarraDeSessao` | Start/stop, estado da live e do jogo, cronômetro | estado do SSE |
 | `SeletorModalidade` | Escolhe a modalidade (Fase 1: só Escalada) | lista de modalidades |
 | `EditorDePlacar` | Por resultado: a cutscene que o OBS toca e os presentes que contam vitória ou derrota; e a vida do portal | preset, catálogo, `/api/cutscenes` |
-| `EditorDePreset` | Container dos 6 slots, salva o preset | preset |
-| `CartaoDeSlot` | Um slot: presente, animação, delta, intensidade | slot, catálogo, animações |
+| `EditorDePreset` | Container dos slots do preset — 6 por padrão, com o botão de acrescentar até 24 —, salva o preset | preset |
+| `CartaoDeSlot` | Um slot: presente, animação, delta, intensidade, "aparece no overlay"; e, se for extra (posição acima de 6), o remover de vez | slot, catálogo, animações |
 | `SeletorDePresente` | Modal com busca, ícone oficial, cor de faixa | catálogo |
 | `SeletorDeAnimacao` | Modal com filtro por direção e peso visual | animações |
 | `AvisoDeCurva` | Aviso não bloqueante de vínculo fora do esperado | slot |
@@ -32,6 +32,12 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `PainelDeAcervo` | A galeria do acervo: foto, tags, status e assetId de cada peça, e o botão que desenha e sobe o que falta (ADR-004) | acervo |
 | `PainelDeOverlay` | As URLs dos dois overlays para colar no OBS ou no TikTok LIVE Studio (cutscenes e HUD da live), os ajustes do HUD, os vídeos na pasta e se o escolhido pelo preset ativo está lá | `/api/overlay` |
 | `TabelaDeMovimento` | A página de presentes (ADR-016): a regra `moedas × multiplicador`, a animação de cada direção, e uma linha por presente do catálogo com o delta editável | preset + catálogo |
+| `EstudioDeOverlay` | Palco 9:16 com uma caixa por elemento do HUD, escala e visibilidade, salva o layout | `/api/overlay/layout` |
+
+São **28 componentes**, e `panel/test/fiacao.test.mjs` conta os arquivos desta
+pasta contra este número e cobra que cada um seja montado por alguém. O número
+aparece nos dois lugares de propósito: componente que ninguém monta passa no
+build calado, e tabela que envelhece deixa de ser a lista.
 
 ## Regras
 - `CartaoDeSlot` é o componente mais importante do produto. Ele precisa mostrar
@@ -94,22 +100,32 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
   o preenche, porque o que muda entre uma plataforma e outra é a foto, não a
   dificuldade. Peça que derruba o jogador faria escolher textura virar escolha
   de jogabilidade.
-- O painel tem 7 páginas: **Ao vivo** (6 slots, monitor, testador),
+- O painel tem 8 páginas: **Ao vivo** (os slots do preset, monitor, testador),
   **Presentes** (a tabela de movimento do ADR-016), **Configurar**
   (conta, presets, modalidade, look, mapa, prévia e acervo), **Jogo** (abrir no
   Studio e testar as 20 animações), **Overlay** (as URLs para o OBS e o LIVE
-  Studio), **Histórico** (lives passadas) e **Log**.
-  "Presentes" fica ao lado de "Ao vivo" porque é a irmã dos 6 slots: eles dizem
+  Studio), **Estúdio** (onde cada elemento do overlay fica na tela, ADR-015),
+  **Histórico** (lives passadas) e **Log**.
+  "Estúdio" fica colada em "Overlay" porque as duas respondem à mesma pergunta
+  em ordem: primeiro qual URL colar no OBS, depois como arrumar o que ela
+  desenha. Separar as duas faria o streamer procurar o layout na aba que já
+  tinha aberto para pegar o link.
+  "Presentes" fica ao lado de "Ao vivo" porque é a irmã dos slots: eles dizem
   o que ANIMA, ela diz quanto o resto do catálogo ANDA.
   "Ao vivo" é a de abertura, e é
-  inegociável que ela carregue os 6 slots: o 02_DESIGN_SYSTEM exige os seis lado
-  a lado e sempre visíveis. O que foi para "Configurar" é o que já era pré-live
-  e trava com a sessão rodando, então sair da tela principal não custa nada.
+  inegociável que ela carregue os slots do preset: o 02_DESIGN_SYSTEM exige os
+  **seis primeiros lado a lado e sempre visíveis**, numa grade fixa de seis
+  colunas que nunca quebra. Os extras (posição 7 em diante, R1.1) caem em linhas
+  abaixo e podem exigir rolagem — a regra vale literal para os seis, e é por
+  isso que a grade não pode virar `auto-fill`. O que foi para "Configurar" é o
+  que já era pré-live e trava com a sessão rodando, então sair da tela principal
+  não custa nada.
   "Histórico" é a única página que olha para trás, e por isso fica longe de
   "Ao vivo": nada nela serve durante a transmissão.
-- **`AvisoDeVitoria` é a única coisa que pode empurrar os 6 slots para baixo**,
-  e só enquanto durar a decisão que o jogo está esperando (R6). É também o
-  único aviso do painel sem tempo de tela: ele fica até o streamer reiniciar,
+- **`AvisoDeVitoria` é a única coisa que pode empurrar os seis primeiros slots
+  para baixo**, e só enquanto durar a decisão que o jogo está esperando (R6).
+  É também o único aviso do painel sem tempo de tela: fica até o streamer
+  reiniciar,
   porque é exatamente essa a regra — chegar no topo não recomeça sozinho.
 - `ResumoDaLive` é montado por duas páginas com o mesmo objeto: pelo "Ao vivo"
   logo depois do Stop (F5.5), e pelo "Histórico" sobre uma live passada. O
@@ -136,6 +152,23 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 - `PainelDeOverlay` existe porque a cutscene falha **calada**: sem o arquivo,
   o OBS mostra um retângulo transparente e nada reclama. A aba diz se o vídeo
   está no disco ANTES da live, que é o único momento em que dá para resolver.
+- **`EstudioDeOverlay` não desenha conteúdo ao vivo.** Cada elemento é uma caixa
+  com o nome legível dele e mais nada — nem placar, nem ícone de presente, nem
+  contagem. A tela existe para POSICIONAR, e uma segunda cópia do HUD dentro do
+  painel envelheceria sozinha: bastaria alguém mexer na página do overlay para o
+  Estúdio passar a mostrar um jogo que não é mais o que vai ao ar, sem nada
+  quebrar. A conferência de verdade é o overlay aberto no OBS, que se ajusta ao
+  vivo pelo evento SSE `layout` (ADR-015).
+- **As posições padrão vêm da rota, nunca escritas no componente.** O catálogo
+  dos oito elementos — id, rótulo, posição padrão, tamanho — mora na ponte, ao
+  lado do CSS que ele espelha, e chega em `GET /api/overlay/layout`. Número de
+  geometria do overlay dentro do painel seria a terceira cópia dos mesmos
+  valores, e a única sem teste olhando.
+- **A faixa da cam aparece sombreada, e caixa em cima dela é avisada.** Sobre a
+  cam não se desenha nada (02_DESIGN_SYSTEM, seção C, e ADR-015): a proporção
+  muda de cena para cena e o que está ali cobre o rosto do streamer. O aviso é
+  do Estúdio porque é o único lugar onde alguém está olhando para a posição —
+  no OBS, quem descobre é a plateia.
 - `TabelaDeMovimento` mostra o catálogo INTEIRO, e por isso ela é a única lista
   do painel que abre parcial: filtro e busca primeiro, 100 linhas por vez
   depois. São 670 presentes, e montar 670 campos editáveis trava a tela de quem

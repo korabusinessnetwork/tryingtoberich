@@ -1,0 +1,247 @@
+/* O estúdio de overlay.
+
+   Tela de CONFIGURAÇÃO, como a aba de overlay: o streamer vem aqui antes da
+   live, arruma a cena uma vez e não volta. Por isso ela pode ocupar espaço e
+   explicar — ao contrário da página Ao vivo, olhada por 2 segundos.
+
+   Nenhum hex literal: toda cor vem de tokens.css (02_DESIGN_SYSTEM). */
+
+.estudio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  padding: var(--espaco);
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-superficie);
+}
+
+.estudio-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.estudio-titulo {
+  margin: 0;
+  font-size: 15px;
+}
+
+.estudio-etiqueta,
+.estudio-nota {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--painel-texto-secundario);
+}
+
+/* Palco à esquerda, controles à direita. Abaixo de 900px eles empilham: o
+   painel vive numa segunda tela, que às vezes é meia tela. */
+.estudio-mesa {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: var(--espaco);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .estudio-mesa { grid-template-columns: 1fr; }
+}
+
+/* O palco é a tela do OBS em miniatura. `aspect-ratio` em vez de altura fixa
+   porque a conversão de pixel para porcentagem lê a medida real na hora do
+   arrasto — o palco pode ter qualquer largura, desde que a proporção seja a
+   mesma 9:16 que a página desenha. */
+.estudio-palco {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  width: 100%;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+  /* Caixa arrastada até a borda não pode transbordar por cima dos controles. */
+  overflow: hidden;
+  /* Sem isto o navegador rola a página em vez de arrastar a caixa no toque. */
+  touch-action: none;
+}
+
+/* A faixa da cam: sombreada e listrada, porque "aqui não" precisa ser visível
+   de relance e não pode depender de cor sozinha (ADR-015). */
+.estudio-cam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 4px;
+  border-bottom: var(--borda);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--painel-superficie),
+    var(--painel-superficie) 6px,
+    var(--painel-fundo) 6px,
+    var(--painel-fundo) 12px
+  );
+  pointer-events: none;
+}
+
+.estudio-cam-rotulo {
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--painel-texto-secundario);
+}
+
+.estudio-caixa {
+  position: absolute;
+  /* A origem no canto superior esquerdo é a mesma do `x`/`y` guardado: girar
+     ou escalar a partir do centro faria a caixa desenhada não bater com o
+     número que o arquivo guarda. */
+  transform-origin: top left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 4px;
+  overflow: hidden;
+  border: var(--borda);
+  border-radius: var(--raio);
+  border-color: var(--painel-texto-secundario);
+  background: var(--painel-superficie);
+  color: var(--painel-texto-primario);
+  cursor: grab;
+  user-select: none;
+}
+
+.estudio-caixa:focus-visible {
+  outline: 2px solid var(--estado-vitoria);
+  outline-offset: 1px;
+}
+
+/* Quem foi mexido se distingue de quem está no padrão — é o que diz, sem
+   olhar a lista, o que este arquivo de layout vai guardar. */
+.estudio-caixa-movida { border-color: var(--estado-vitoria); }
+
+.estudio-caixa-arrastando {
+  cursor: grabbing;
+  border-color: var(--painel-texto-primario);
+}
+
+.estudio-caixa-oculta {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.estudio-caixa-nome {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.estudio-caixa-marca {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--painel-texto-secundario);
+}
+
+/* Uma linha por elemento: nome, onde está, tamanho, visível, voltar. */
+.estudio-controles {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.estudio-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--alvo-minimo);
+  padding: 4px 12px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  background: var(--painel-fundo);
+}
+
+.estudio-linha-nome {
+  flex: 1 1 120px;
+  font-weight: 600;
+}
+
+.estudio-linha-posicao {
+  flex: none;
+  min-width: 110px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--painel-texto-secundario);
+}
+
+/* O aviso do pulo ocupa a linha inteira, embaixo do resto: ele é uma frase, e
+   espremido entre o controle de tamanho e a caixinha de visível seria lido
+   como rótulo de campo. */
+.estudio-linha-ancora {
+  flex: 1 0 100%;
+  order: 9;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--painel-texto-secundario);
+}
+
+.estudio-linha-escala,
+.estudio-linha-visivel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+.estudio-linha-escala input[type="range"] {
+  width: 90px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.estudio-linha-legenda { white-space: nowrap; }
+
+.estudio-linha-valor {
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+  color: var(--painel-texto-primario);
+}
+
+.estudio-linha-visivel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+}
+
+.estudio-linha-voltar {
+  flex: none;
+  min-width: var(--alvo-minimo);
+  padding: 0;
+}
+
+.estudio-aviso { margin: 0; }
+
+.estudio-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.estudio-salvar { min-width: 140px; }

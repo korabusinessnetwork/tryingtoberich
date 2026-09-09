@@ -87,6 +87,7 @@ export function CartaoDeSlot({
   slot,
   presente,
   animacao,
+  ehExtra,
   aoEditarPresente,
   aoEditarAnimacao,
   aoMudar,
@@ -101,20 +102,48 @@ export function CartaoDeSlot({
   const posicao = slot?.posicao ?? "—";
   const vazio = !slot || slot.vazio === true || slot.presenteId == null;
 
-  // R1.3 — slot vazio é estado válido, não é buraco nem erro. O cartão explica
-  // o que custa deixá-lo assim (ADR-007: presente fora dos 6 é descartado) e
-  // oferece o caminho de saída num alvo grande.
+  //[[ Para um EXTRA, "Limpar" e "Remover de vez" são a mesma operação.
+  //
+  // O preset guarda os slots num array e não tem como gravar "posição 7,
+  // vazia": o schema exige presente, animação, delta e intensidade. Limpar já
+  // tirava o slot do array — o que mudou é a consequência, porque a grade
+  // agora vai até a maior posição usada: tirar o extra do topo faz o cartão
+  // sumir na hora. Dois botões que chamam a mesma coisa na tela principal
+  // custariam um clique errado por live; o que muda é o RÓTULO, que passa a
+  // dizer o que de fato acontece. ]]
+  const rotuloDeLimpar = ehExtra ? "Remover" : "Limpar";
+
+  // R1.3 — slot vazio é estado válido, não é buraco nem erro. O cartão diz o
+  // que acontece com o presente que fica de fora e oferece a saída num alvo
+  // grande.
   if (vazio) {
     return (
       <section className="cartao cartao-slot cartao-slot-vazio" aria-label={`Slot ${posicao}, vazio`}>
         <header className="cartao-slot-topo">
-          <span className="cartao-slot-posicao">{posicao}</span>
-          <span className="cartao-slot-rotulo">Vazio</span>
+          <span className={`cartao-slot-posicao${ehExtra ? " cartao-slot-posicao-extra" : ""}`}>
+            {posicao}
+          </span>
+          <span className="cartao-slot-rotulo">{ehExtra ? "Extra vazio" : "Vazio"}</span>
         </header>
+        {/* O texto antigo dizia que presente fora dos 6 era descartado. Isso
+            deixou de ser verdade no ADR-016: a tabela de movimento move a
+            torre com o catálogo inteiro, e o slot passou a ser o lugar de dar
+            animação e delta PRÓPRIOS a um presente. Manter a frase velha faria
+            o streamer preencher slot por medo de perder presente. */}
         <p className="cartao-slot-explicacao secundario">
-          Slot vazio é válido. Só lembre que presente fora dos 6 slots é descartado e
-          aparece apenas no contador de não mapeados.
+          Slot vazio é válido. O presente que ficar de fora não some: ele continua movendo a
+          torre pela tabela de movimento. O slot é o que dá a ele animação, delta e
+          intensidade próprios.
         </p>
+        {/* Buraco no meio dos extras: a posição continua existindo porque ela
+            viaja para os eventos da sessão, e renumerar reescreveria a que slot
+            um evento já gravado se refere. Sem esta linha o cartão parece preso. */}
+        {ehExtra && (
+          <p className="cartao-slot-explicacao secundario">
+            Esta posição sobrou de um extra removido. Ela some sozinha quando os extras acima
+            dela saírem.
+          </p>
+        )}
         <button type="button" className="cartao-slot-preencher" onClick={aoEditarPresente}>
           Escolher presente
         </button>
@@ -140,6 +169,12 @@ export function CartaoDeSlot({
     avisoDeDirecao({ animacao, delta }),
   ].filter(Boolean);
 
+  // AUSENTE = true. Todo preset gravado antes deste campo existir continua
+  // aparecendo na legenda do overlay — e abrir um preset velho e salvar sem
+  // tocar em nada não pode apagar a legenda em silêncio. Só `false` explícito
+  // tira, e é isso que o painel grava ao criar um extra.
+  const mostraNoOverlay = slot.mostrarNoOverlay !== false;
+
   const rascunhoInvalido = rascunho !== null && lerDelta(rascunho) === null;
   const guardadoInvalido = lerDelta(delta) === null;
   const textoDoCampo = rascunho ?? formatarDelta(delta);
@@ -163,13 +198,24 @@ export function CartaoDeSlot({
       aria-label={`Slot ${posicao}`}
     >
       <header className="cartao-slot-topo">
-        <span className="cartao-slot-posicao">{posicao}</span>
+        <span className={`cartao-slot-posicao${ehExtra ? " cartao-slot-posicao-extra" : ""}`}>
+          {posicao}
+        </span>
+        {/* Texto, não só a borda tracejada: cor e forma sozinhas nunca decidem
+            nada neste painel, e "este não é um dos 6 do painel de desejos" é
+            justamente o que explica o rótulo Remover e o overlay desmarcado. */}
+        {ehExtra && <span className="cartao-slot-extra-marca">extra</span>}
         {/* Marca periférica: o streamer vê que existe aviso sem ler o aviso. */}
         {avisos.length > 0 && (
           <span className="cartao-slot-alerta" aria-hidden="true">!</span>
         )}
-        <button type="button" className="cartao-slot-limpar" onClick={aoLimpar}>
-          Limpar
+        <button
+          type="button"
+          className="cartao-slot-limpar"
+          onClick={aoLimpar}
+          aria-label={`${rotuloDeLimpar} o slot ${posicao}`}
+        >
+          {rotuloDeLimpar}
         </button>
       </header>
 
@@ -307,6 +353,21 @@ export function CartaoDeSlot({
           ))}
         </div>
       </div>
+
+      {/* Fica no rodapé, junto da intensidade, e nunca acima do delta: o delta
+          é quem tem de ganhar a disputa de atenção nos 2 segundos de olhada.
+          Isto aqui é decisão de montagem, feita antes da live. */}
+      <label className="cartao-slot-overlay">
+        <input
+          type="checkbox"
+          checked={mostraNoOverlay}
+          onChange={(evento) => aoMudar?.({ mostrarNoOverlay: evento.target.checked })}
+          aria-label={`O slot ${posicao} aparece na legenda do overlay`}
+        />
+        <span className="cartao-slot-legenda secundario">
+          {mostraNoOverlay ? "Aparece no overlay" : "Fora do overlay"}
+        </span>
+      </label>
 
       {avisos.length > 0 && (
         <div className="cartao-slot-avisos">

@@ -20,6 +20,7 @@ import { promisify } from "node:util";
 
 import { RAIZ } from "../bridge/src/repos/arquivo.mjs";
 import { FATOR_SALTO_VERTICAL } from "../bridge/src/dominio/regras.mjs";
+import { REGRAS } from "../bridge/src/config.mjs";
 import { criarValidador } from "../bridge/src/repos/schemas.mjs";
 import { acharParser, comoInstalarParser } from "../scripts/verificar-luau.mjs";
 
@@ -542,6 +543,181 @@ test("o estado que o jogo PUBLICA é o estado que o schema aceita", async () => 
   );
 });
 
+test("`publicarEstado` é declarado ANTES de quem o chama: nome de função só resolve para trás em Lua", async () => {
+  //[[ Bug real, achado na auditoria de 2026-09-04.
+  //
+  // `encerrarRodada` chamava `publicarEstado()` no fim da contagem, ~60 linhas
+  // antes da declaração. Em Lua isso não é erro de sintaxe: vira busca de
+  // GLOBAL, que é nil, e estoura em tempo de execução — em toda rodada. A linha
+  // seguinte, `cobrarProximaDaFila()`, nunca rodava: um donate de 6 derrotas
+  // cobrava uma e perdia cinco (R4, ADR-014). Passava por ruído porque a torre
+  // reiniciava do mesmo jeito, por outro caminho.
+  //
+  // O arquivo já tinha o remédio para `encerrarRodada` e `cobrarProximaDaFila`:
+  // declaração adiantada no topo.
+  //
+  // A varredura cobre TODO módulo de server/ e shared/, e não só o sessao.lua:
+  // dois dias depois o mesmo erro apareceu no portal.lua, num helper novo que
+  // chamava `bloco` antes da declaração. Guarda que só olha o arquivo onde o
+  // bug apareceu da primeira vez não é guarda, é lembrança.
+  const cedoDemais = [];
+
+  for (const subdir of ["server", "shared"]) {
+    const arquivos = (await readdir(path.join(RAIZ, "game", "src", subdir))).filter((f) => f.endsWith(".lua"));
+    assert.ok(arquivos.length > 0, `nenhum .lua em game/src/${subdir}`);
+
+    for (const arquivo of arquivos) {
+      const linhas = semComentarios(await lerJogo(subdir, arquivo)).split("\n");
+
+      // Onde cada nome passa a existir: `local function f()`, `function f()` de
+      // uma adiantada, ou a própria declaração adiantada `local f`.
+      const declaradaEm = new Map();
+      linhas.forEach((linha, i) => {
+        const m = /^\s*(?:local\s+)?function\s+([a-zA-Z_][\w]*)\s*\(/.exec(linha)
+          ?? /^\s*local\s+([a-zA-Z_][\w]*)\s*$/.exec(linha);
+        if (m && !declaradaEm.has(m[1])) declaradaEm.set(m[1], i);
+      });
+
+      linhas.forEach((linha, i) => {
+        for (const m of linha.matchAll(/(?:^|[^\w.:])([a-zA-Z_][\w]*)\s*\(/g)) {
+          const nome = m[1];
+          if (!declaradaEm.has(nome)) continue;          // não é função local daqui
+          if (/^\s*(?:local\s+)?function\s/.test(linha)) continue;  // a própria declaração
+          if (declaradaEm.get(nome) > i) {
+            cedoDemais.push(`${subdir}/${arquivo}: ${nome} (linha ${i + 1}, declarada na ${declaradaEm.get(nome) + 1})`);
+          }
+        }
+      });
+    }
+  }
+
+  assert.deepEqual(cedoDemais, [], "chamada antes da declaração vira global nil e estoura em tempo de execução");
+});
+
+test("o portal se quebra conforme apanha, e não só no golpe que o derruba", async () => {
+  //[[ Pedido do dono, em dois tempos: "quando ele for sendo atingido por
+  // animações ele tem que ir se quebrando conforme a vida dele", e depois
+  // "coloca um esquema de rachaduras também".
+  //
+  // A moldura era quatro blocos inteiros: a única pista de dano era o vazio
+  // esmaecendo, e o espectador pagava para quebrar uma coisa que não se
+  // quebrava. Agora ela é montada em tijolos, cada golpe derruba a fatia que a
+  // vida perdida não sustenta mais, e o que fica de pé racha antes de cair. ]]
+  const portal = semComentarios(await lerJogo("server", "portal.lua"));
+
+  assert.match(portal, /local function parede\(/, "a moldura precisa ser fatiada para poder quebrar");
+  assert.match(portal, /local function estilhacar\(/, "falta o pedaço se soltando");
+  assert.match(portal, /local function rachar\(/, "falta a rachadura antes da queda");
+  assert.match(portal, /local function desmoronar\(/, "falta quem liga o estrago à vida");
+
+  // A conta é sobre a VIDA, não sobre o número de golpes: dois presentes de -10
+  // e um de -20 têm que deixar o portal no mesmo estado.
+  const desmoronar = portal.slice(portal.indexOf("local function desmoronar"));
+  const corpo = desmoronar.slice(0, desmoronar.indexOf("\nend\n"));
+  assert.match(corpo, /#estado\.tijolos \* restante/, "a queda tem que ser proporcional à vida restante");
+  assert.match(corpo, /rachar\(/, "o que fica de pé precisa rachar");
+
+  // E o dano chama o desmoronamento, senão nada disso aparece na tela.
+  const danificar = portal.slice(portal.indexOf("function Portal.danificar"));
+  assert.match(danificar.slice(0, danificar.indexOf("\nend\n")), /desmoronar\(restante\)/, "danificar não desmorona");
+
+  // O atalho pago derruba tudo de uma vez: dar a rodada com a moldura de pé
+  // deixaria o donate de derrota sem consequência na tela.
+  const quebrar = portal.slice(portal.indexOf("function Portal.quebrar"));
+  assert.match(quebrar.slice(0, quebrar.indexOf("\nend\n")), /desmoronar\(0\)/, "quebrar não derruba a moldura");
+
+  // O portal do TOPO é cenário: monta a mesma geometria e não entra na lista de
+  // quem apanha, senão a primeira pancada lá embaixo o esburacaria também.
+  assert.match(portal, /montarPortal\(Portal\.NOME_DO_FINAL, posicaoDaBase, beirada\)/,
+    "o portal do topo não pode receber o coletor de tijolos");
+});
+
+test("o efeito da animação ACOMPANHA o boneco durante o movimento", async () => {
+  //[[ Pedido do dono: "as animações devem seguir o boneco até ele chegar na
+  // última plataforma". Elas não seguiam. Só cinco das 32 se soldam no
+  // personagem; as outras montam um pivô ancorado na posição de partida, e o
+  // Tween leva o boneco embora — com a tabela de movimento (ADR-016), centenas
+  // de andares acima. O efeito ficava para trás, no andar de onde ele saiu.
+  //
+  // A correção mora em efeitos.lua para os 32 módulos não mudarem: quem cria
+  // pivô durante o ciclo entra num laço que reescreve o CFrame dele a cada
+  // frame. Este teste trava as três pontas da fiação. ]]
+  const efeitos = semComentarios(await lerJogo("shared", "efeitos.lua"));
+  assert.match(efeitos, /function Efeitos\.acompanharBoneco/, "falta como armar o boneco do ciclo");
+  assert.match(efeitos, /RunService\.Heartbeat:Connect/, "o pivô precisa ser reposicionado a cada frame");
+  assert.match(efeitos, /acompanhar\(pivo\)/, "todo pivô criado no ciclo tem que entrar na lista");
+
+  // Soldar resolveria o transporte e mataria o giro; por isso o pivô continua
+  // ancorado e o laço faz as duas coisas. Se `girar` voltar a tweenar um pivô
+  // que anda, o efeito treme atrás do boneco.
+  const girar = efeitos.slice(efeitos.indexOf("function Efeitos.girar"));
+  const corpoDoGirar = girar.slice(0, girar.indexOf("\nend"));
+  assert.match(corpoDoGirar, /acompanhando\[pivo\]/, "girar não checa se o pivô acompanha o boneco");
+
+  const movimento = semComentarios(await lerJogo("server", "movimento.lua"));
+  assert.match(movimento, /Efeitos\.acompanharBoneco\(raiz, direcao\)/, "o movimento não arma o acompanhamento com a direção");
+  assert.match(movimento, /direcao = contexto\.posicaoDestino - raiz\.Position/, "sem a direção não há como saber o que é 'à frente'");
+
+  //[[ E o efeito não pode ser desenhado DENTRO do boneco. As animações de
+  // subida nascem no pé dele — o empurrão ficava para trás quando ninguém
+  // acompanhava —, e com o pivô acompanhando esse mesmo offset zero põe a peça
+  // dentro do corpo. A folga empurra só o que falta para sair, na linha de
+  // viagem, preservando o desvio lateral que a animação escolheu. ]]
+  assert.match(efeitos, /FOLGA_A_FRENTE/, "falta a folga que tira o efeito de dentro do boneco");
+  const acompanhar = efeitos.slice(efeitos.indexOf("local function acompanhar(pivo)"));
+  const corpoDoAcompanhar = acompanhar.slice(0, acompanhar.indexOf("\nend"));
+  assert.match(corpoDoAcompanhar, /deslocamento:Dot\(direcaoEmFoco\)/, "a folga tem que medir o avanço na linha de viagem");
+  assert.match(corpoDoAcompanhar, /lado = -1/, "o efeito precisa escolher um lado na criação");
+
+  //[[ E o lado tem que valer a CADA FRAME, não só na criação. `girar` recebe um
+  // `avanco`, e a varredura ao longo da linha de viagem levava o pivô de um
+  // lado ao outro passando por dentro do boneco — parado no mundo isso nunca se
+  // via, porque ele já tinha ido embora. ]]
+  const passo = efeitos.slice(efeitos.indexOf("local function passoDoAcompanhamento"));
+  const corpoDoPasso = passo.slice(0, passo.indexOf("\nend"));
+  assert.match(corpoDoPasso, /seguidor\.lado/, "o laço tem que manter o efeito do lado escolhido");
+  assert.match(corpoDoPasso, /FOLGA_A_FRENTE \* seguidor\.lado/, "a folga do laço é a mesma da criação, com sinal");
+  assert.match(movimento, /Efeitos\.acompanharBoneco\(nil\)/, "sem desarmar, a animação seguinte herda o boneco");
+
+  // E o laço precisa morrer sozinho: um Heartbeat por live que ninguém
+  // desconecta é a regra 1 do efeitos.lua ao contrário.
+  assert.match(efeitos, /pararLaco\(\)/, "o laço precisa parar quando não há mais pivô acompanhando");
+
+  //[[ O efeito fica ONDE A ANIMAÇÃO O PÔS — à frente do boneco, na linha de
+  // viagem — e não onde ele estiver quando `girar` for chamado. A primeira
+  // versão recalculava o deslocamento dentro do `girar`, e entre criar o pivô e
+  // girar o Tween já tinha andado: a conta dava um deslocamento menor que o
+  // pedido, às vezes negativo, e o efeito entrava DENTRO do boneco. ]]
+  const trechoDoSeguidor = corpoDoGirar.slice(corpoDoGirar.indexOf("acompanhando[pivo]"));
+  assert.ok(
+    !/seguidor\.deslocamento\s*=/.test(trechoDoSeguidor),
+    "girar não pode remexer no deslocamento: ele foi medido na criação, com o boneco ainda parado",
+  );
+  assert.match(efeitos, /deslocamento = pivo\.Position - raiz\.Position/, "o deslocamento é medido uma vez, na criação");
+});
+
+test("a checagem de chamada adiantada morde de verdade", () => {
+  // Guarda que nunca acusa passa sempre, e este projeto já foi mordido por isso.
+  const fonteFalsa = ["local function a()", "\tb()", "end", "local function b()", "end", ""].join("\n");
+  const linhas = fonteFalsa.split("\n");
+  const declaradaEm = new Map();
+  linhas.forEach((linha, i) => {
+    const m = /^\s*(?:local\s+)?function\s+([a-zA-Z_][\w]*)\s*\(/.exec(linha)
+      ?? /^\s*local\s+([a-zA-Z_][\w]*)\s*$/.exec(linha);
+    if (m && !declaradaEm.has(m[1])) declaradaEm.set(m[1], i);
+  });
+  const cedoDemais = [];
+  linhas.forEach((linha, i) => {
+    for (const m of linha.matchAll(/(?:^|[^\w.:])([a-zA-Z_][\w]*)\s*\(/g)) {
+      const nome = m[1];
+      if (!declaradaEm.has(nome)) continue;
+      if (/^\s*(?:local\s+)?function\s/.test(linha)) continue;
+      if (declaradaEm.get(nome) > i) cedoDemais.push(nome);
+    }
+  });
+  assert.deepEqual(cedoDemais, ["b"], "a checagem tem que acusar a chamada adiantada de mentira");
+});
+
 test("a checagem de estado publicado morde de verdade", () => {
   // Guarda que nunca acusa passa sempre, e este projeto já foi mordido três
   // vezes por isso (o gate do painel, o teste de RemoteEvent, e o próprio bug
@@ -811,7 +987,10 @@ test("todo ScreenGui declara ZIndexBehavior.Sibling", async () => {
   // ZIndex (1) desaparece atrás do próprio pai (2). O vestiário abria como um
   // retângulo preto — 57 elementos construídos, nenhum visível, nenhum erro no
   // Output e nada para depurar.
-  const clientes = ["vestiario.client.lua", "ajustes.client.lua", "hud.client.lua", "flash.client.lua"];
+  // `hud.client.lua` saiu quando o HUD saiu do jogo (ADR-015). `torre.client.lua`
+  // entrou depois: a barra da torre voltou para dentro do jogo, porque no
+  // overlay ela só andava quando um estado chegava da ponte, a cada 2s.
+  const clientes = ["vestiario.client.lua", "ajustes.client.lua", "flash.client.lua", "torre.client.lua"];
 
   for (const arquivo of clientes) {
     const fonte = await lerJogo("client", arquivo);
@@ -1462,6 +1641,105 @@ test("o teto de plataformas é o MESMO no mapa e no estado do jogo", async () =>
     mapa.properties.marcos.items.properties.plataforma.maximum,
     teto,
     "marco acima do topo da torre não existe, e abaixo dele o topo não teria marco",
+  );
+
+  //[[ A SESSÃO entrou nesta trava depois de quebrar sozinha (auditoria de
+  // 2026-09-04). O teto dela ficou em 400 enquanto a torre foi para 1000, e o
+  // efeito era pior que o do estado: passar do andar 400 fazia TODA gravação
+  // falhar, e o Stop estourar em vez de devolver o resumo (F5.5) — deixando a
+  // ponte com uma sessão que não encerrava nem recomeçava.
+  //
+  // A varredura é recursiva porque o número aparece na raiz E dentro do resumo,
+  // e um teste que só olha a raiz deixa metade do arquivo sem guarda. ]]
+  const sessao = await ler("sessao.schema.json");
+  const tetosDaSessao = [];
+  const varrer = (no, caminho) => {
+    if (!no || typeof no !== "object") return;
+    for (const [chave, valor] of Object.entries(no)) {
+      if (/^plataforma(Referencia|Maxima)$/.test(chave) && valor && typeof valor === "object") {
+        tetosDaSessao.push({ onde: `${caminho}.${chave}`, teto: valor.maximum });
+      }
+      varrer(valor, `${caminho}.${chave}`);
+    }
+  };
+  varrer(sessao, "sessao");
+
+  assert.ok(tetosDaSessao.length >= 3, `esperava achar os campos de plataforma da sessão, achei ${tetosDaSessao.length}`);
+  for (const { onde, teto: doCampo } of tetosDaSessao) {
+    assert.equal(
+      doCampo,
+      teto,
+      `${onde} tem teto ${doCampo} e a torre vai até ${teto}: acima disso a sessão para de gravar e o Stop quebra`,
+    );
+  }
+
+  // E uma sessão no topo de uma torre inteira valida de verdade.
+  const { validar } = await criarValidador();
+  const exemplo = JSON.parse(await readFile(path.join(RAIZ, "data", "exemplos", "sessao-encerrada.json"), "utf8"));
+  assert.deepEqual(
+    validar("sessao", { ...exemplo, plataformaReferencia: teto, plataformaMaxima: teto }),
+    [],
+    "sessão no topo da torre mais alta tem que ser válida",
+  );
+});
+
+test("o teto de SLOT é o mesmo no preset, na sessão e no código das duas pontas", async () => {
+  //[[ Mesma classe de bug do teto de plataformas, no assunto ao lado.
+  //
+  // O 24 está escrito em seis lugares independentes e nada compara um com o
+  // outro: preset.slots.maxItems, preset.$defs.slot.posicao.maximum, o
+  // evento.slot.maximum da sessão, o regex de presentesPorSlot, o
+  // REGRAS.SLOTS_MAX da ponte e o SLOTS_MAX do painel. O comentário do próprio
+  // sessao.schema.json nomeia a consequência: subir o preset para 32 e deixar a
+  // sessão em 24 faz um presente do slot 25 gravar evento fora do contrato, e
+  // salvarSessao estoura `sessao_invalida` no Stop — com a live já acabada e
+  // nada gravado. É exatamente o que acabou de custar a gravação por causa de
+  // plataformaReferencia, e o teto do preset é o que manda. ]]
+  const ler = async (arquivo) =>
+    JSON.parse(await readFile(path.join(RAIZ, "data", "schemas", arquivo), "utf8"));
+
+  const preset = await ler("preset.schema.json");
+  const sessao = await ler("sessao.schema.json");
+
+  const teto = preset.properties.slots.maxItems;
+  assert.ok(Number.isInteger(teto), "o preset precisa declarar quantos slots cabem");
+
+  assert.equal(
+    preset.$defs.slot.properties.posicao.maximum,
+    teto,
+    `cabem ${teto} slots mas a posição vai até ${preset.$defs.slot.properties.posicao.maximum}: ` +
+      "ou sobra posição que não existe, ou falta posição para o último slot",
+  );
+
+  const doEvento = sessao.$defs.eventoAplicado.properties.slot.oneOf.find((forma) => forma.type === "integer");
+  assert.ok(doEvento, "o slot do evento da sessão precisa aceitar inteiro (e nulo, para o presente da tabela)");
+  assert.equal(
+    doEvento.maximum,
+    teto,
+    `o preset vai até o slot ${teto} e a sessão só grava até ${doEvento.maximum}: ` +
+      "um presente acima disso derruba a gravação inteira no Stop",
+  );
+
+  //[[ O regex é testado pelo COMPORTAMENTO, e não pelo texto.
+  //
+  // `^([1-9]|1[0-9]|2[0-4])$` e um teto 24 batem, mas quem sobe o teto tem que
+  // reescrever o regex à mão — e um regex quase certo (o clássico `2[0-9]`)
+  // passaria numa comparação de string e deixaria entrar chave inexistente. ]]
+  const chaveDeSlot = new RegExp(
+    Object.keys(sessao.$defs.resumo.properties.presentesPorSlot.patternProperties)[0],
+  );
+  assert.ok(chaveDeSlot.test(String(teto)), `presentesPorSlot recusa a chave "${teto}", que é o último slot do preset`);
+  assert.equal(
+    chaveDeSlot.test(String(teto + 1)),
+    false,
+    `presentesPorSlot aceita a chave "${teto + 1}", que é um slot que o preset não pode ter`,
+  );
+
+  assert.equal(
+    REGRAS.SLOTS_MAX,
+    teto,
+    `a ponte deixa o painel montar ${REGRAS.SLOTS_MAX} slots e o schema aceita ${teto}: ` +
+      "o excedente é recusado na gravação do preset, depois de o streamer já ter preenchido",
   );
 });
 

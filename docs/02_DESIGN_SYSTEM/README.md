@@ -10,7 +10,17 @@ falando. Ele olha o painel por 2 segundos por vez.
 - Tema escuro fixo. Fundo próximo de `#111`, superfície `#1B1B1B`.
 - Estado sempre visível e colorido: live conectada, jogo online, sessão rodando.
   Verde, âmbar e vermelho, com texto junto, nunca cor sozinha.
-- Os 6 slots ficam lado a lado, sempre visíveis, sem scroll. É a tela principal.
+- **Os 6 primeiros slots ficam lado a lado, sempre visíveis, sem scroll.** É a
+  tela principal. A regra continua literal para os seis, mesmo desde que o
+  preset passou a poder ter até 24 (R1, ADR-007, 2026-09-04): a grade é **fixa
+  em `repeat(6, minmax(0, 1fr))`**, os cartões comprimem, e a primeira linha
+  nunca quebra. Os extras, do 7 em diante, caem em linhas novas abaixo e podem
+  rolar — eles são configuração deliberada do streamer, não a leitura de canto
+  de olho.
+- **Trocar essa grade por `auto-fill` ou `auto-fit` quebra a regra acima.** Com
+  o preset cheio a linha reflui sozinha, os seis deixam de estar lado a lado e a
+  tela principal só se descobre errada durante a live. Está escrito aqui porque
+  é o tipo de "melhoria" que parece óbvia para quem chega depois.
 - Alvo de toque e clique com no mínimo 40px. O streamer clica com pressa.
 - Nada de animação decorativa. Transição só onde comunica mudança de estado.
 - Toda cor de marca vem de variável CSS, nunca literal no componente. Isso é o
@@ -56,18 +66,52 @@ porque é exatamente essa a regra do R6.
 
 ## C. Overlay do OBS (por cima da cam e do jogo, formato vertical)
 
-As mesmas regras da seção B, com uma tela a mais: a metade de cima é a **cam**,
-e o overlay é quem a veste. Referência: a live do CTFps7 que o dono mandou
-(ADR-015).
+Quase tudo que o espectador lê está aqui, por cima da captura (ADR-015, nota de
+2026-09-04). A seção B descreve o que o jogo desenhava; ele guardou **uma coisa
+só**, a barra da torre, porque ela precisa andar a cada degrau e no overlay só
+andaria a cada estado — de dois em dois segundos.
 
-- A tela tem dois andares, cam em cima e jogo embaixo, e o corte é da CENA do
-  OBS — vai na URL (`?cam=43`), não no preset.
-- Na cam: os cantos. Pote de moedas em cima à esquerda, ranking em cima à
-  direita, `TOP COMBO` e `TOP PRESENTE` embaixo nos cantos, `VS` embaixo no
-  centro. O rosto do streamer fica livre.
-- No jogo: legenda dos presentes no topo (positivos à esquerda, negativos à
-  direita, ícone e delta), barra da torre na lateral direita. O centro
-  continua sendo do boneco.
+- A tela tem dois andares, cam em cima e jogo embaixo, e o corte é da CENA —
+  vai na URL (`?cam=33`), não no preset.
+- **Sobre a cam não se desenha nada.** A proporção da cam muda de cena para
+  cena, e um `?cam=` errado punha caixa em cima do rosto do streamer. Com a cam
+  livre, errar o parâmetro desloca o conjunto e nunca cobre a pessoa.
+- No jogo, de cima para baixo: placar e barra `VS` na primeira faixa; legenda
+  dos presentes logo abaixo (positivos à esquerda, negativos à direita, ícone e
+  delta); portal no rodapé à esquerda; presente que chegou no meio à esquerda;
+  contagem e resultado no centro; aviso de seguidor no canto inferior direito.
+  A barra da torre fica na lateral direita, mas quem a desenha é o JOGO. O centro fica livre para o boneco,
+  menos no fim de rodada, quando a corrida acabou (mesma exceção da seção B).
+- **Essas posições são o PADRÃO, não a lei.** Desde o Estúdio de Overlay
+  (ADR-015, nota de 2026-09-04) o streamer move cada um dos oito elementos —
+  `placar`, `vs`, `legendaSubida`, `legendaDescida`, `portal`, `presente`,
+  `centro` e `seguidor` — pelo painel. O que está escrito acima é onde eles
+  nascem, e é para onde voltam quando o ajuste é apagado. A cena de cada
+  streamer deixa livre um canto diferente da tela; a ordem de leitura descrita
+  aqui continua sendo a recomendação, e a régua para julgar um layout novo.
+- **A coordenada é do palco, em porcentagem, pelo canto superior esquerdo.**
+  `x` e `y` de 0 a 100 sobre o palco 9:16 inteiro, `escala` de 0,5 a 2. Não é
+  pixel e não é `--u`: o palco muda de tamanho com a janela, e o layout salvo
+  precisa cair no mesmo ponto da TELA em qualquer captura.
+- **Mover um elemento o ancora pela ESQUERDA e pelo TOPO.** `legendaDescida`,
+  `portal` e `seguidor` nascem colados à direita ou à base — é o que os mantém
+  alinhados com a borda enquanto o conteúdo cresce. No primeiro arrastar eles
+  trocam de âncora e dão um pulo, do tamanho da diferença entre a largura real
+  do conteúdo e a da caixa desenhada no Estúdio. Não é bug: é o preço de
+  posicionar à mão, e aparece na hora, na tela onde se está arrastando.
+- **A faixa da cam aparece sombreada no Estúdio, e caixa em cima dela é
+  avisada.** A regra de não desenhar sobre a cam vale igual depois de o layout
+  virar do streamer — mais ainda, porque agora é possível violá-la com um
+  arrastar. O aviso não bloqueia salvar: quem sabe que a cena tem a webcam
+  menor do que o `?cam=` pode querer aquele espaço.
+- **A legenda mostra só o que está marcado**, não todo slot do preset
+  (`mostrarNoOverlay`, R1.6). Ela é uma faixa horizontal desenhada para meia
+  dúzia de ícones; com o preset podendo ir a 24 (R1), mandar todos para lá
+  transborda a faixa e cobre o boneco, que é o que o espectador precisa ver.
+  Slot fora da legenda continua valendo no jogo — muda a tela, não a mecânica.
+- **Nada de doador e nada de moeda.** Ranking, pote de moedas, maior combo e
+  maior presente existiram e saíram: a live não pode correr risco de restrição.
+  O que aparece é o PRESENTE e o que ele faz com a torre.
 - Rótulos curtíssimos e números grandes, texto claro com contorno escuro —
   como na seção B. Nada crítico nos 15% inferiores.
 - Tamanhos numa unidade de PALCO (`--u`, 1% da largura de um palco 9:16),

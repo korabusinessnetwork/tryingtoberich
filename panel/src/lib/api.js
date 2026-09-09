@@ -217,6 +217,18 @@ export const api = {
    */
   overlay: () => chamar("/api/overlay"),
 
+  /**
+   * O estúdio de overlay: o catálogo dos elementos do HUD e o que já foi movido.
+   *
+   * O catálogo — id, rótulo, posição padrão e tamanho de cada elemento — vem da
+   * PONTE junto do layout salvo. O painel não conhece a geometria da página do
+   * OBS: se ela mudar, o estúdio acompanha sem ninguém tocar aqui.
+   */
+  layoutDoOverlay: () => chamar("/api/overlay/layout"),
+
+  /** Só o que o streamer mexeu viaja: elemento ausente é a posição padrão da página. */
+  salvarLayoutDoOverlay: (elementos) => chamar("/api/overlay/layout", json("PUT", { elementos })),
+
   /** A pasta de cutscenes, para o preset escolher: a pasta É a lista (ADR-014). */
   cutscenes: () => chamar("/api/cutscenes"),
 

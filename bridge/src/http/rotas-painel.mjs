@@ -19,6 +19,8 @@ import { listarCenarios } from "../repos/fixtures.mjs";
 import { anotarItemDoAcervo, carregarAcervo } from "../repos/acervo.mjs";
 import { listarResumos } from "../repos/sessoes.mjs";
 import { listarCutscenes } from "../repos/cutscenes.mjs";
+import { carregarLayout } from "../repos/overlay.mjs";
+import { CAM_PADRAO, ELEMENTOS_DO_OVERLAY } from "../dominio/overlay-layout.mjs";
 
 /**
  * A escolha do preset ativo, dita junto de "o arquivo está lá?" (ADR-014).
@@ -389,6 +391,53 @@ export function rotasDoPainel(nucleo) {
       ...pasta,
       emUso: cutscenesEmUso(nucleo.estado.cutscenes, pasta.cutscenes),
     });
+  });
+
+  /**
+   * O Estúdio de Overlay: o que o streamer mexeu, e o CATÁLOGO do que existe.
+   *
+   * O catálogo vai junto de propósito. As posições padrão são o CSS da página
+   * do HUD, e o painel não pode ter uma segunda cópia delas: duas escritas dos
+   * mesmos números divergem caladas, e o sintoma seria a caixa cair no estúdio
+   * num lugar e no OBS em outro. A `cam` acompanha porque é ela que separa a
+   * faixa da câmera do resto do palco, e nada deve ser desenhado lá (ADR-015).
+   *
+   * Os NOMES das três chaves são lidos em panel/src/components/EstudioDeOverlay.jsx:
+   * `catalogo` é o que existe, `elementos` é só a exceção que o streamer salvou.
+   * Já saíram trocados uma vez — o catálogo indo como `elementos` — e o efeito
+   * foi mudo e total: o estúdio caía no estado vazio, nenhuma caixa era
+   * desenhada, e a cena de ontem nunca voltava. Nada quebra, a feature só não
+   * existe na tela.
+   */
+  rotas.get("/overlay/layout", async (req, res) => {
+    const layout = await carregarLayout();
+    res.json({ catalogo: ELEMENTOS_DO_OVERLAY, elementos: layout.elementos, cam: CAM_PADRAO });
+  });
+
+  /**
+   * Salva a cena inteira. Quem valida contra o schema é o repositório (ADR-003)
+   * — a rota só traduz o corpo e devolve o que ficou gravado.
+   *
+   * O `streamerId` é preenchido AQUI, como no PUT de preset: o painel não
+   * conhece o tenant e não deve conhecer (ADR-003). Por isso ele vem DEPOIS do
+   * spread e não antes: antes, um `streamerId` no corpo vencia o da ponte, e
+   * qualquer requisição gravava o tenant que quisesse em disco.
+   *
+   * E `elementos` é EXIGIDO. A gravação é substituição total por decisão
+   * documentada, então um corpo `{}` — truncado, retry de fetch abortado, bug
+   * no painel — significaria "apague a cena inteira", com escrita atômica e sem
+   * confirmação. Apagar continua possível, mas dito: `{ elementos: {} }`, que é
+   * o que o botão "voltar ao padrão" já manda.
+   */
+  rotas.put("/overlay/layout", async (req, res) => {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      throw new ErroDeDominio("layout_invalido", "O estúdio manda um objeto com os elementos que você mexeu.", { status: 400 });
+    }
+    const { elementos } = req.body;
+    if (!elementos || typeof elementos !== "object" || Array.isArray(elementos)) {
+      throw new ErroDeDominio("layout_invalido", "O estúdio manda { elementos }: um objeto por elemento que você mexeu.", { status: 400 });
+    }
+    res.json(await nucleo.definirLayoutDoOverlay({ ...req.body, streamerId: REGRAS.STREAMER_ID }));
   });
 
   /**

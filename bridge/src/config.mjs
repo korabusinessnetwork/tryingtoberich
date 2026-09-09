@@ -34,8 +34,16 @@ export const REGRAS = Object.freeze({
    * pública, que é para o que o limite existe.
    */
   LIMITE_JOGO_POR_MINUTO: 300,
-  /** R1 — seis slots, sempre. O limite é o formato da TikTok, não técnico. */
-  SLOTS: 6,
+  /**
+   * R1 — seis é o PADRÃO, 24 é o teto.
+   *
+   * O 6 continua sendo o que a TikTok exibe como painel de desejos, e é por isso
+   * que ele é o que o painel abre. O dono pediu poder acrescentar mais, então
+   * deixou de ser limite: 24 é o teto do painel, escolhido para a legenda do
+   * overlay ainda caber e não por restrição técnica.
+   */
+  SLOTS_PADRAO: 6,
+  SLOTS_MAX: 24,
   /** R2 e biblioteca de animações — teto de intensidade. */
   INTENSIDADE_MAX: 5,
   /** Fase 1 — streamerId existe desde já, mas é sempre "local" (ADR-003). */

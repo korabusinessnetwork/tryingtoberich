@@ -15,7 +15,7 @@
 
 import { REGRAS } from "../config.mjs";
 import { log } from "../log.mjs";
-import { normalizarCatalogo, normalizarPresente } from "./normalizador.mjs";
+import { normalizarCatalogo, normalizarPresente, sanitizarNome } from "./normalizador.mjs";
 
 /** Estados que o painel entende. Ver o evento `estado` do SSE em 07_APIS. */
 export const ESTADO = Object.freeze({
@@ -39,6 +39,7 @@ export class ConectorTikTok {
     aoEvento = semAcao,
     aoEstado = semAcao,
     aoCatalogo = semAcao,
+    aoSeguidor = semAcao,
     // Injetável para o teste não depender do pacote nem da rede.
     abrirConexao = abrirConexaoReal,
     backoffMs = REGRAS.BACKOFF_MS,
@@ -47,6 +48,7 @@ export class ConectorTikTok {
     this.aoEvento = aoEvento;
     this.aoEstado = aoEstado;
     this.aoCatalogo = aoCatalogo;
+    this.aoSeguidor = aoSeguidor;
     this.abrirConexao = abrirConexao;
     this.backoffMs = backoffMs;
   }
@@ -79,6 +81,13 @@ export class ConectorTikTok {
       // Carimba na entrada: é o t0 da medição de latência do Princípio nº1.
       const evento = normalizarPresente(cru, Date.now());
       if (evento) this.aoEvento(evento);
+    });
+
+    // Seguidor novo: só o nome, sanitizado como o do doador. Nada de id, nada
+    // de foto, nada de disco — o aviso aparece na tela e some (11_SEGURANCA).
+    this.#conexao.aoSeguidor?.((cru) => {
+      const nome = sanitizarNome(cru?.user?.nickname ?? cru?.nickname ?? cru?.uniqueId);
+      if (nome) this.aoSeguidor({ nome });
     });
 
     this.#conexao.aoFim((motivo) => {
@@ -142,6 +151,13 @@ async function abrirConexaoReal(usuario) {
 
   return {
     aoPresente: (ouvinte) => conexao.on(WebcastEvent.GIFT, ouvinte),
+    // Seguidor novo. Não é presente e não move nada: existe só para o overlay
+    // dar o troféu de vilão na tela. Se a lib não expuser o evento nesta
+    // versão, o `?.` deixa a live subir do mesmo jeito — perder o aviso de
+    // follow não pode impedir a sessão de começar.
+    aoSeguidor: (ouvinte) => {
+      if (WebcastEvent.FOLLOW) conexao.on(WebcastEvent.FOLLOW, ouvinte);
+    },
     aoFim: (ouvinte) => {
       conexao.on(WebcastEvent.STREAM_END, () => ouvinte("stream_end"));
       conexao.on("disconnected", () => ouvinte("desconectado"));

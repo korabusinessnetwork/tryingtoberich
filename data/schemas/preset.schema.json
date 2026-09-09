@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kora.local/kora-stream-games/preset.schema.json",
   "title": "Preset",
-  "description": "A configuração de uma live: modalidade, mapa, look e os 6 slots de presente. Ver R1, R2 e ADR-007. A unicidade de presenteId entre slots (R1.4) não é expressável em JSON Schema e é checada em scripts/validar-contratos.mjs.",
+  "description": "A configuração de uma live: modalidade, mapa, look e os slots de presente. Seis é o PADRÃO — o número de desejos que a TikTok exibe —, não o teto: o streamer acrescenta até 24 pelo painel (R1 emendada, ADR-007). Nem a unicidade de presenteId (R1.4) nem a de posicao são expressáveis aqui: as duas vivem em bridge/src/dominio/regras.mjs e são checadas na gravação e em scripts/validar-contratos.mjs.",
   "type": "object",
   "additionalProperties": false,
   "required": ["presetId", "streamerId", "nome", "modalidade", "slots"],
@@ -94,18 +94,10 @@
       "items": { "$ref": "#/$defs/vinculoDePlacar" }
     },
     "slots": {
-      "description": "No máximo 6. Slot vazio simplesmente não aparece: preset com menos de 6 preenchidos é válido (R1.3).",
+      "description": "Seis por padrão, 24 no teto. Slot vazio simplesmente não aparece: preset com menos preenchidos é válido (R1.3). A unicidade de posicao NÃO mora aqui — o par contains/maxContains precisaria ser repetido 24 vezes, uma por posição, e viraria um bloco ilegível que ninguém manteria. Ela virou regra cruzada, ao lado da R1.4, em posicoesRepetidas().",
       "type": "array",
-      "maxItems": 6,
-      "items": { "$ref": "#/$defs/slot" },
-      "allOf": [
-        { "contains": { "$ref": "#/$defs/naPosicao1" }, "minContains": 0, "maxContains": 1 },
-        { "contains": { "$ref": "#/$defs/naPosicao2" }, "minContains": 0, "maxContains": 1 },
-        { "contains": { "$ref": "#/$defs/naPosicao3" }, "minContains": 0, "maxContains": 1 },
-        { "contains": { "$ref": "#/$defs/naPosicao4" }, "minContains": 0, "maxContains": 1 },
-        { "contains": { "$ref": "#/$defs/naPosicao5" }, "minContains": 0, "maxContains": 1 },
-        { "contains": { "$ref": "#/$defs/naPosicao6" }, "minContains": 0, "maxContains": 1 }
-      ]
+      "maxItems": 24,
+      "items": { "$ref": "#/$defs/slot" }
     }
   },
   "$defs": {
@@ -141,19 +133,17 @@
       "additionalProperties": false,
       "required": ["posicao", "presenteId", "animacaoId", "delta", "intensidade"],
       "properties": {
-        "posicao": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "posicao": { "type": "integer", "minimum": 1, "maximum": 24 },
         "presenteId": { "$ref": "comuns.schema.json#/$defs/presenteId" },
         "animacaoId": { "$ref": "comuns.schema.json#/$defs/animacaoId" },
         "delta": { "$ref": "comuns.schema.json#/$defs/delta" },
         "intensidade": { "$ref": "comuns.schema.json#/$defs/intensidade" },
-        "cooldownMs": { "type": "integer", "minimum": 0, "maximum": 60000, "default": 0 }
+        "cooldownMs": { "type": "integer", "minimum": 0, "maximum": 60000, "default": 0 },
+        "mostrarNoOverlay": {
+          "description": "Se este presente entra na legenda do overlay da live (ADR-015). AUSENTE = true, e a omissão é o contrato: todo preset já gravado em disco nasceu sem o campo e não pode perder a legenda por causa disso. Falso esconde só a TELA — o presente continua valendo no jogo, com o mesmo delta e a mesma animação.",
+          "type": "boolean"
+        }
       }
-    },
-    "naPosicao1": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 1 } } },
-    "naPosicao2": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 2 } } },
-    "naPosicao3": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 3 } } },
-    "naPosicao4": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 4 } } },
-    "naPosicao5": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 5 } } },
-    "naPosicao6": { "type": "object", "required": ["posicao"], "properties": { "posicao": { "const": 6 } } }
+    }
   }
 }

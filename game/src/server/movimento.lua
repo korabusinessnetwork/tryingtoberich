@@ -247,7 +247,32 @@ local function tocarAnimacao(personagem, animacaoId, contexto)
 			warn("[Kora] animação indisponível (" .. tostring(erro) .. "), movimento segue")
 			return
 		end
+		--[[ Todo pivô criado por esta animação acompanha ESTE boneco.
+
+			Sem isto o efeito nasce ancorado onde o boneco estava e fica lá,
+			enquanto o Tween o leva até a plataforma de destino — que com a
+			tabela de movimento (ADR-016) pode ser centenas de andares acima.
+			Desarma no `finally` do pcall, para animação que explode no meio não
+			deixar o foco preso e contaminar a animação seguinte. ]]
+		-- `Efeitos` pode não ter carregado (o require acima é protegido); sem ele
+		-- a animação roda como sempre, só sem acompanhar.
+		local raiz = personagem:FindFirstChild("HumanoidRootPart")
+		if Efeitos then
+			--[[ A direção da viagem vai junto, e é o que mantém o efeito NA
+				FRENTE do boneco. Sem ela, animação que nasce no pé dele — a
+				maioria das de subida, porque o empurrão ficava para trás
+				quando ninguém acompanhava — passa a ser desenhada dentro do
+				corpo. Ver FOLGA_A_FRENTE em efeitos.lua. ]]
+			local direcao = nil
+			if raiz and typeof(contexto.posicaoDestino) == "Vector3" then
+				direcao = contexto.posicaoDestino - raiz.Position
+			end
+			Efeitos.acompanharBoneco(raiz, direcao)
+		end
 		local ok, falha = pcall(animacao.executar, personagem, contexto)
+		if Efeitos then
+			Efeitos.acompanharBoneco(nil)
+		end
 		if not ok then
 			warn("[Kora] animação " .. tostring(animacaoId) .. " falhou: " .. tostring(falha))
 		end

@@ -1,13 +1,37 @@
 # 03 — Regras de Negócio
 
 ## R1 — Preset e slots
-1. Um **preset** é a configuração de uma live. Tem exatamente **6 slots**.
-2. O número 6 vem do painel de desejos da TikTok. É regra de produto, não
-   limitação técnica. Não aumentar sem decisão explícita do dono.
-3. Um slot pode estar **vazio**. Preset com menos de 6 preenchidos é válido.
+> **Emendada em 2026-09-04 por decisão explícita do dono:** *"por padrão a gente
+> usa 6 presentes, mas eu gostaria de colocar um botão para o usuário poder
+> adicionar mais presentes e definir o que cada um deles vai fazer, e decidir se
+> vai ir pro overlay ou não"*. A R1.2 dizia "não aumentar sem decisão explícita
+> do dono"; a decisão é esta. O 6 deixou de ser teto e passou a ser **padrão**.
+> Ver ADR-007.
+
+1. Um **preset** é a configuração de uma live. Tem **6 slots por padrão** e no
+   máximo **24**.
+2. O 6 continua sendo o padrão porque é o que a TikTok exibe como desejos na
+   live: o espectador vê seis, e slot que ele não vê quase não dispara. Isso é
+   argumento para o padrão, não proibição — passar de 6 é escolha do streamer,
+   um presente por vez, e o painel só cria o sétimo quando ele clica. O teto de
+   24 é de tela: os 6 primeiros ficam lado a lado e os extras caem em linhas
+   abaixo (`02_DESIGN_SYSTEM`, seção A).
+3. Um slot pode estar **vazio**, e isso vale igual para os extras. Preset com
+   menos de 6 preenchidos é válido; preset com o slot 8 preenchido e o 7 vazio
+   também é.
 4. Um mesmo presente **não pode** ocupar dois slots do mesmo preset.
 5. Uma mesma animação **pode** aparecer em mais de um slot, com deltas
    diferentes. Isso é intencional.
+6. **`mostrarNoOverlay`** diz se o presente aparece na legenda do overlay da
+   live (ADR-015). **Ausente quer dizer que aparece** — é o que mantém válido
+   todo preset salvo antes desta emenda. Fora do overlay o presente continua
+   valendo no jogo: casa com o slot, toca a animação e move a torre. O que muda
+   é só a tela do espectador.
+7. **`posicao` vai de 1 a 24 e é única dentro do preset.** Essa unicidade é
+   **regra cruzada**, checada em `bridge/src/dominio/regras.mjs` como a da R1.4,
+   e não mais pelo JSON Schema: o schema garantia a posição repetindo um bloco
+   por posição, e repetir aquilo 24 vezes seria absurdo. Preset com posição
+   repetida é recusado com `posicao_repetida`, antes de chegar ao disco.
 
 ## R2 — Composição de um slot
 Cada slot preenchido tem:
@@ -24,10 +48,10 @@ Cada slot preenchido tem:
 animação de subida com delta negativo, o painel avisa que está invertido mas
 permite. A animação toca do jeito que é; o boneco vai para onde o delta manda.
 
-## R3 — O valor sugere, nunca decide (nos 6 slots)
-> **Emendada em 2026-09-04 pelo ADR-016.** O que está abaixo vale para os 6
-> slots, e só para eles: o vínculo entre presente escolhido, animação e delta
-> continua sendo do streamer, um a um. Fora dos 6, o valor passou a decidir —
+## R3 — O valor sugere, nunca decide (nos slots)
+> **Emendada em 2026-09-04 pelo ADR-016.** O que está abaixo vale para os slots
+> do preset, e só para eles: o vínculo entre presente escolhido, animação e
+> delta continua sendo do streamer, um a um. Fora dos slots, o valor decide —
 > é a tabela de movimento da R12, em que a conta é a regra e a mão do streamer
 > é a exceção.
 
@@ -142,9 +166,9 @@ onde o boneco está.
 > Nasceu com o ADR-016, por pedido do dono: *"quero uma página só pra definir a
 > subida ou descida por presentes, e já pré-definida com base no valor × 10 —
 > doou uma rosa que vale 1 moeda, sobe 10"*. Ela emenda a R3 e não substitui a
-> R1: os 6 slots continuam sendo os 6.
+> R1: os slots continuam sendo escolha do streamer, um a um.
 
-1. Todo presente do catálogo tem um **delta**, e não só os 6 dos slots. O
+1. Todo presente do catálogo tem um **delta**, e não só os dos slots. O
    presente fora dos slots deixou de ser descartado.
 2. O delta padrão é `moedas × multiplicador`, com **multiplicador 10**: presente
    de 1 moeda sobe 10 andares. Ele é do preset e vale para o catálogo inteiro.
@@ -155,7 +179,7 @@ onde o boneco está.
 5. **Delta 0 é válido aqui** e quer dizer "este presente não mexe na torre". Ele
    volta a ser contado como não mapeado, que é o que sobra do mundo anterior.
    Presente que não custa moeda cai neste caso sozinho.
-6. **O slot vence a tabela.** Presente que está num dos 6 dispara com a animação,
+6. **O slot vence a tabela.** Presente que está num slot dispara com a animação,
    o delta, a intensidade e o cooldown do slot. A tabela responde pelo resto.
 7. Quem vem da tabela usa **uma animação por direção**, escolhida no preset, com
    intensidade fixa e sem cooldown. A rajada (R4) vale igual: o delta multiplica

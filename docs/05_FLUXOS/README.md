@@ -4,19 +4,25 @@
 1. Streamer abre o painel em `localhost`.
 2. Escolhe a modalidade. Na Fase 1 só existe **Escalada**, mas o seletor existe.
 3. Escolhe um mapa existente ou gera um novo (F4).
-4. Monta o preset: para cada um dos 6 slots, escolhe presente, animação, delta e
+4. Monta o preset: para cada slot, escolhe presente, animação, delta e
    intensidade. O painel avisa se o vínculo foge da curva, mas não bloqueia.
+   São 6 slots ao abrir; "Acrescentar presente" cria do 7 em diante, até 24
+   (R1), e cada um decide se aparece na legenda do overlay.
 5. Salva o preset.
 6. Abre o Roblox e entra na experiência. O jogo começa o long-poll sozinho.
 7. Clica em **Start** no painel. A ponte conecta na live e a sessão começa.
 8. Configura os 6 mesmos presentes como desejos no app da TikTok, para o
    espectador ver os mesmos itens que o sistema entende.
+   **São 6 porque o painel de desejos da TikTok mostra 6** — é daqui que sai o
+   padrão da R1, e não de um limite do sistema. Presente do slot 7 em diante
+   funciona igual no jogo, mas não cabe nos desejos: ninguém o vê sem o streamer
+   apontar. Por isso os extras são exceção deliberada, e não o caminho normal.
 
 ## F2 — Presente durante a live (caminho crítico)
 1. Espectador envia presente.
 2. `tiktok-live-connector` emite o evento na ponte.
 3. Ponte normaliza: `{presenteId, repeatCount, nomeDoador}`.
-4. Ponte procura o `presenteId` nos 6 slots do preset ativo.
+4. Ponte procura o `presenteId` nos slots do preset ativo.
    - Achou: calcula `delta * repeatCount`, aplica cooldown e coalescência (R5).
    - Não achou: procura na **tabela de movimento** (R12, ADR-016), que dá delta
      a todo presente do catálogo. Achou lá, dispara com a animação padrão da

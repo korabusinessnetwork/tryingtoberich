@@ -18,6 +18,7 @@ resolvem se forem registrados juntos — ver `criarValidador()` em
 | `evento-presente` | evento normalizado que sai do conector da TikTok | ponte |
 | `evento-jogo` | resposta de `GET /jogo/eventos` | ponte |
 | `estado-jogo` | corpo de `POST /jogo/estado` | jogo |
+| `overlay-layout` | `data/overlay-layout.json` | painel (Estúdio de Overlay) |
 
 ## O que o schema não consegue prender
 

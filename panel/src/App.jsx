@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api } from "./lib/api.js";
-import { idDePreset, SLOTS } from "./lib/regras.js";
+import { ehSlotExtra, idDePreset, listaDePresentes, primeiroPresenteLivre, proximaPosicaoLivre, SLOTS_MAX } from "./lib/regras.js";
 import { useFluxo } from "./lib/useFluxo.js";
 import { AvisoDeVitoria } from "./components/AvisoDeVitoria.jsx";
 import { BarraDeSessao } from "./components/BarraDeSessao.jsx";
@@ -10,6 +10,7 @@ import { ContaDaLive } from "./components/ContaDaLive.jsx";
 import { ControleDaPartida } from "./components/ControleDaPartida.jsx";
 import { EditorDePlacar } from "./components/EditorDePlacar.jsx";
 import { EditorDePreset } from "./components/EditorDePreset.jsx";
+import { EstudioDeOverlay } from "./components/EstudioDeOverlay.jsx";
 import { GaleriaDeSkins } from "./components/GaleriaDeSkins.jsx";
 import { SeletorDeMundo } from "./components/SeletorDeMundo.jsx";
 import { GerenciadorDePresets } from "./components/GerenciadorDePresets.jsx";
@@ -180,11 +181,84 @@ export function App() {
     if (cutscenes) definirDados((d) => ({ ...d, cutscenes }));
   }, [executar]);
 
+  //[[ Limpar tira o slot do array — e é isso que remove um extra de vez.
+  //
+  // Nos 6 do padrão a posição continua desenhada vazia (R1.3); num extra, se
+  // ele era a maior posição usada, a grade encolhe sozinha. Não há uma segunda
+  // operação de "remover": o preset não sabe gravar "posição 7, vazia", e
+  // inventar um handler idêntico só para o extra seria dois nomes para a mesma
+  // escrita. Quem muda é o rótulo do botão, no CartaoDeSlot. ]]
   const limparSlot = useCallback((posicao) => {
     definirPreset((atual) =>
       atual ? { ...atual, slots: (atual.slots ?? []).filter((s) => s.posicao !== posicao) } : atual,
     );
   }, []);
+
+  /**
+   * R1 emendada — o streamer acrescenta presente além dos 6, até 24.
+   *
+   * O slot nasce COMPLETO, como em `vincularNaoMapeado` e pelo mesmo motivo: o
+   * schema exige presente, animação, delta e intensidade, e um cartão pela
+   * metade só apareceria como `preset_invalido` no Salvar, depois de o streamer
+   * ter configurado o resto. O presente padrão é o primeiro do catálogo que
+   * ainda não está VINCULADO — nem em slot, nem no placar —, e o modal aberto
+   * em seguida existe para ele ser trocado na hora.
+   */
+  const acrescentarSlot = useCallback(() => {
+    if (!preset) return;
+
+    const posicao = proximaPosicaoLivre(preset);
+    if (posicao === null) {
+      definirAviso(`O preset já tem os ${SLOTS_MAX} slots que a ponte aceita. Remova um antes de acrescentar outro.`);
+      return;
+    }
+
+    // Catálogo VAZIO não é catálogo esgotado. Instalação nova, antes do primeiro
+    // "Atualizar da TikTok", chega aqui com zero slots preenchidos: dizer que
+    // "todo presente já está num slot" manda o streamer trocar o presente de um
+    // slot que não existe e esconde a única ação que resolve. A frase é a mesma
+    // do SeletorDePresente e da TabelaDeMovimento, que já tratam este estado.
+    const presentes = listaDePresentes(dados?.catalogo);
+    if (presentes.length === 0) {
+      definirAviso("O catálogo está vazio. Atualize a lista da TikTok ao escolher um presente.");
+      return;
+    }
+
+    // Slots E placar na mesma varredura, como a R1.4 que a ponte aplica: a
+    // regra mora em lib/regras.js, com teste, em vez de numa varredura escrita
+    // à mão aqui — que foi como o placar ficou de fora na primeira versão.
+    const presente = primeiroPresenteLivre(presentes, preset);
+    if (!presente) {
+      definirAviso("Todo presente do catálogo já está num slot ou no placar. Troque o presente de um slot em vez de acrescentar.");
+      return;
+    }
+
+    const padrao = (dados?.animacoes ?? []).find((a) => a.direcao === "subida") ?? (dados?.animacoes ?? [])[0];
+    // Sem animação o slot nasceria sem `animacaoId`, o JSON.stringify do Salvar
+    // some com a chave e o schema devolve `preset_invalido` — no botão que
+    // promete um cartão COMPLETO. Melhor não criar o slot e dizer por quê.
+    if (!padrao) {
+      definirAviso("As animações ainda não carregaram. Tente de novo em um instante.");
+      return;
+    }
+
+    mudarSlot(posicao, {
+      presenteId: presente.presenteId,
+      animacaoId: padrao?.id,
+      delta: 1,
+      intensidade: 1,
+      // `false` EXPLÍCITO, e só no extra. A legenda do overlay 9:16 foi
+      // desenhada para poucos itens, positivos de um lado e negativos do outro
+      // (ADR-015): 24 marcados estouram a faixa e cobrem o boneco. O extra
+      // entra fora da legenda e o streamer marca o que quiser mostrar. O
+      // "ausente = true" continua valendo para os presets que já estão em
+      // disco, que é o que impede a legenda de esvaziar sozinha.
+      ...(ehSlotExtra(posicao) ? { mostrarNoOverlay: false } : {}),
+    });
+    // O padrão existe para o slot nascer válido, não para ser a escolha final.
+    definirEditando({ posicao, tipo: "presente" });
+    definirAviso(null);
+  }, [preset, dados, mudarSlot]);
 
   const salvarPreset = useCallback(async () => {
     if (!preset) return;
@@ -559,24 +633,43 @@ export function App() {
     if (!preset) return;
     if (!item?.presenteId) return;
 
-    const ocupadas = new Set((preset.slots ?? []).map((slot) => slot.posicao));
-    const livre = Array.from({ length: SLOTS }, (_, i) => i + 1).find((posicao) => !ocupadas.has(posicao));
-    if (!livre) {
-      definirAviso("Os 6 slots estão ocupados. Limpe um antes de vincular outro presente.");
+    // Procura até 24, não até 6: desde a R1 emendada o preset tem extras, e a
+    // mensagem antiga passaria a mentir — "os 6 estão ocupados" com 18
+    // posições livres manda o streamer limpar um slot à toa no meio da live.
+    const livre = proximaPosicaoLivre(preset);
+    if (livre === null) {
+      definirAviso(`Os ${SLOTS_MAX} slots estão ocupados. Limpe um antes de vincular outro presente.`);
       return;
     }
 
     const padrao = (dados?.animacoes ?? []).find((a) => a.direcao === "subida") ?? (dados?.animacoes ?? [])[0];
+    // Mesma trava de `acrescentarSlot`: slot sem animação é `preset_invalido`
+    // no Salvar, e aqui o streamer está no meio da live para descobrir isso.
+    if (!padrao) {
+      definirAviso("As animações ainda não carregaram. Tente de novo em um instante.");
+      return;
+    }
     mudarSlot(livre, {
       presenteId: item.presenteId,
       animacaoId: padrao?.id,
       delta: 1,
       intensidade: 1,
+      // Mesma regra de `acrescentarSlot`: extra nasce fora da legenda do
+      // overlay. O caminho de criação é outro, a consequência na tela é a mesma.
+      ...(ehSlotExtra(livre) ? { mostrarNoOverlay: false } : {}),
     });
     // Abre a escolha de animação na sequência: o padrão existe para o slot
     // nascer válido, não para ser a escolha final.
     definirEditando({ posicao: livre, tipo: "animacao" });
-    definirAviso(null);
+    // Vincular num extra é silencioso demais para o meio de uma live: o slot
+    // nasce fora da legenda do overlay (R1.6) e o presente que o streamer
+    // acabou de mapear não aparece na faixa. Antes o painel recusava com aviso;
+    // agora aceita, então o aviso passa a ser o que explica o que aconteceu.
+    definirAviso(
+      ehSlotExtra(livre)
+        ? `Criei o slot ${livre}, fora da legenda do overlay. Marque "Aparece no overlay" no cartão se quiser mostrá-lo.`
+        : null,
+    );
   }, [preset, dados, mudarSlot]);
 
   const slotEditado = useMemo(
@@ -647,6 +740,9 @@ export function App() {
           { id: "configurar", rotulo: "Configurar" },
           { id: "jogo", rotulo: "Jogo" },
           { id: "overlay", rotulo: "Overlay" },
+          // A irmã da aba de overlay: uma diz a URL para colar no OBS, a outra
+          // arruma o que aparece nela.
+          { id: "estudio", rotulo: "Estúdio" },
           { id: "historico", rotulo: "Histórico" },
           { id: "log", rotulo: "Log", contador: naoVistos },
         ]}
@@ -685,6 +781,7 @@ export function App() {
             salvando={salvando}
             aoMudarSlot={mudarSlot}
             aoLimparSlot={limparSlot}
+            aoAcrescentarSlot={acrescentarSlot}
             aoSalvar={salvarPreset}
             aoEditarPresente={(posicao) => definirEditando({ posicao, tipo: "presente" })}
             aoEditarAnimacao={(posicao) => definirEditando({ posicao, tipo: "animacao" })}
@@ -892,6 +989,12 @@ export function App() {
         </div>
       ) : null}
 
+      {pagina === "estudio" ? (
+        <div className="app-pagina">
+          <EstudioDeOverlay />
+        </div>
+      ) : null}
+
       {pagina === "log" ? (
         <div className="app-pagina">
           <PainelDeLogs
@@ -906,6 +1009,7 @@ export function App() {
 
       <SeletorDePresente
         aberto={editando?.tipo === "presente"}
+        posicao={editando?.posicao ?? null}
         catalogo={dados.catalogo}
         atualizando={atualizandoCatalogo}
         aoAtualizar={atualizarCatalogo}

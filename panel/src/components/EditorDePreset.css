@@ -3,7 +3,15 @@
    A grade é o requisito, não uma preferência: "os 6 slots ficam lado a lado,
    sempre visíveis, sem scroll" (02_DESIGN_SYSTEM, seção A). Por isso são 6
    colunas fixas com `minmax(0, 1fr)` — os cartões comprimem, mas a linha nunca
-   quebra e nada some abaixo da dobra. Nenhuma cor literal aqui. */
+   quebra e nada some abaixo da dobra. Nenhuma cor literal aqui.
+
+   As 6 colunas continuam FIXAS agora que o preset aceita até 24 slots (R1
+   emendada): os extras caem sozinhos nas linhas seguintes, sem mexer na
+   primeira. `auto-fill`/`auto-fit` está PROIBIDO aqui — com eles a quantidade
+   de colunas passa a depender da largura da janela, os 6 do painel de desejos
+   reflowam para 4 ou 7 por linha, e a regra da seção A morre calada. Quem
+   achar que a grade "deveria se adaptar" está trocando a tela principal do
+   produto por uma preferência de layout. */
 
 .editor-preset {
   display: flex;
@@ -42,13 +50,46 @@
   line-height: 1.3;
 }
 
+.editor-preset-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 /* Salvar fica na ponta oposta ao nome e sempre no mesmo lugar: o streamer
    acerta o botão sem procurar, que é o ponto do alvo de 40px. */
 .editor-preset-salvar {
-  margin-left: auto;
   flex: 0 0 auto;
   min-width: 140px;
   font-weight: 600;
+}
+
+/* Peso visual baixo, ao lado de Salvar e nunca com a cara dele: acrescentar é
+   ação de montagem, feita antes da live e uma vez; Salvar é a que o streamer
+   procura com pressa. Alvo cheio mesmo assim — botão discreto não é botão
+   pequeno. */
+.editor-preset-acrescentar {
+  flex: 0 0 auto;
+  min-height: var(--alvo-minimo);
+  padding: 0 12px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+.editor-preset-acrescentar:hover:not(:disabled),
+.editor-preset-acrescentar:focus-visible {
+  color: var(--painel-texto-primario);
+  border-color: var(--painel-borda);
+}
+
+.editor-preset-teto {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 /* Pastilha do base.css, adaptada para texto de uma frase: o ponto de estado

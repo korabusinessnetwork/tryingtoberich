@@ -145,6 +145,46 @@ test("preset inválido não chega ao disco", async () => {
   assert.equal(await carregarPreset("teste-nunca-gravado"), null, "nada foi escrito");
 });
 
+test("preset com duas caixas na mesma posição não chega ao disco (R1)", async () => {
+  //[[ O schema não pega mais isto — a regra desceu para regras.mjs quando o
+  // teto virou 24. Se o repositório não a chamar, o preset colidido GRAVA, e a
+  // sessão passa a atribuir presentes ao slot errado no resumo. ]]
+  const colidido = {
+    presetId: "teste-posicao-repetida", streamerId: "local", nome: "Colidido", modalidade: "escalada",
+    slots: [
+      { posicao: 3, presenteId: "sem-rose", animacaoId: "sub_pulo", delta: 2, intensidade: 1 },
+      { posicao: 3, presenteId: "sem-galaxy", animacaoId: "sub_pulo", delta: 40, intensidade: 1 },
+    ],
+  };
+  await assert.rejects(() => salvarPreset(colidido), (erro) => {
+    // O código é o que o painel lê para escolher a mensagem; a frase é para o
+    // streamer. Cobrar os dois é o que impede alguém trocar o código por
+    // "preset_invalido" achando que dá no mesmo.
+    assert.equal(erro.codigo, "posicao_repetida");
+    assert.match(erro.message, /posição: 3/);
+    return true;
+  });
+  assert.equal(await carregarPreset("teste-posicao-repetida"), null, "nada foi escrito");
+});
+
+test("preset com 8 slots grava: o sétimo e o oitavo são a feature, não erro (R1 emendada)", async () => {
+  const oito = {
+    presetId: "teste-oito-slots", streamerId: "local", nome: "Oito", modalidade: "escalada",
+    slots: Array.from({ length: 8 }, (_, i) => ({
+      posicao: i + 1, presenteId: `sem-extra-${i + 1}`, animacaoId: "sub_pulo",
+      delta: i + 1, intensidade: 1, mostrarNoOverlay: i < 6,
+    })),
+  };
+  try {
+    const salvo = await salvarPreset(oito);
+    assert.equal(salvo.slots.length, 8);
+    assert.equal((await carregarPreset("teste-oito-slots")).slots[7].mostrarNoOverlay, false, "o extra vai ao disco desmarcado");
+  } finally {
+    const { caminhoDeDados, apagar } = await import("../src/repos/arquivo.mjs");
+    await apagar(caminhoDeDados("presets", "teste-oito-slots.json"));
+  }
+});
+
 /* ---------------------------------------------------------------- */
 /* Catálogo                                                          */
 /* ---------------------------------------------------------------- */
@@ -282,4 +322,33 @@ test("a sessão reduzida passa no schema, que recusa encerrada com eventos dentr
     validar("sessao", { ...reduzida, eventos: [{ em: "2026-09-01T20:03:11Z", slot: 1, presenteId: "x", repeticoes: 1, delta: 1, animacaoId: "sub_pulo" }] }),
     [],
   );
+});
+
+test("a sessão aceita evento e resumo em slot além do sexto — senão a live não vira arquivo", async () => {
+  //[[ O guarda do pior momento possível.
+  //
+  // O teto do slot na sessão ficou preso em 6 quando o do preset subiu para 24.
+  // Com um presente disparado do slot 12, salvarSessao lança sessao_invalida no
+  // STOP: a live inteira, já acabada, não vira arquivo — e ninguém descobre
+  // durante a transmissão, quando ainda daria para fazer algo. ]]
+  const { criarValidador } = await import("../src/repos/schemas.mjs");
+  const { validar } = await criarValidador();
+
+  const aberta = {
+    sessaoId: "2026-09-01T20-00-00", streamerId: "local", presetId: "escalada-padrao",
+    mapaId: null, iniciadaEm: "2026-09-01T20:00:00Z", encerradaEm: null,
+    plataformaReferencia: 0, plataformaMaxima: 12, quedasNaturais: 0, naoMapeados: [],
+    eventos: [
+      { em: "2026-09-01T20:03:11Z", slot: 12, presenteId: "sem-extra-12", repeticoes: 3, delta: 30, animacaoId: "sub_pulo" },
+      { em: "2026-09-01T20:03:40Z", slot: 24, presenteId: "sem-extra-24", repeticoes: 1, delta: 5, animacaoId: "sub_pulo" },
+    ],
+  };
+  assert.deepEqual(validar("sessao", aberta), [], "o evento do slot 12 está dentro do contrato");
+
+  const reduzida = reduzirAoResumo(aberta, "2026-09-01T21:00:00Z");
+  assert.deepEqual(reduzida.resumo.presentesPorSlot, { 12: 1, 24: 1 });
+  assert.deepEqual(validar("sessao", reduzida), [], "e o resumo por slot também");
+
+  const alem = { ...aberta, eventos: [{ ...aberta.eventos[0], slot: 25 }] };
+  assert.notDeepEqual(validar("sessao", alem), [], "25 continua fora: o teto do preset é 24");
 });

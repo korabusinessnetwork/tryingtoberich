@@ -73,7 +73,9 @@ export function EditorDePlacar({
     <section className="placar" aria-label="Presentes de placar">
       <header className="placar-cabecalho">
         <h2 className="placar-titulo">Presentes de placar</h2>
-        <span className="placar-etiqueta">fora dos 6 slots</span>
+        {/* Sem número: o preset vai até 24 slots (R1 emendada), e o 6 deixou de
+            ser o que separa esta lista da grade de slots. */}
+        <span className="placar-etiqueta">fora dos slots do preset</span>
       </header>
 
       <p className="placar-explicacao">

@@ -12,6 +12,7 @@ data/
   catalogo-presentes.json       (gerado pela coleta, não editar à mão)
   catalogo-presentes.seed.json  (semente de desenvolvimento, valores não confirmados)
   animacoes.json                (espelho do índice Luau, gerado)
+  overlay-layout.json           (só o que o streamer moveu no Estúdio, ver ADR-015)
   sessoes/<sessaoId>.json       (efêmero, reduzido a resumo ao fim, ver 11_SEGURANCA)
   icones/<presenteId>.png       (cache do ícone oficial do presente)
   icones-itens/<assetId>.png    (cache do ícone de peça do vestiário)
@@ -19,6 +20,12 @@ data/
   exemplos/                     (um arquivo válido de cada modelo, só para teste)
   fixtures/                     (evento da TikTok para testar sem estar ao vivo)
 ```
+
+`overlay-layout.json` é o único arquivo do lote que guarda **exceção, não
+estado**: elemento ausente quer dizer "onde o CSS da página já o desenha", como
+as exceções da tabela de movimento (ADR-016). Arquivo inexistente é layout
+vazio, nunca erro — a página do overlay tem que abrir igual na máquina em que
+ninguém nunca entrou no Estúdio. Formato em `overlay-layout.schema.json`.
 
 Os quatro últimos são contratos, não dado de produção: nenhum repositório em
 `bridge/src/repos/` lê `exemplos/` nem `fixtures/`. `npm test` valida cada
@@ -54,14 +61,40 @@ exemplo é schema quebrado.
       "delta": 2,
       "intensidade": 1,
       "cooldownMs": 0
+    },
+    {
+      "posicao": 7,
+      "presenteId": "5655",
+      "animacaoId": "des_punho_impacto",
+      "delta": -40,
+      "intensidade": 3,
+      "cooldownMs": 0,
+      "mostrarNoOverlay": false
     }
   ]
 }
 ```
 
-Regras: `slots` tem no máximo 6 itens, `posicao` de 1 a 6 e única,
+Regras: `slots` tem no máximo 24 itens, `posicao` de 1 a 24 e única,
 `presenteId` único dentro do preset, `delta` inteiro diferente de 0 (sem teto),
 `intensidade` entre 1 e 5.
+
+As duas unicidades — `posicao` e `presenteId` — são **regra cruzada**, checadas
+em `bridge/src/dominio/regras.mjs` e por `npm run validar`, não pelo JSON
+Schema. O schema garantia a posição com um bloco por posição; vinte e quatro
+daqueles seriam ilegíveis e ninguém os manteria em dia. Quem salva com posição
+repetida leva `posicao_repetida`.
+
+`mostrarNoOverlay` diz se o slot aparece na legenda do overlay da live
+(ADR-015). **Ausente = true**: preset salvo antes de o campo existir continua
+aparecendo inteiro, e o painel marca a caixa por padrão ao abrir um deles. O
+slot do exemplo acima é o 7 — um extra, criado pelo botão "Acrescentar
+presente" — e nasce desmarcado: a legenda foi desenhada para meia dúzia de
+ícones num palco 9:16 (R1.6). Fora da legenda ele continua casando com o
+presente, animando e movendo a torre.
+
+Os 6 primeiros slots são o **padrão** (R1.1), não o teto: o painel abre com
+seis, e vai até 24 se o streamer pedir.
 
 `cutsceneDeVitoria` e `cutsceneDeDerrota` apontam para um vídeo de
 `data/cutscenes/` pelo nome sem extensão (ADR-014). A pasta é a lista — não há
@@ -70,11 +103,11 @@ diz quais presentes provocam cada resultado, e não pode repetir presente de
 slot.
 
 `movimento` é a tabela do ADR-016: quanto a torre anda com CADA presente do
-catálogo, e não só com os 6 dos slots. Guarda a **regra** (`moedas ×
+catálogo, e não só com os que estão nos slots. Guarda a **regra** (`moedas ×
 multiplicador`, 10 por padrão) e só as `excecoes` que o streamer escreveu à mão
 — as 670 linhas nunca vão para o disco, e presente novo da TikTok já nasce com
 delta. Delta 0 numa exceção quer dizer "este presente não mexe na torre".
-Ausente, o preset se comporta como antes: fora dos 6 slots, nada acontece.
+Ausente, o preset se comporta como antes: fora dos slots, nada acontece.
 O slot vence a tabela para o presente que está nele. Ver R12.
 
 O preset apenas **referencia** um look. A composição vive em `data/looks/`,

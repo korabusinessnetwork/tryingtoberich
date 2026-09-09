@@ -61,6 +61,32 @@
   color: var(--painel-texto-secundario);
 }
 
+/* O extra não é um dos 6 do painel de desejos da TikTok. Tracejado, não cor:
+   o cartão já gasta âmbar em aviso e vermelho em indisponível, e a etiqueta
+   "extra" ao lado diz a mesma coisa em texto. */
+.cartao-slot-posicao-extra {
+  border-style: dashed;
+}
+
+/* Quem encolhe é a ETIQUETA, nunca o botão. O topo é flex sem quebra de linha
+   e o cartão tem `overflow: hidden`: num extra com aviso, bolinha + "extra" +
+   alerta + "Remover" passam dos ~149px que sobram por cartão na largura mínima
+   de 1100px, e o `margin-left: auto` do botão empurrava o excesso para fora —
+   o "Remover" era cortado, e ele é o único caminho para tirar um extra. */
+.cartao-slot-extra-marca {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 1px 5px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--painel-texto-secundario);
+}
+
 /* Existe aviso neste cartão. O texto do aviso fica no rodapé; esta marca é só
    para o olhar de 2 segundos saber que há algo a ler quando sobrar tempo. */
 .cartao-slot-alerta {
@@ -315,6 +341,31 @@
 .cartao-slot-nivel-aceso {
   background: var(--painel-texto-secundario);
   border-color: var(--painel-texto-secundario);
+}
+
+/* ---- overlay: o presente aparece, ou não, na legenda da live ---------- */
+
+/* O rótulo inteiro é o alvo de clique, e é ele quem carrega os 40px: a caixa
+   sozinha teria 18px e obrigaria a mira. A caixa perde o `min-height` de 40px
+   que `base.css` dá a todo input — aqui ela é um marcador dentro de uma linha
+   de texto, e 40px de altura abririam um buraco no cartão, que já é alto e
+   está numa grade `align-items: stretch`. */
+.cartao-slot-overlay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--alvo-minimo);
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.cartao-slot-overlay input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
 }
 
 /* ---- avisos: sempre no rodapé, alinhados entre os 6 cartões ----------- */

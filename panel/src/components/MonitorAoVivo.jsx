@@ -315,7 +315,10 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
     return { disputas, empates };
   }, [lista]);
 
-  // F2.4: presente que não caiu em nenhum dos 6 slots foi descartado. O
+  // F2.4: presente que não caiu em nenhum slot do preset foi descartado. Sem
+  // número: o preset deixou de ter 6 slots fixos e passou a ir até 24 (R1
+  // emendada), e um "6" aqui, a poucos centímetros de uma grade que mostra 12
+  // cartões, faz o streamer duvidar de qual dos dois está certo. O
   // contador de vezes é o pedido do backlog; as moedas ao lado são o que
   // transforma "17 presentes" em "isso é dinheiro passando batido".
   const naoMapeado = useMemo(() => {
@@ -365,7 +368,7 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
           <p className="monitor-numerao">{emPtBr(naoMapeado.total)}</p>
           <p className="secundario monitor-metrica-nota">
             {naoMapeado.total === 0
-              ? "todo presente caiu num dos 6 slots"
+              ? "todo presente caiu num slot do preset"
               : `descartados · ≈ ${emPtBr(naoMapeado.moedas)} moedas perdidas`}
           </p>
           {naoMapeado.topo.length > 0 && (

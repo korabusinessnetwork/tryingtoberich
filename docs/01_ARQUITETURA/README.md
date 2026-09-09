@@ -31,7 +31,7 @@ o desenho: o HttpService não recebe requisição de entrada e não enxerga
 ## Processo 1 — Ponte (`bridge/`)
 Node.js. Responsabilidades:
 - Conectar na live via `tiktok-live-connector` e normalizar os eventos.
-- Casar o presente recebido com um dos 6 slots do preset ativo.
+- Casar o presente recebido com um dos slots do preset ativo.
 - Manter as requisições de long-poll do Roblox abertas e respondê-las no
   instante em que um evento casado aparece.
 - Servir a API local do painel (preset, catálogo, sessão, mapa).
@@ -54,7 +54,7 @@ bridge/src/
 React + Vite, roda em `localhost`. Nunca conversa com a TikTok, com o Gemini nem
 com o Roblox direto. Só fala com a ponte. Responsabilidades:
 - Selecionar modalidade e dar start/stop na sessão.
-- Montar o preset: escolher os 6 presentes no catálogo, e para cada um escolher
+- Montar o preset: escolher os presentes no catálogo, e para cada um escolher
   animação, delta e intensidade.
 - Gerar mapa com o Gemini e pré-visualizar o spec.
 - Monitorar a sessão ao vivo (últimos eventos, latência medida, altura atual).

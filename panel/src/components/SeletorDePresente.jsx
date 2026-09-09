@@ -66,6 +66,7 @@ function IconeDoPresente({ presente }) {
 
 export function SeletorDePresente({
   aberto,
+  posicao,
   catalogo,
   presenteIdAtual,
   presenteIdsUsados,
@@ -152,7 +153,15 @@ export function SeletorDePresente({
         aria-labelledby="seletor-presente-titulo"
       >
         <header className="seletor-presente-cabecalho">
-          <h2 id="seletor-presente-titulo">Escolher presente</h2>
+          {/* A POSIÇÃO no título, e não só "Escolher presente". Enquanto o modal
+              só abria pelo clique no cartão, o contexto vinha do clique; o botão
+              "+ Acrescentar presente" o abre do cabeçalho, e ele preenche a
+              primeira posição LIVRE — com um buraco no meio dos 6, o slot 3 e
+              não um sétimo cartão. Sem o número, o streamer troca na live o
+              conteúdo de um slot que achava estar criando. */}
+          <h2 id="seletor-presente-titulo">
+            Escolher presente{Number.isFinite(posicao) ? ` — slot ${posicao}` : ""}
+          </h2>
           <button
             type="button"
             className="seletor-presente-fechar"

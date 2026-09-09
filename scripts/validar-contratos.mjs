@@ -19,6 +19,7 @@ import { criarValidador } from "../bridge/src/repos/schemas.mjs";
 import {
   faixaDeMoedas,
   mapaPodeIrAoAr,
+  posicoesRepetidas,
   presentesRepetidos,
   problemasDeJogabilidade,
   referenciasInexistentes,
@@ -29,6 +30,7 @@ export {
   FATOR_SALTO_VERTICAL,
   faixaDeMoedas,
   mapaPodeIrAoAr,
+  posicoesRepetidas,
   presentesRepetidos,
   problemasDeJogabilidade,
   referenciasDeAcervo,
@@ -68,6 +70,18 @@ async function principal() {
     checar(`data/exemplos/${arquivo}`, validar(nomeSchema, await emDados("exemplos", arquivo)));
   }
 
+  //[[ O layout do overlay é OPCIONAL por construção.
+  //
+  // Quem nunca abriu o Estúdio de Overlay não tem o arquivo, e é o caso normal:
+  // a ausência já é o padrão da página. Só validamos quando ele existe — um
+  // relatório vermelho numa instalação limpa treinaria o dono a ignorar o
+  // vermelho, que é o oposto do que este script serve para fazer. ]]
+  const layout = await lerJson(path.join(RAIZ, "data", "overlay-layout.json")).catch((erro) => {
+    if (erro.code === "ENOENT") return null;
+    throw erro;
+  });
+  if (layout) checar("data/overlay-layout.json", validar("overlay-layout", layout));
+
   const dirCenarios = path.join(RAIZ, "data", "fixtures", "cenarios");
   for (const arquivo of (await readdir(dirCenarios)).filter((f) => f.endsWith(".json")).sort()) {
     const cenario = await emDados("fixtures", "cenarios", arquivo);
@@ -78,7 +92,12 @@ async function principal() {
   }
 
   diz("\nRegras cruzadas:");
-  checar("preset sem presente repetido (R1.4)", presentesRepetidos(await emDados("exemplos", "preset-escalada-padrao.json")));
+  const presetExemplo = await emDados("exemplos", "preset-escalada-padrao.json");
+  checar("preset sem presente repetido (R1.4)", presentesRepetidos(presetExemplo));
+  // Entrou aqui quando saiu do JSON Schema: com o teto em 24, os pares
+  // contains/maxContains virariam 24 blocos. Sem esta linha, a checagem de
+  // posição some do relatório e ninguém percebe que a garantia mudou de lugar.
+  checar("preset sem posição repetida (R1)", posicoesRepetidas(presetExemplo));
   checar("mapa jogável sem presente (ADR-009)", problemasDeJogabilidade(mapa));
   checar("mapa só referencia o acervo (ADR-004)", referenciasInexistentes(mapa, acervo));
   checar("semente com faixa coerente com moedas (R3)",

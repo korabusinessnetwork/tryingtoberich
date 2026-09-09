@@ -49,6 +49,31 @@
       "type": "integer",
       "minimum": 0
     },
+    "portal": {
+      "description": "O portal do primeiro andar (ADR-007, nota do portal), para quem desenha a barra dele. Desde que o HUD saiu do jogo quem desenha é o overlay do OBS (ADR-015), e ele só conhece este payload.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "aberto": { "type": "boolean" },
+        "vida": { "type": "integer", "minimum": 0 },
+        "vidaMaxima": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "contagem": {
+      "description": "A contagem regressiva do fim de rodada, ou ausente quando não há nenhuma. `restanteMs` é o tempo QUE FALTA no instante do envio, não o instante em que termina: o overlay tica sozinho a partir dele, e assim os dois relógios não precisam concordar.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resultado", "restanteMs"],
+          "properties": {
+            "resultado": { "type": "string", "enum": ["vitoria", "derrota"] },
+            "restanteMs": { "type": "integer", "minimum": 0 }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
     "enviadoEm": { "type": "integer", "minimum": 0 }
   }
 }

@@ -1,106 +1,67 @@
 /**
- * O HUD da live para o overlay do OBS (ADR-015): agregados em memória, por
- * sessão. Funções puras — nada de despachante, nada de disco, nada de rede.
+ * O HUD da live para o overlay do OBS (ADR-015): a disputa da rodada e a
+ * legenda dos presentes. Funções puras — nada de despachante, disco ou rede.
  *
- * O que estes testes protegem: o ranking conta quem PAGOU (mapeado ou não), a
- * disputa é da rodada e o resto é da sessão, e nada aqui guarda mais do que o
- * nome que vai para a tela (11_SEGURANCA, camada 4).
+ * O que estes testes protegem, além do cálculo: que a agregação por DOADOR não
+ * volte. Ela existiu, mostrava um ranking de quem mais gastou, e saiu a pedido
+ * do dono para a live não correr risco de restrição na TikTok. Com ela foi o
+ * único acúmulo de nickname da ponte (11_SEGURANCA, camada 4).
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import * as hudModule from "../src/dominio/hud.mjs";
 import {
-  TOPO_DO_RANKING,
   criarHud,
   instantaneoDoHud,
   legendaDoPreset,
   registrarDisputa,
   registrarEmpurrao,
-  registrarPresente,
   zerarDisputa,
 } from "../src/dominio/hud.mjs";
 
-const presente = (nomeDoador, moedas, repeticoes = 1, presenteNome = "Rose", presenteId = "5655") => ({
-  presenteId, presenteNome, moedas, repeticoes, nomeDoador, recebidoEm: 0,
-});
+const ZERADO = { disputa: { subida: 0, descida: 0 } };
 
-const ZERADO = { moedas: 0, ranking: [], topCombo: null, topPresente: null, disputa: { subida: 0, descida: 0 } };
-
-test("o ranking soma moedas × rajada por doador, ordena e corta no topo", () => {
+test("a disputa da rodada soma as duas pontas, e o combate entra pelas somas brutas", () => {
   const hud = criarHud();
-  registrarPresente(hud, presente("julin_", 1, 20));
-  registrarPresente(hud, presente("raylton", 100));
-  registrarPresente(hud, presente("kelvyn", 69));
-  registrarPresente(hud, presente("julin_", 100));
-  registrarPresente(hud, presente("quarto", 5));
-
-  const { ranking, moedas } = instantaneoDoHud(hud);
-  assert.deepEqual(ranking, [
-    { nome: "julin_", moedas: 120 },
-    { nome: "raylton", moedas: 100 },
-    { nome: "kelvyn", moedas: 69 },
-  ]);
-  assert.equal(ranking.length, TOPO_DO_RANKING, "a referência do dono mostra três");
-  assert.equal(moedas, 294, "o total conta todo mundo, inclusive quem ficou fora do topo");
-});
-
-test("empate em moedas desempata pelo nome, para a lista não pular de ordem a cada presente", () => {
-  const hud = criarHud();
-  registrarPresente(hud, presente("bruna", 10));
-  registrarPresente(hud, presente("ana", 10));
-  assert.deepEqual(instantaneoDoHud(hud).ranking.map((d) => d.nome), ["ana", "bruna"]);
-});
-
-test("sem nome, o presente conta no total e não conta no ranking", () => {
-  const hud = criarHud();
-  registrarPresente(hud, presente(null, 50));
-  registrarPresente(hud, presente("   ", 50));
-  const foto = instantaneoDoHud(hud);
-  assert.equal(foto.moedas, 100);
-  assert.deepEqual(foto.ranking, []);
-});
-
-test("top combo é a maior rajada (x1 não é combo); top presente é o maior valor unitário", () => {
-  const hud = criarHud();
-  registrarPresente(hud, presente("kelvyn", 1, 20, "GG", "gg"));
-  registrarPresente(hud, presente("raylton", 100, 1, "Coins", "cc"));
-  registrarPresente(hud, presente("ana", 500, 1, "Lion", "lion"));
-  registrarPresente(hud, presente("bia", 5, 30, "Rose", "rose"));
-  // Empate na rajada fica com quem chegou primeiro.
-  registrarPresente(hud, presente("caio", 1, 30, "Rose", "rose"));
-
-  const { topCombo, topPresente } = instantaneoDoHud(hud);
-  assert.deepEqual(topCombo, { presenteId: "rose", presenteNome: "Rose", nome: "bia", repeticoes: 30 });
-  assert.deepEqual(topPresente, { presenteId: "lion", presenteNome: "Lion", nome: "ana", moedas: 500 });
-});
-
-test("a disputa da rodada soma as duas pontas — e zera no fim da rodada, sem levar o resto junto", () => {
-  const hud = criarHud();
-  registrarPresente(hud, presente("ana", 10));
   registrarEmpurrao(hud, 40);
   registrarEmpurrao(hud, -8);
   registrarEmpurrao(hud, 0);
-  // Combate entra pelas somas brutas, não pelo líquido (ADR-012).
+  // Combate entra pelas somas brutas, não pelo líquido (ADR-012): a barra é
+  // sobre quanto cada lado brigou, e o líquido já está na torre.
   registrarDisputa(hud, { somaSubida: 30, somaDescida: 50, liquido: -20 });
   assert.deepEqual(instantaneoDoHud(hud).disputa, { subida: 70, descida: 58 });
+});
 
+test("zerar a disputa é o fim da rodada, e não apaga mais nada porque não há mais nada", () => {
+  const hud = criarHud();
+  registrarEmpurrao(hud, 120);
   zerarDisputa(hud);
-  const depois = instantaneoDoHud(hud);
-  assert.deepEqual(depois.disputa, { subida: 0, descida: 0 });
-  assert.equal(depois.moedas, 10, "zerar a disputa não apaga a sessão");
+  assert.deepEqual(instantaneoDoHud(hud), ZERADO);
 });
 
 test("o instantâneo é cópia: mexer nele não mexe no HUD", () => {
   const hud = criarHud();
-  registrarPresente(hud, presente("ana", 10, 5));
+  registrarEmpurrao(hud, 10);
   const foto = instantaneoDoHud(hud);
-  foto.ranking.push({ nome: "intruso", moedas: 999 });
   foto.disputa.subida = 999;
-  foto.topCombo.repeticoes = 999;
-  assert.deepEqual(instantaneoDoHud(hud).ranking, [{ nome: "ana", moedas: 50 }]);
-  assert.deepEqual(instantaneoDoHud(hud).disputa, { subida: 0, descida: 0 });
-  assert.equal(instantaneoDoHud(hud).topCombo.repeticoes, 5);
+  assert.deepEqual(instantaneoDoHud(hud).disputa, { subida: 10, descida: 0 });
+});
+
+test("o HUD não agrega NADA por doador, e não guarda moeda: é o que tira a live do risco", () => {
+  //[[ Guarda de arquitetura, não de cálculo. O ranking por doador, o pote de
+  // moedas, o TOP COMBO e o TOP PRESENTE existiram aqui e saíram por decisão do
+  // dono. Quem for reimplementar tem que esbarrar neste teste antes, porque a
+  // razão não é técnica: é a restrição da live e a camada 4 do 11_SEGURANCA. ]]
+  const proibidos = ["registrarPresente", "porDoador", "ranking", "topCombo", "topPresente", "TOPO_DO_RANKING"];
+  const exportados = Object.keys(hudModule);
+  for (const nome of proibidos) {
+    assert.ok(!exportados.includes(nome), `${nome} voltou ao módulo do HUD`);
+  }
+
+  // E o instantâneo que vai para o SSE não carrega campo nenhum além da disputa.
+  assert.deepEqual(Object.keys(instantaneoDoHud(criarHud())), ["disputa"]);
 });
 
 test("a legenda tem um item por slot preenchido, ordenada pela força, com nome e ícone do catálogo", () => {
@@ -123,14 +84,42 @@ test("a legenda tem um item por slot preenchido, ordenada pela força, com nome 
   assert.deepEqual(legendaDoPreset({ slots: [] }, catalogo), []);
 });
 
-test("lixo não quebra: hud nulo, evento nulo, instantâneo de nada", () => {
+test("a legenda esconde só o slot desmarcado, e o slot SEM o campo continua aparecendo (ADR-015)", () => {
+  //[[ A retrocompatibilidade em forma de teste.
+  //
+  // Todo preset gravado antes desta feature não tem `mostrarNoOverlay`. Se a
+  // ausência valesse como falso, abrir um preset antigo apagaria a legenda
+  // inteira do overlay sem ninguém ter desmarcado nada — e em silêncio, porque
+  // a live continuaria funcionando com o boneco reagindo normalmente. ]]
+  const preset = {
+    slots: [
+      { posicao: 1, presenteId: "1", delta: 2, mostrarNoOverlay: true },
+      { posicao: 2, presenteId: "2", delta: -60, mostrarNoOverlay: false },
+      { posicao: 3, presenteId: "3", delta: 40 },
+    ],
+  };
+
+  const legenda = legendaDoPreset(preset, { presentes: [] });
+  assert.deepEqual(legenda.map((s) => s.posicao), [3, 1], "o desmarcado sai, e a ordem por |delta| fica");
+  assert.equal(legenda.some((s) => s.presenteId === "2"), false, "o -60 era o mais forte e mesmo assim não entra");
+});
+
+test("a legenda fala do PRESENTE, nunca de quem mandou nem de quanto custou", () => {
+  const preset = { slots: [{ posicao: 1, presenteId: "9101", delta: 150 }] };
+  const catalogo = {
+    presentes: [{ presenteId: "9101", nome: "Universe", iconeUrl: "http://x/u.png", moedas: 44999, faixa: 5 }],
+  };
+  assert.deepEqual(Object.keys(legendaDoPreset(preset, catalogo)[0]).sort(), [
+    "delta", "iconeUrl", "nome", "posicao", "presenteId",
+  ]);
+});
+
+test("lixo não quebra: hud nulo, entrada inválida, instantâneo de nada", () => {
   assert.deepEqual(instantaneoDoHud(null), ZERADO);
   assert.deepEqual(instantaneoDoHud(criarHud()), ZERADO);
-  assert.equal(registrarPresente(null, presente("ana", 1)), null);
   const hud = criarHud();
-  registrarPresente(hud, null);
-  registrarPresente(hud, { presenteId: "x", moedas: "muito", repeticoes: -3, nomeDoador: 7 });
   registrarDisputa(hud);
   registrarEmpurrao(hud, Number.NaN);
+  registrarEmpurrao(null, 10);
   assert.deepEqual(instantaneoDoHud(hud), ZERADO);
 });

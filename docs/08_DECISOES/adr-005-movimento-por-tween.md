@@ -62,6 +62,50 @@ Duas escolhas dentro disso:
 - Descartado por decisão do dono: arranca do ar na hora. Esperar até 1s
   consumiria todo o orçamento de latência do Princípio nº1.
 
+## Nota de 2026-09-04 — o efeito viaja junto
+
+Pedido do dono: *"as animações devem seguir o boneco até ele chegar na última
+plataforma"*. Elas não seguiam.
+
+Cinco das 32 animações se soldam no personagem e sempre viajaram junto. As
+outras 27 montam um pivô **ancorado** na posição de partida e penduram tudo
+nele; o passo 3 deste ADR então leva o boneco por Tween e o efeito fica onde
+ele estava. Com um presente pequeno isso quase não se via. Com a tabela de
+movimento (ADR-016) mandando uma rosa de 1 moeda subir dez andares, e um
+presente caro subir centenas, o efeito passou a ficar um prédio inteiro abaixo
+do boneco.
+
+Soldar o pivô resolveria o transporte e **mataria o giro**: peça soldada não
+aceita CFrame, e o giro é o que faz shuriken ser shuriken. É a mesma troca que
+`sub_jato_propulsor` já documentava — ele é o único soldado justamente por não
+girar.
+
+A saída foi manter o pivô ancorado e mover o CFrame dele num laço de
+`Heartbeat`: posição da raiz mais o deslocamento guardado, vezes rotação e
+giro. Um laço só para todos os pivôs, que se desliga quando o último morre. As
+peças penduradas vão de graça — elas estão soldadas no pivô, e mover peça
+ancorada arrasta o que está soldado nela. `Efeitos.girar` passou a alimentar
+esse laço em vez de tweenar, porque uma corrente de Tweens mirando CFrames
+absolutos puxaria o efeito de volta para onde o boneco estava.
+
+Quem arma é `movimento.lua`, em volta da chamada da animação. Nenhum dos 32
+módulos mudou, que é a regra do `efeitos.lua`: primitiva nova entra lá.
+
+**Emenda do mesmo dia — a folga à frente.** Acompanhar sozinho não bastou: as
+animações de subida nascem no PÉ do boneco, porque ficar para trás ERA o efeito
+enquanto ninguém acompanhava. Com o pivô seguindo, esse offset zero passou a
+desenhar a peça dentro do corpo dele. A direção da viagem viaja junto com a
+raiz, e o pivô que nasce com menos de `FOLGA_A_FRENTE` studs de avanço é
+empurrado só o que falta para sair do corpo — o desvio lateral que a animação
+escolheu fica intacto. A folga é um piso, não uma posição.
+
+**E o limite da torre deixou de engolir o presente.** No topo e no primeiro
+andar o delta é comido pelo grampo, e `sessao.lua` tinha um `return` ali: o
+presente sumia sem animação nenhuma, justamente onde a plateia está martelando.
+Agora o ciclo roda com destino igual à origem — o Tween não sai do lugar, o
+efeito toca inteiro e o controle volta no fim. Não é caso especial: é o caso
+geral com deslocamento zero.
+
 ## Consequências
 ### Positivas
 - Parkour é jogo de verdade, com erro e acerto do streamer.

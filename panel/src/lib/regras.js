@@ -188,12 +188,83 @@ export function idDePreset(nome) {
     .replace(/-+$/g, "");
 }
 
-/** R1 — o preset tem 6 posições, e slot vazio é válido. Sempre devolve 6. */
-export const SLOTS = 6;
+/**
+ * R1 emendada — 6 é o PADRÃO, não o teto.
+ *
+ * Os seis primeiros vêm do painel de desejos da TikTok: são as posições que o
+ * espectador enxerga na live, e por isso continuam existindo na tela mesmo
+ * vazias (R1.3). É por isso que o piso é 6 e não a contagem real de slots —
+ * esconder o slot 4 porque ninguém o preencheu tiraria da vista justamente o
+ * lugar onde o streamer procura o presente.
+ *
+ * O teto de 24 é o `maxItems` de `data/schemas/preset.schema.json`: passar
+ * dali a ponte devolve 400 `preset_invalido`, então o painel nem oferece.
+ */
+export const SLOTS_PADRAO = 6;
+export const SLOTS_MAX = 24;
 
+/**
+ * As posições a desenhar: os 6 de sempre, mais os extras que este preset tem.
+ *
+ * Devolve até a MAIOR posição usada, não até a contagem de slots: remover o
+ * extra 8 de [7, 8, 9] tem de deixar um cartão vazio no 8, porque a posição
+ * viaja para `sessao.eventos` e para `presentesPorSlot` — renumerar os extras
+ * reescreveria a que slot um evento já gravado se refere.
+ */
 export function slotsDoPreset(preset) {
-  const porPosicao = new Map((preset?.slots ?? []).map((slot) => [slot.posicao, slot]));
-  return Array.from({ length: SLOTS }, (_, i) => porPosicao.get(i + 1) ?? { posicao: i + 1, vazio: true });
+  const porPosicao = new Map();
+  for (const slot of preset?.slots ?? []) {
+    // O preset também é editado à mão em disco (ADR-003). Posição fracionária
+    // ou negativa nunca casaria com o índice e já sumia antes; o que é novo é
+    // o teto: sem ele, um `posicao: 5000` digitado errado pediria cinco mil
+    // cartões e travaria a aba antes de o streamer ver o erro.
+    if (!Number.isInteger(slot?.posicao) || slot.posicao < 1 || slot.posicao > SLOTS_MAX) continue;
+    porPosicao.set(slot.posicao, slot);
+  }
+
+  const maior = porPosicao.size > 0 ? Math.max(...porPosicao.keys()) : 0;
+  const total = Math.max(SLOTS_PADRAO, maior);
+  return Array.from({ length: total }, (_, i) => porPosicao.get(i + 1) ?? { posicao: i + 1, vazio: true });
+}
+
+/** Extra é o que passou do painel de desejos: ele ganha o botão de remover de vez. */
+export const ehSlotExtra = (posicao) => Number.isInteger(posicao) && posicao > SLOTS_PADRAO;
+
+/**
+ * A próxima posição livre, ou `null` quando o preset já bateu no teto.
+ *
+ * Procura a partir do 1 de propósito: se o streamer limpou o slot 3 e depois
+ * acrescentou um presente, o buraco no meio dos 6 é preenchido antes de nascer
+ * um sétimo cartão — cartão vazio à vista com uma linha nova embaixo é a
+ * mesma informação ocupando o dobro da tela.
+ */
+export function proximaPosicaoLivre(preset) {
+  const ocupadas = new Set((preset?.slots ?? []).map((slot) => slot.posicao));
+  for (let posicao = 1; posicao <= SLOTS_MAX; posicao += 1) {
+    if (!ocupadas.has(posicao)) return posicao;
+  }
+  return null;
+}
+
+/**
+ * O presente que pode entrar num slot novo: o primeiro do catálogo que ainda
+ * não está vinculado a NADA neste preset.
+ *
+ * Slots e placar na mesma varredura, como a R1.4 que a ponte aplica
+ * (`bridge/src/dominio/regras.mjs`). Olhando só os slots, um presente de
+ * vitória já vinculado voltaria como padrão do slot novo e o Salvar devolveria
+ * `presente_repetido` — falando de dois slots, enquanto a colisão real está no
+ * placar, que esta tela nem mostra ao lado. `null` quando não sobrou nenhum.
+ */
+export function primeiroPresenteLivre(catalogo, preset) {
+  const jaVinculado = new Set(
+    [...(preset?.slots ?? []), ...(preset?.placar ?? [])].map((vinculo) => String(vinculo?.presenteId)),
+  );
+  return (
+    listaDePresentes(catalogo).find(
+      (presente) => presente?.presenteId != null && !jaVinculado.has(String(presente.presenteId)),
+    ) ?? null
+  );
 }
 
 /** R1.4 — o mesmo presente não pode ocupar dois slots. A ponte recusa; o painel avisa antes. */
@@ -429,4 +500,118 @@ export function resumoDaTabela(linhas, totalPlataformas) {
     // há torre para comparar, e aí a conta não é feita em vez de ser inventada.
     varremATorre: teto === null ? null : queMovem.filter((linha) => Math.abs(linha.delta) >= teto).length,
   };
+}
+
+/* ---------------------------------------------------------------- */
+/* Estúdio de overlay — a geometria da caixa arrastável              */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Prende a caixa dentro do palco e arredonda a uma casa.
+ *
+ * Duas coisas, e as duas por consequência real. Sair do palco não dá erro: dá
+ * um elemento desenhado fora da cena, que no OBS simplesmente não aparece e o
+ * streamer descobre ao vivo. E o arredondamento existe porque o `x` vem de uma
+ * conta de pixel do ponteiro — sem ele o arquivo guardaria `37.41999999999996`,
+ * que é ruído para quem for ler o JSON à mão depois.
+ *
+ * O teto é `100 - tamanho`, não 100: `x` e `y` são o canto SUPERIOR ESQUERDO
+ * do elemento, então prender só a origem deixaria a caixa inteira pendurada
+ * para fora. Caixa mais larga que o palco fica em 0 em vez de virar negativa.
+ */
+export function prenderNoPalco({ x, y, largura = 0, altura = 0 }) {
+  const dentro = (valor, tamanho) => {
+    if (!Number.isFinite(valor)) return 0;
+    const teto = Math.max(0, 100 - (Number.isFinite(tamanho) ? tamanho : 0));
+    return Math.min(teto, Math.max(0, valor));
+  };
+  const casa = (valor) => Math.round(valor * 10) / 10;
+
+  return { x: casa(dentro(x, largura)), y: casa(dentro(y, altura)) };
+}
+
+/** Escreve a exceção de um elemento do overlay, preservando o que já havia nela. */
+export function layoutComElemento(elementos, id, campos) {
+  const atual = elementos?.[id] ?? {};
+  return { ...elementos, [id]: { escala: 1, visivel: true, ...atual, ...campos } };
+}
+
+/**
+ * Devolve o elemento ao padrão da página — APAGANDO a chave, não gravando a
+ * posição padrão nela.
+ *
+ * É a mesma escolha do `semExcecao` da tabela (ADR-016), e pela mesma razão:
+ * o arquivo guarda só o que o streamer mexeu. Gravar a posição padrão faria o
+ * layout congelar o desenho de hoje — no dia em que a página do OBS mudar de
+ * lugar um elemento, quem clicou "voltar ao padrão" uma vez ficaria preso no
+ * padrão velho, sem nada dizendo por quê.
+ */
+export function semElemento(elementos, id) {
+  const resto = { ...elementos };
+  delete resto[id];
+  return resto;
+}
+
+/**
+ * A caixa encosta na faixa da cam? (ADR-015)
+ *
+ * Aviso, nunca bloqueio: quem decide o enquadramento é o streamer, e a cam
+ * pode estar em outro lugar da cena dele. Mas nada é desenhado sobre a cam de
+ * propósito — um elemento ali fica atrás do rosto, e a live inteira passa com
+ * o placar escondido sem ninguém perceber.
+ */
+export function invadeACam(caixa, cam) {
+  const faixa = Number.isFinite(cam) ? cam : 0;
+  if (faixa <= 0) return false;
+  const topo = Number.isFinite(caixa?.y) ? caixa.y : 0;
+  const base = topo + (Number.isFinite(caixa?.altura) ? caixa.altura : 0);
+  return topo < faixa && base > 0;
+}
+
+/**
+ * As duas leituras da resposta de `GET /api/overlay/layout`: o CATÁLOGO do que
+ * existe e as EXCEÇÕES do que o streamer mexeu.
+ *
+ * Existe porque as duas pontas chamam de `elementos` coisas diferentes. O
+ * 07_APIS, que é normativo, diz `elementos` = o que o streamer moveu, com o
+ * catálogo ao lado; a rota de hoje devolve `{ layout: { elementos }, elementos:
+ * [o catálogo], cam }`. Lendo uma forma só, o estúdio abre com o palco VAZIO e
+ * anunciando "8 fora do padrão" sem ninguém ter arrastado nada — e sem nenhum
+ * erro na tela, porque tecnicamente a chamada deu certo. Aceitar as duas é o
+ * que faz a tela funcionar hoje e continuar funcionando no dia em que a rota
+ * se alinhar à doc.
+ *
+ * A forma é reconhecida pelo TIPO, não pela presença da chave: catálogo é
+ * lista, exceção é mapa de id para posição.
+ */
+export function lerRespostaDoLayout(resposta) {
+  const catalogoEmElementos = Array.isArray(resposta?.elementos);
+  const excecoes = catalogoEmElementos ? resposta?.layout?.elementos : resposta?.elementos;
+  const ehMapa = excecoes != null && typeof excecoes === "object" && !Array.isArray(excecoes);
+
+  return {
+    catalogo: resposta?.catalogo ?? (catalogoEmElementos ? resposta.elementos : null),
+    elementos: ehMapa ? excecoes : {},
+  };
+}
+
+/**
+ * A âncora pela qual o CSS da página prende o elemento HOJE, em texto de tela.
+ *
+ * Quem não nasce preso pela esquerda e pelo topo troca de âncora no primeiro
+ * arrastar e dá um pulo (02_DESIGN_SYSTEM, seção C). O catálogo da ponte diz
+ * quem é assim e promete que "o painel avisa" — este é o texto do aviso.
+ * Âncora desconhecida devolve `null`: aviso inventado sobre um elemento novo
+ * seria pior que aviso nenhum.
+ */
+const ANCORAS_QUE_PULAM = {
+  "direita-topo": "à direita",
+  "direita-base": "à direita e à base",
+  "esquerda-base": "à base",
+  "centro-topo": "pelo centro",
+  "faixa-topo": "pela largura inteira",
+};
+
+export function avisoDeAncora(ancora) {
+  return ANCORAS_QUE_PULAM[ancora] ?? null;
 }

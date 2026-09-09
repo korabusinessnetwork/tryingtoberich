@@ -45,6 +45,82 @@
   a conta do teto tem que ser refeita — e quem protege isso é um teste que
   soma os motivos, não um número solto.
 
+### BUG-003 — o teto de 400 andares no schema da sessão travava a ponte inteira
+- **Sintoma:** passando do andar 400 numa live, a sessão parava de ser gravada
+  (só uma linha `sessao_nao_persistiu` no log, a cada presente) e o botão Parar
+  passava a devolver erro em vez do resumo (F5.5). Depois disso a ponte não
+  encerrava nem recomeçava: Stop repetia o erro, Start respondia 409
+  `sessao_em_andamento`. Só matando o Node.
+- **Reprodução:** subir a torre além da plataforma 400 com o mapa no ar
+  (`mundo-montado`, 1000 plataformas) e apertar Parar.
+- **Causa raiz:** `data/schemas/sessao.schema.json` travava
+  `plataformaReferencia` e `plataformaMaxima` em 400 — número da época em que a
+  torre era pequena — enquanto `mapa.schema.json` aceita 5000 e o mundo no ar
+  tem 1000. O mesmo número estava escrito em três arquivos e dois subiram.
+- **Correção:** teto em 5000 nos três campos da sessão, e o teste que já
+  amarrava mapa × estado-jogo passou a varrer `sessao.schema.json` recursivamente
+  — a raiz e o resumo.
+- **Status:** corrigido em 2026-09-04.
+- **A lição:** é o BUG-001 outra vez, com outro schema. Número igual escrito em
+  três lugares diverge no dia em que um muda. Quando um teto sobe, o teste que o
+  trava tem que varrer TODOS os arquivos que o repetem, não só o par que
+  quebrou da última vez.
+
+### BUG-004 — `encerrarSessao` soltava a sessão depois de um await que podia falhar
+- **Sintoma:** sessão fantasma. Conector desconectado, long-polls fechados,
+  relógio parado — e `estado.sessao` dizendo "rodando" para sempre.
+- **Reprodução:** fazer a gravação da sessão falhar (era o BUG-003; hoje serve
+  disco cheio ou o OneDrive segurando o arquivo) e apertar Parar.
+- **Causa raiz:** ordem. `bridge/src/nucleo.mjs` derrubava a live inteira, e só
+  depois fazia `await this.#sessao.encerrar()`, com `this.#sessao = null` na
+  linha seguinte. O await estourava e aquela linha nunca rodava.
+- **Correção:** a sessão é solta ANTES do await, junto do `#hud` (nickname não
+  pode sobreviver ao Stop nem quando a gravação falha, 11_SEGURANCA camada 4).
+  A gravação ficou num `try/finally` que publica o estado nos dois caminhos.
+  Teste em `bridge/test/ponta-a-ponta.test.mjs` prova que dá para dar Start
+  depois de um Stop que falhou.
+- **Status:** corrigido em 2026-09-04.
+- **A lição:** limpeza de estado nunca vai depois de um `await` que pode lançar.
+  O BUG-003 era o gatilho; esta é a razão de ele ter derrubado a ponte inteira
+  em vez de só perder um arquivo.
+
+### BUG-005 — `publicarEstado` chamado antes de existir: a fila de donates parava na primeira
+- **Sintoma:** no Output do Studio, "attempt to call a nil value (global
+  'publicarEstado')" ao fim de TODA rodada. Efeito real, silencioso: um donate
+  de 6 derrotas cobrava uma e perdia cinco (R4, ADR-014).
+- **Reprodução:** terminar qualquer rodada e esperar a contagem zerar.
+- **Causa raiz:** `game/src/server/sessao.lua` chamava `publicarEstado()` dentro
+  de `encerrarRodada`, cerca de 60 linhas antes do `local function
+  publicarEstado()`. Em Lua isso não é erro de sintaxe: o nome vira busca de
+  global, que é nil. A linha seguinte, `cobrarProximaDaFila()`, nunca rodava.
+  Passava por ruído porque a torre reiniciava do mesmo jeito, por outro caminho.
+- **Correção:** `publicarEstado` entrou na lista de declarações adiantadas que o
+  arquivo já mantinha para `encerrarRodada` e `cobrarProximaDaFila`. O teste
+  novo em `test/jogo.test.mjs` cobra isso de TODA função local do arquivo, com
+  teste de controle.
+- **Status:** corrigido em 2026-09-04.
+- **A lição:** o arquivo já tinha o remédio escrito no topo, com o comentário
+  dizendo que o tropeço tinha acontecido duas vezes no vestiário. Aconteceu a
+  terceira. Remédio que depende de alguém lembrar precisa virar teste.
+
+### BUG-006 — o contorno do texto do HUD sumiu numa substituição cega
+- **Sintoma:** na live, o ranking, a legenda e a barra da torre saíam com texto
+  branco sem contorno em cima da captura da cam — ilegíveis em cena clara. A
+  página parecia certa para quem só olhava: sombra de ícone e medalha continuava
+  funcionando.
+- **Reprodução:** abrir `/overlay/hud` sobre qualquer fundo claro.
+- **Causa raiz:** trocar a unidade `vw` pela unidade do palco com uma
+  substituição por regex transformou `-0.12vw` em `-calc(0.12 * var(--u))`. Um
+  menos antes do `calc()` não existe em CSS: o navegador descarta a declaração
+  inteira, sem erro. O sinal tem que ir dentro.
+- **Correção:** `calc(-0.12 * var(--u))`, e um teste em `bridge/test/http.test.mjs`
+  que recusa qualquer menos antes de `calc(` na página servida — ignorando
+  comentários, senão o comentário que documenta a forma errada acusa a si mesmo.
+- **Status:** corrigido em 2026-09-04.
+- **A lição:** substituição cega em CSS não é refatoração, é reescrita. E CSS
+  inválido falha CALADO — a mesma classe de erro do BUG-001, em outra linguagem:
+  ninguém reclama, e o defeito só aparece na tela de quem está assistindo.
+
 ## Formato
 ### BUG-NNN — título
 - **Sintoma:**

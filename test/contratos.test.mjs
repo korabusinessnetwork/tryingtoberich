@@ -9,6 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -20,8 +21,10 @@ import {
   referenciasNaoAprovadas,
   mapaPodeIrAoAr,
   faixaDeMoedas,
+  posicoesRepetidas,
   FATOR_SALTO_VERTICAL,
 } from "../scripts/validar-contratos.mjs";
+import { idsDoOverlay } from "../bridge/src/dominio/overlay-layout.mjs";
 
 const lerJson = async (...partes) => JSON.parse(await readFile(path.join(RAIZ, ...partes), "utf8"));
 const clonar = (o) => structuredClone(o);
@@ -75,10 +78,36 @@ test("todo evento das fixtures de cenário valida como evento normalizado", asyn
 /* R1 e R2 — preset e slots                                        */
 /* -------------------------------------------------------------- */
 
-test("preset: no máximo 6 slots (R1.1)", () => {
-  const sete = clonar(preset);
-  sete.slots.push({ posicao: 6, presenteId: "sem-corgi", animacaoId: "sub_mola", delta: 3, intensidade: 1 });
-  assert.notDeepEqual(validar("preset", sete), []);
+//[[ Seis deixou de ser teto e virou padrão (R1 emendada, pedido do dono).
+//
+// O slot extra além do sexto é gerado, e não escrito à mão, porque são 18
+// deles: cada um precisa de presenteId próprio, senão o que reprova o preset é
+// a R1.4 e o teste passaria a medir a regra errada. ]]
+const slotExtra = (posicao) => ({
+  posicao,
+  presenteId: `sem-extra-${posicao}`,
+  animacaoId: "sub_mola",
+  delta: posicao,
+  intensidade: 1,
+});
+const presetComSlots = (quantos) => ({
+  ...clonar(preset),
+  slots: Array.from({ length: quantos }, (_, i) => slotExtra(i + 1)),
+});
+
+test("preset: 24 slots é válido e 25 é recusado — o 6 é padrão, o teto é 24 (R1.1)", () => {
+  assert.deepEqual(validar("preset", presetComSlots(24)), [], "24 slots com presentes distintos passa");
+  assert.notDeepEqual(validar("preset", presetComSlots(25)), [], "o 25º estoura o teto");
+});
+
+test("preset: posição acima de 24 é recusada, e a 7ª não é mais (R1.1)", () => {
+  const setimo = clonar(preset);
+  setimo.slots.push(slotExtra(7));
+  assert.deepEqual(validar("preset", setimo), [], "o sétimo presente é justamente o que o dono pediu");
+
+  const alem = clonar(preset);
+  alem.slots.push(slotExtra(25));
+  assert.notDeepEqual(validar("preset", alem), []);
 });
 
 test("preset: menos de 6 slots preenchidos é válido (R1.3)", () => {
@@ -87,10 +116,55 @@ test("preset: menos de 6 slots preenchidos é válido (R1.3)", () => {
   assert.deepEqual(validar("preset", dois), []);
 });
 
-test("preset: duas posições iguais são rejeitadas (R1)", () => {
+test("preset: duas posições iguais passam no schema e são pegas pela regra cruzada (R1)", () => {
+  //[[ Esta garantia MUDOU DE LUGAR, e é isso que o teste registra.
+  //
+  // Ela morava no schema, como seis pares contains/maxContains. Com o teto em
+  // 24 seriam 24 blocos iguais, então desceu para regras.mjs, ao lado da R1.4.
+  // O schema deixou de reprovar de propósito — quem confiar só nele grava um
+  // preset com dois slots na posição 1. ]]
+  assert.deepEqual(posicoesRepetidas(preset), [], "o exemplo não tem posição repetida");
+
   const colidido = clonar(preset);
   colidido.slots[1].posicao = 1;
-  assert.notDeepEqual(validar("preset", colidido), []);
+  assert.deepEqual(validar("preset", colidido), [], "a forma continua válida: posicao 1 é inteiro na faixa");
+  assert.deepEqual(posicoesRepetidas(colidido), [1]);
+});
+
+test("as regras cruzadas do preset sobrevivem a um JSON quebrado: quem relata é o relatório, não o stack", () => {
+  //[[ Em salvarPreset o schema roda ANTES e lança, então isto nunca aparece
+  // lá. Mas em scripts/validar-contratos.mjs o erro de schema é apenas
+  // COLETADO e as regras cruzadas rodam em seguida sobre o preset possivelmente
+  // inválido: um `slots: [null]` num arquivo editado a mão (o ADR-003 prevê a
+  // edição em disco) estourava TypeError e o `npm run validar` morria com stack
+  // trace — em vez de imprimir a lista de contratos quebrados, que é
+  // exatamente para o que ele existe. ]]
+  for (const quebrado of [{ slots: [null] }, { slots: [null], placar: [null] }, {}, null, undefined]) {
+    assert.deepEqual(posicoesRepetidas(quebrado), [], `posicoesRepetidas quebrou em ${JSON.stringify(quebrado)}`);
+    assert.deepEqual(presentesRepetidos(quebrado), [], `presentesRepetidos quebrou em ${JSON.stringify(quebrado)}`);
+  }
+
+  // E o slot bom no meio do lixo continua sendo contado.
+  const meio = { slots: [null, { posicao: 2, presenteId: "rosa" }, { posicao: 2, presenteId: "rosa" }] };
+  assert.deepEqual(posicoesRepetidas(meio), [2]);
+  assert.deepEqual(presentesRepetidos(meio), ["rosa"]);
+});
+
+test("preset: mostrarNoOverlay é opcional, booleano, e ausente vale como marcado (ADR-015)", () => {
+  //[[ O campo é opcional porque os presets já em disco não o têm. Fosse
+  // obrigatório, abrir a live com o preset de ontem devolveria preset_invalido
+  // e o painel não carregaria nada. ]]
+  assert.deepEqual(validar("preset", preset), [], "o exemplo não tem o campo e continua válido");
+
+  for (const valor of [true, false]) {
+    const marcado = clonar(preset);
+    marcado.slots[0].mostrarNoOverlay = valor;
+    assert.deepEqual(validar("preset", marcado), [], `mostrarNoOverlay=${valor} deveria passar`);
+  }
+
+  const texto = clonar(preset);
+  texto.slots[0].mostrarNoOverlay = "sim";
+  assert.notDeepEqual(validar("preset", texto), [], "string não é caixa marcada");
 });
 
 test("preset: o mesmo presente em dois slots é rejeitado (R1.4)", () => {
@@ -389,6 +463,50 @@ test("animação acima de 3,5s é rejeitada: empilha e estica o bloqueio de cont
   const longa = clonar(indice);
   longa.animacoes[0].duracaoBase = 4;
   assert.notDeepEqual(validar("animacoes", longa), []);
+});
+
+/* -------------------------------------------------------------- */
+/* ADR-015 — o layout do overlay guarda EXCEÇÃO, não a tela inteira */
+/* -------------------------------------------------------------- */
+
+test("layout sem exceção nenhuma é válido: é o estado de quem nunca abriu o estúdio", () => {
+  //[[ O caso mais comum é o arquivo não existir.
+  //
+  // Se o schema exigisse os oito elementos, o repositório teria que gravar a
+  // tela inteira no primeiro salvar — e toda instalação ficaria congelada no
+  // padrão do dia em que o streamer arrastou a primeira caixa. Mexer no CSS da
+  // página depois não mudaria a tela de mais ninguém. ]]
+  assert.deepEqual(validar("overlay-layout", { streamerId: "local", atualizadoEm: null, elementos: {} }), []);
+  assert.deepEqual(validar("overlay-layout", { streamerId: "local", elementos: { placar: { x: 10, y: 40 } } }), []);
+  assert.deepEqual(validar("overlay-layout", { streamerId: "local", elementos: { portal: { visivel: false } } }), []);
+});
+
+test("as chaves do layout são exatamente os elementos que a página desenha", () => {
+  // O catálogo da ponte e o schema são duas listas dos mesmos ids. Um id só no
+  // schema é uma caixa que o estúdio nunca oferece; um id só no catálogo é uma
+  // caixa que o streamer arrasta e o salvar recusa com 400.
+  const schema = JSON.parse(
+    readFileSync(path.join(RAIZ, "data", "schemas", "overlay-layout.schema.json"), "utf8"),
+  );
+  assert.deepEqual(Object.keys(schema.properties.elementos.properties).sort(), [...idsDoOverlay()].sort());
+});
+
+test("elemento inventado, escala fora da faixa e campo extra são recusados", () => {
+  const comElementos = (elementos) => validar("overlay-layout", { streamerId: "local", elementos });
+
+  // Um id que a página não desenha vira uma caixa que nunca aparece no OBS, e
+  // ninguém descobre isso a não ser ao vivo.
+  assert.notDeepEqual(comElementos({ topCombo: { x: 10 } }), []);
+  // Fora de 0,5..2 o elemento ou some da leitura de quem assiste no celular, ou
+  // cobre a tela e engole o jogo.
+  assert.notDeepEqual(comElementos({ placar: { escala: 2.5 } }), []);
+  assert.notDeepEqual(comElementos({ placar: { escala: 0.4 } }), []);
+  assert.notDeepEqual(comElementos({ placar: { x: -1 } }), []);
+  assert.notDeepEqual(comElementos({ placar: { y: 101 } }), []);
+  // Campo extra: o painel e a página falam a mesma língua ou não falam nenhuma.
+  assert.notDeepEqual(comElementos({ placar: { x: 10, rotacao: 90 } }), []);
+  // Objeto vazio não entra: é "voltar ao padrão", e quem grava o descarta.
+  assert.notDeepEqual(comElementos({ placar: {} }), []);
 });
 
 /* -------------------------------------------------------------- */
