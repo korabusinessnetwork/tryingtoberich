@@ -62,11 +62,25 @@ O long-poll continua sendo o desenho certo de qualquer jeito: quem inicia a
 conexão continua sendo o Roblox, e continua não existindo push de fora para
 dentro. Muda só por onde a requisição passa.
 
-**Como verificar, em cinco minutos:** ligar HttpService em Game Settings →
-Security, subir a ponte, e num Script do ServerScriptService pedir
-`HttpService:GetAsync("http://127.0.0.1:8787/saude")` com o header do token.
-Respondeu, o túnel é opcional. Deu erro de host bloqueado, o túnel fica e este
-ADR continua valendo inteiro.
+**Como verificar — atualizado em 2026-09-09, a sonda existe:**
+
+```bash
+npm run sondar
+```
+
+O comando confere a ponte desta máquina, imprime a sonda Luau já com a porta
+certa, e você cola na barra de comandos do Studio. Respondeu, o túnel é
+opcional. Deu bloqueio de host, o túnel fica e este ADR continua valendo
+inteiro. Ver `docs/09_BACKLOG/fase-0-fixes-minimos.md`, item F0-7, e
+`specs/f0-7-sonda-de-localhost.md`.
+
+A rota sondada é `GET /jogo/sonda` — **não** `/saude`, que esta seção sugeriu em
+2026-09-01 e nunca chegou a existir. Ela vive dentro de `/jogo/*`, com token e
+rate limit como todas as outras: rota aberta responderia a mesma pergunta e
+abriria superfície de graça. E é por estar protegida que ela responde melhor —
+**um `401` já prova o alcance**, porque para tomar 401 o pacote precisou chegar
+aqui. Uma sonda que trate 401 como falha responde "não" a uma pergunta cuja
+resposta foi "sim".
 
 O código já funciona dos dois jeitos: a ponte só faz bind em `127.0.0.1`, e o
 túnel, quando existe, é um encaminhador na frente. Nada muda em `bridge/`.

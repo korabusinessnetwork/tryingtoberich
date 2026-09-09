@@ -27,7 +27,11 @@ import { promisify } from "node:util";
 import { RAIZ } from "../bridge/src/repos/arquivo.mjs";
 
 const executar = promisify(execFile);
-const DIR = path.join(RAIZ, "game", "src");
+// `game/` inteiro, e não só `game/src`: fora do src moram ferramentas de
+// diagnóstico rodadas à mão no Studio (a sonda do F0-7, por exemplo). Elas
+// não vão para o place, mas um erro de sintaxe nelas custa a mesma viagem
+// ao Studio que o gate existe para evitar.
+const DIR = path.join(RAIZ, "game");
 
 async function listarLua(dir) {
   const achados = [];

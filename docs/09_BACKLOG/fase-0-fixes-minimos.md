@@ -95,6 +95,29 @@ isso pertencem à Fase 0.
 Bloco 1 e agora vale para todo cliente, não só para o dono.
 **Estimativa:** cinco minutos. Melhor relação custo/benefício do projeto inteiro.
 
+**A sonda está pronta** (rodada 2 do ciclo, `specs/f0-7-sonda-de-localhost.md`).
+O procedimento inteiro:
+
+```bash
+npm run sondar
+```
+
+Ele confere a ponte desta máquina primeiro — sem isso, o teste no Studio falha
+por um motivo que não é o da pergunta e a resposta sai errada — e imprime a
+sonda Luau já com a porta certa. Cole o que ele imprimir na **barra de comandos
+do Studio** (View → Command Bar) e leia o Output.
+
+A sonda separa as quatro causas que se parecem: `HttpService` desligado, ponte
+fora do ar, token errado, e Studio realmente bloqueado. **Um `401` é resposta
+POSITIVA** — para tomar 401 o pacote precisou chegar na ponte.
+
+**Onde registrar a resposta, nos dois lugares:**
+- `memory/learnings.md` — o resultado e o que ele decide
+- este item, trocando o título por SIM ou NÃO
+
+Se a resposta for SIM, o ADR-002 reabre para tirar o túnel do caminho, e o
+ADR-P04 perde o passo mais frágil do instalador.
+
 ### F0-8 · Medir a latência ponta a ponta numa live real
 **O que decide:** é a condição de reabertura do ADR-001 **e** do ADR-P01. Acima
 de 1000ms de forma consistente, a decisão de motor volta à mesa. A ponte já mede

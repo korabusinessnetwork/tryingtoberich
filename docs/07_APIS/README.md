@@ -12,6 +12,27 @@ painel não existe nela. Ver `11_SEGURANCA`.
 Autenticação: header `X-Bridge-Token` em toda requisição. Sem token, 401.
 O token vive no `.env` da ponte e é colado uma vez no Roblox Studio.
 
+### `GET /jogo/sonda`
+Diagnóstico, chamado à mão. **Nunca em laço** — não encosta no caminho crítico.
+
+Existe para uma pergunta só, aberta no ADR-002 desde o Bloco 1: o `HttpService`
+do Studio alcança a ponte em `127.0.0.1`? Ver F0-7 em `09_BACKLOG` e o comando
+`npm run sondar`.
+
+Resposta (200):
+
+```json
+{ "ok": true, "porta": 8787 }
+```
+
+A porta identifica QUAL ponte respondeu — sondar a porta errada responde a
+pergunta errada sem ninguém perceber.
+
+**O `401` desta rota é informação útil, não só erro.** Para tomar 401 a
+requisição precisou chegar até aqui, o que já responde a pergunta do alcance.
+Por isso a sonda vive dentro de `/jogo/*`, com token e rate limit como as
+demais, em vez de ser uma rota aberta.
+
 ### `GET /jogo/eventos`
 Long-poll. O Roblox chama isso em laço infinito.
 

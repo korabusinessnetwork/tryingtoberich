@@ -16,6 +16,29 @@ import { criarValidador } from "../repos/schemas.mjs";
 export function rotasDoJogo(nucleo) {
   const rotas = express.Router();
 
+  /**
+   * Sonda de alcance (F0-7). Responde na hora, sem tocar disco nem rede.
+   *
+   * Existe para uma pergunta só, aberta no ADR-002 desde o Bloco 1: o
+   * `HttpService` do Roblox Studio alcança a ponte em `127.0.0.1`? Se alcançar,
+   * o Cloudflare Tunnel deixa de ser obrigatório — e com ele some a única
+   * exposição do sistema à internet, o passo mais frágil do futuro instalador
+   * (ADR-P04) e cerca de um terço do orçamento de latência.
+   *
+   * Está DENTRO do `/jogo/*`, com token e rate limit como todas as outras. Isso
+   * é de propósito, e é o que a torna útil: um `401` já prova que o pacote
+   * chegou aqui. Uma rota aberta responderia a mesma pergunta e abriria
+   * superfície de graça (`docs/11_SEGURANCA`).
+   *
+   * Nunca é chamada em laço, então não encosta no caminho crítico do presente.
+   */
+  rotas.get("/sonda", (req, res) => {
+    // Só o que responde "cheguei na ponte CERTA": a porta. Versão não entra
+    // aqui — reportar versão é tarefa da telemetria do ADR-P02, e uma rota
+    // pública devolve o mínimo que resolve a pergunta.
+    res.json({ ok: true, porta: nucleo.config?.portaJogo ?? null });
+  });
+
   /** Long-poll. A ponte segura a resposta até haver evento ou até o timeout. */
   rotas.get("/eventos", (req, res) => {
     const desde = Number.parseInt(req.query.desde ?? "0", 10);
