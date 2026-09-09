@@ -7,6 +7,27 @@ Uma seção por rodada, mais recente no topo.
 commits do dono que também estavam sem push — a `claude/monta-b1h5fy` remota
 estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
 
+## Rodada 5 — F0-2, a vistoria antes do Studio — 2026-09-09
+- Spec: `specs/f0-2-vistoria-antes-do-studio.md`
+- Resultado da review: **aprovado sem ressalvas** — 9 de 9, depois de a review
+  corrigir uma classificação minha que contrariava o próprio spec (ponte como
+  impedimento em vez de aviso) e um assert que perseguia palavra em vez de
+  comportamento, pela terceira rodada seguida
+- **Nada impede a sessão.** Studio e Rojo instalados, o place monta (62
+  instâncias), acervo e mapa prontos. Verificado antes de propor qualquer coisa.
+- Aprendido: `memory/learnings.md`
+- Commit: `a4168c7` na branch `claude/camada-de-produto-e-fase-0`
+- Números: 504 testes verdes (eram 493)
+- **Achado da própria vistoria:** a ponte no ar nesta máquina é anterior à
+  rodada 2 e responde 404 em `/jogo/sonda`. Um `npm run ponte` resolve.
+- Pendente de decisão: nenhuma nova. Continuam abertas o ADR-P06 (bloqueia
+  vender) e a dessincronia `assetId`×`faces.ft` (rodada 4).
+- Próximo item recomendado: **nenhum item de código.** As três perguntas que
+  sobram da Fase 0 — F0-2, F0-7 e F0-4 — são a mesma sessão no Studio, e o
+  roteiro está pronto em `docs/09_BACKLOG/roteiro-da-sessao-no-studio.md`.
+  Insistir em rodada de código antes disso é construir sobre o que não foi
+  medido.
+
 ## Rodada 4 — F0-1, o acervo — 2026-09-09
 - Spec: `specs/f0-1-acervo-ja-esta-pronto.md`
 - Resultado da review: **aprovado sem ressalvas** — 8 de 8 critérios, depois de
