@@ -148,3 +148,26 @@ dos cinco erros eram argumentos a favor de jogar fora o trabalho existente.**
   igual ao fluxo atual do Matheus. Confirmar se o overlay de ranking existente
   convive na mesma cena do OBS.
 - Se o painel e a ponte viram um processo só ou continuam separados na Fase 2.
+
+## Decisão pendente aberta em 2026-09-09 (rodada 4)
+
+- **O painel pode dessincronizar `assetId` de `faces.ft` num skybox.**
+  `anotarItemDoAcervo` grava `assetId` e **não toca em `faces`**. O schema
+  documenta, em texto, que num céu de seis faces o `assetId` "é o da face `ft`,
+  que serve de miniatura na galeria e de imagem única para o jogo que só sabe
+  pintar uma" — mas nada faz valer.
+
+  Consequência se acontecer: a galeria mostra uma miniatura e o jogo pinta a
+  face frontal com outra imagem. Silencioso, e só visível ao vivo.
+
+  Não foi consertado na rodada 4 de propósito: é mudança de comportamento na
+  camada de escrita, e a rodada era de verificação (F0-1). **Não está
+  acontecendo hoje** — os 10 skybox têm `assetId` igual a `faces.ft`.
+
+  As três saídas, para decidir numa rodada própria:
+  1. `anotarItemDoAcervo` passa a atualizar `faces.ft` junto — mas aí editar o
+     número pela tela muda uma das seis imagens, o que pode surpreender.
+  2. O painel recusa editar `assetId` de item que tem `faces`, e manda editar as
+     faces. Mais honesto, e exige tela para as seis.
+  3. O `assetId` vira derivado de `faces.ft` quando `faces` existe, e some do
+     formulário. Mais simples de garantir, e muda o schema.

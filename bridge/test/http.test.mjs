@@ -32,7 +32,7 @@ const TOKEN = "t".repeat(32);
 const config = {
   token: TOKEN, portaJogo: 0, portaPainel: 0, host: "127.0.0.1",
   usuarioTiktok: "", chaveGemini: "",
-  longpollTimeoutMs: 150, combateMaxMs: 2000,
+  longpollTimeoutMs: 600, combateMaxMs: 2000,
 };
 
 /** Duas portas de propósito: é o que impede o túnel de alcançar o painel. */
@@ -95,13 +95,30 @@ test("token de tamanho diferente não passa nem por acidente", async () => {
   assert.equal(resposta.status, 401);
 });
 
+//[[ Os dois testes abaixo são o mesmo contrato visto pelas duas pontas: o
+// long-poll responde NO EVENTO (200 com eventos) ou NO TIMEOUT (204 vazio).
+//
+// O cronômetro deles ficou frouxo de propósito, em 2026-09-09. Antes a janela
+// era de 10ms contra um timeout de 150ms, e o teste do evento quebrou uma vez
+// na suíte inteira medindo 191ms — com o comportamento CERTO: status 200, o
+// evento entregue, e a máquina apenas ocupada rodando os outros arquivos em
+// paralelo. Cronômetro apertado assim mede carga, não código.
+//
+// O timeout subiu para 600ms para afastar as duas pontas: entrega por evento
+// leva milissegundos, e um bug que só descarregasse no timeout apareceria em
+// 600. Custa meio segundo de suíte, uma vez. ]]
+const TIMEOUT_DO_LONGPOLL = 600;
+
 test("o long-poll segura a resposta e devolve 204 no timeout", async () => {
   const antes = Date.now();
   const resposta = await fetch(`${base}/jogo/eventos?desde=0`, { headers: comToken });
   const decorrido = Date.now() - antes;
 
   assert.equal(resposta.status, 204);
-  assert.ok(decorrido >= 140, `segurou ${decorrido}ms, esperava ao menos o timeout de 150ms`);
+  assert.ok(
+    decorrido >= TIMEOUT_DO_LONGPOLL * 0.9,
+    `segurou ${decorrido}ms, esperava ao menos o timeout de ${TIMEOUT_DO_LONGPOLL}ms`,
+  );
 });
 
 test("o long-poll responde no instante do evento, não no timeout", async () => {
@@ -118,8 +135,14 @@ test("o long-poll responde no instante do evento, não no timeout", async () => 
   const decorrido = Date.now() - antes;
   const corpo = await resposta.json();
 
+  // O status é o que separa as duas pontas de verdade: timeout devolve 204
+  // vazio. O cronômetro é a segunda linha, e existe para pegar um bug que
+  // entregue o evento SÓ quando o timeout estourar — aí seriam ~600ms.
   assert.equal(resposta.status, 200);
-  assert.ok(decorrido < 140, `respondeu em ${decorrido}ms: não esperou o timeout`);
+  assert.ok(
+    decorrido < TIMEOUT_DO_LONGPOLL * 0.6,
+    `respondeu em ${decorrido}ms: não esperou o timeout de ${TIMEOUT_DO_LONGPOLL}ms`,
+  );
   assert.equal(corpo.cursor, 1);
   assert.equal(corpo.eventos[0].animacaoId, "sub_cometa");
 });

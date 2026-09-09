@@ -8,26 +8,47 @@ Ação 4 do plano de produto. A regra de corte é uma só, e é do próprio plan
 Tudo que é acabamento, conveniência ou feature nova fica fora, mesmo sendo boa
 ideia. A lista está ordenada: os primeiros são pré-requisito dos seguintes.
 
-**Estado da base em 2026-09-09:** 451 testes verdes, 6 bugs conhecidos todos
-corrigidos, Blocos 0 a 3b concluídos. O que falta **não é código quebrado** — é
-que quase nada disto jamais rodou fora do teste. Essa é a natureza desta lista.
+**Estado da base em 2026-09-09, depois de quatro rodadas do ciclo:** 494 testes
+verdes, 7 bugs conhecidos todos corrigidos, Blocos 0 a 3b concluídos, acervo
+montado e aprovado. O que falta **não é código quebrado** — é que quase nada
+disto jamais rodou fora do teste. Essa é a natureza desta lista.
 
 ---
 
 ## Bloqueadores duros
 
-Sem estes, não existe live nenhuma.
+Sem estes, não existe live nenhuma. **Sobraram dois**: o F0-1 foi verificado e
+está feito, e os dois que restam são a mesma coisa — nunca ninguém abriu o
+Studio nem o navegador.
 
-### F0-1 · Montar o acervo de verdade no Roblox
-**Por que bloqueia:** enquanto os `assetId` de `data/acervo.json` estiverem
-`pendente-upload`, **nenhum mapa pode ir ao ar** (ADR-004). Não há como rodar
-uma live sem mapa.
-**O que é:** subir as imagens (6 skybox, 6 texturas, 5 props), esperar a
-moderação da Roblox, preencher `assetId` e mudar `status` para `aprovado`. A
-tela do acervo no painel já existe para isso, e o schema recusa o arquivo
-inteiro se um id cair no item errado.
-**Quem faz:** dono. É moderação de plataforma, não código.
-**Estimativa:** uma tarde, mais o tempo da fila de moderação.
+### F0-1 · Montar o acervo de verdade no Roblox — **FEITO**
+**Verificado em 2026-09-09** (rodada 4 do ciclo, `specs/f0-1-acervo-ja-esta-pronto.md`):
+
+- **10 skybox**, todos `aprovado`, com `assetId` e as 6 faces preenchidas
+- **10 texturas**, todas `aprovado`, com `assetId`
+- **5 props** nativos — efeitos do Roblox, nunca precisaram de moderação
+- nenhum `pendente-upload`, nenhuma face faltando, nenhum `assetId` repetido
+- o mapa real salvo, `mundo-montado`, responde `pode: true`
+
+O dono subiu e aprovou tudo em algum momento, e **este item ficou aqui listado
+como bloqueador duro depois de já estar resolvido** — a ponto de as rodadas 1 a
+3 planejarem em cima de um bloqueio que não existia.
+
+Confira sozinho, em um comando:
+
+```bash
+npm run validar
+```
+
+Ele agora relata a prontidão do acervo e de **todos** os mapas salvos, não só a
+do exemplo. Era essa ausência que deixava a verdade escondida atrás de leitura
+manual de JSON.
+
+**Achado que sobrou desta verificação, e não bloqueia nada hoje:** o painel pode
+dessincronizar o `assetId` de um skybox das suas `faces.ft` — a rota de edição
+grava um e não toca no outro. Não está acontecendo (os 10 estão coerentes), e a
+correção é mudança de comportamento com três saídas possíveis. Registrado em
+`memory/decisions.md` para uma rodada própria.
 
 ### F0-2 · Rodar dentro do Roblox Studio, pela primeira vez
 **Por que bloqueia:** o gate `npm run luau` prova que os 53 arquivos compilam.

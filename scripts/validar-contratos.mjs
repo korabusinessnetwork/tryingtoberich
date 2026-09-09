@@ -103,11 +103,71 @@ async function principal() {
   checar("semente com faixa coerente com moedas (R3)",
     semente.presentes.filter((p) => p.faixa !== faixaDeMoedas(p.moedas)).map((p) => p.nome));
 
-  const aoAr = mapaPodeIrAoAr(mapa, acervo);
+  //[[ Prontidão é RELATO, não contrato.
+  //
+  // Mapa em rascunho e acervo pela metade são estados legítimos de quem está
+  // montando a próxima live — não são erro de contrato e não podem derrubar o
+  // código de saída. O que este bloco resolve é outra coisa: responder "dá para
+  // ir ao ar?" em UM comando.
+  //
+  // Até 2026-09-09 ele só olhava o mapa de EXEMPLO, e o preço disso foi o
+  // documento errado da rodada 4: o F0-1 ficou listado como bloqueador duro
+  // depois de o acervo já estar pronto, e descobrir a verdade custou três
+  // scripts descartáveis lendo JSON na mão. ]]
   diz("\nProntidão para ir ao ar:");
-  diz(`  ${aoAr.pode ? "✓ o mapa de exemplo pode ir ao ar" : "⏳ o mapa de exemplo AINDA NÃO pode ir ao ar"}`);
+
+  const aprovados = (colecao) => {
+    const itens = acervo[colecao] ?? [];
+    return { total: itens.length, ok: itens.filter((i) => i.status === "aprovado" && i.assetId !== null).length };
+  };
+
+  // Props são efeitos nativos do Roblox: não passam por moderação e por
+  // contrato não têm status nem assetId. Contá-los como pendentes diria que o
+  // acervo nunca está pronto.
+  const skybox = aprovados("skybox");
+  const texturas = aprovados("texturas");
+  const acervoPronto = skybox.ok > 0 && texturas.ok > 0;
+
+  diz(`  ${acervoPronto ? "✓" : "⏳"} acervo: ${skybox.ok}/${skybox.total} skybox e ${texturas.ok}/${texturas.total} texturas aprovados, mais ${(acervo.props ?? []).length} props nativos`);
+  if (!acervoPronto) {
+    diz("     O acervo é trabalho manual de véspera (ADR-004): subir e aprovar as imagens no Roblox,");
+    diz("     preencher assetId e mudar status para aprovado em data/acervo.json.");
+  }
+
+  const aoAr = mapaPodeIrAoAr(mapa, acervo);
+  diz(`  ${aoAr.pode ? "✓" : "⏳"} mapa de exemplo`);
   for (const motivo of aoAr.motivos) diz(`     - ${motivo}`);
-  if (!aoAr.pode) diz("     O acervo é trabalho manual de véspera (ADR-004): subir e aprovar as imagens no Roblox,\n     preencher assetId e mudar status para aprovado em data/acervo.json.");
+
+  //[[ Os mapas REAIS, que são o que decide se a live de hoje acontece. O de
+  // exemplo prova que a regra funciona; ele não prova que o mundo montado pelo
+  // streamer pode ir ao ar. ]]
+  let arquivosDeMapa = [];
+  try {
+    arquivosDeMapa = (await readdir(path.join(RAIZ, "data", "mapas")))
+      .filter((arquivo) => arquivo.endsWith(".json"))
+      .sort();
+  } catch {
+    // Instalação nova ainda não tem a pasta. Não é erro.
+  }
+
+  if (arquivosDeMapa.length === 0) {
+    diz("  · nenhum mapa salvo ainda — monte um no painel");
+  }
+  for (const arquivo of arquivosDeMapa) {
+    const nome = arquivo.replace(/\.json$/, "");
+    const salvo = await lerJson(path.join(RAIZ, "data", "mapas", arquivo));
+
+    // Prontidão só faz sentido sobre mapa que passou no schema: avaliar um
+    // mapa deformado devolveria motivos sobre o campo errado.
+    if (validar("mapa", salvo).length) {
+      diz(`  ⏳ ${nome}: fora do contrato, prontidão não avaliada`);
+      continue;
+    }
+
+    const pronto = mapaPodeIrAoAr(salvo, acervo);
+    diz(`  ${pronto.pode ? "✓" : "⏳"} ${nome}`);
+    for (const motivo of pronto.motivos) diz(`     - ${motivo}`);
+  }
 
   if (erros.length) {
     console.error(`\n${erros.length} contrato(s) quebrado(s):`);

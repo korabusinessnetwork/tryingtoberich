@@ -333,3 +333,46 @@ durar muito além do pedido é a ponte não honrando, e volta a ser erro.
 
 Eu tinha escrito essa perda no spec como "limitação aceita". Aceitar foi a
 resposta errada — era barato fechar.
+
+---
+
+## Rodada 4 do ciclo — o item que já estava feito (2026-09-09)
+
+### Documento desatualizado custa decisão, não só clareza
+`F0-1` estava listado como **bloqueador duro** — "nenhum mapa pode ir ao ar" —
+depois de o acervo já estar inteiro, aprovado e coerente. As rodadas 1 a 3
+planejaram em cima desse bloqueio, e o resumo da rodada 3 recomendou o F0-1 como
+próximo item exatamente por causa dele.
+
+A regra do `CLAUDE.md` — "se doc e código conflitarem, a documentação prevalece
+**e deve ser corrigida quando estiver errada**" — tem uma segunda metade que é
+fácil de esquecer. Backlog é documentação.
+
+### A verdade estava escondida atrás de leitura manual
+Descobrir custou três scripts descartáveis lendo JSON na mão, porque
+`npm run validar` só olhava o mapa de EXEMPLO. Regra que fica: **se responder
+"dá para ir ao ar?" exige script descartável, o comando de validação está
+incompleto.** Agora ele relata o acervo e todos os mapas salvos.
+
+### Não inventar trabalho: fui procurar buraco e não achei
+Suspeitei que `mapaPodeIrAoAr` não checasse as 6 faces do skybox — seria um
+BUG-001 clássico. Fui ver: **o schema já exige as seis**, e a regra já exige
+`aprovado` e `assetId` não nulo. Nada a consertar. Registrar que a suspeita foi
+verificada e descartada vale tanto quanto um conserto.
+
+### Teste que lê estado compartilhado mutável é flake que eu mesmo escrevi
+Meus testes novos liam `data/acervo.json` enquanto `bridge/test/painel-novo.test.mjs`
+exercita — de propósito — a rota que ESCREVE nesse arquivo. Os arquivos de teste
+rodam em paralelo: caiu em 1 de 3 execuções. Passaram a ler `HEAD` pelo git, que
+é o alvo certo: o que se afirma é que **o acervo entregue é coerente**, não o
+estado instantâneo de um arquivo que outro teste está mexendo.
+
+Ironia útil: eu tinha acabado de afrouxar um cronômetro de teste alheio por
+medir carga em vez de código, e introduzi um flake pior na mesma rodada.
+
+### Um teste que afirma invariante não garantida é pior que nenhum
+Escrevi "o assetId de um skybox com faces é o da face ft" a partir da descrição
+do schema. A rota de edição do painel **não garante isso** — grava `assetId` sem
+tocar em `faces`. O teste passaria hoje e quebraria no dia em que o dono usasse a
+tela legitimamente. Removido, e o achado virou decisão pendente. **Antes de
+afirmar um invariante, procurar quem o escreve.**
