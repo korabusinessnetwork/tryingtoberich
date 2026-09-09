@@ -38,7 +38,10 @@ export function normalizarUsuario(bruto) {
   return texto.trim();
 }
 
-const PADRAO = { streamerId: "local", usuarioTiktok: null, presetAtivo: null, galeriaDeSkins: [], atualizadoEm: null };
+const PADRAO = { streamerId: "local", usuarioTiktok: null, presetAtivo: null, idioma: null, galeriaDeSkins: [], atualizadoEm: null };
+
+/** Os idiomas do produto (ADR-P03). O console do operador fica de fora: é PT sempre. */
+export const IDIOMAS = ["pt", "es", "en"];
 
 /**
  * A configuração completa, com o `.env` entrando só onde o disco está vazio.
@@ -83,6 +86,15 @@ export async function salvarConfiguracao(mudancas = {}, semente = "") {
   }
 
   if ("presetAtivo" in mudancas) proxima.presetAtivo = mudancas.presetAtivo ?? null;
+
+  if ("idioma" in mudancas) {
+    // Normaliza pelo prefixo: o painel manda o que o navegador deu, e
+    // `navigator.language` devolve "pt-BR" na máquina do dono. O schema só
+    // aceita os três códigos curtos, então normalizar aqui evita que uma
+    // escolha legítima seja recusada como configuração fora do contrato.
+    const bruto = String(mudancas.idioma ?? "").trim().toLowerCase().slice(0, 2);
+    proxima.idioma = IDIOMAS.includes(bruto) ? bruto : null;
+  }
 
   if ("galeriaDeSkins" in mudancas) {
     // Normaliza aqui e não na tela: nick com arroba ou espaço é o que qualquer

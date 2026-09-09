@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
+import { data, numero } from "../i18n/formatar.js";
 import { corDaFaixa, NOME_DA_FAIXA } from "../lib/regras.js";
 import "./SeletorDePresente.css";
 
@@ -75,6 +77,7 @@ export function SeletorDePresente({
   aoEscolher,
   aoFechar,
 }) {
+  const { t } = useTraducao();
   const [busca, definirBusca] = useState("");
   const campoDeBuscaRef = useRef(null);
 
@@ -160,13 +163,15 @@ export function SeletorDePresente({
               não um sétimo cartão. Sem o número, o streamer troca na live o
               conteúdo de um slot que achava estar criando. */}
           <h2 id="seletor-presente-titulo">
-            Escolher presente{Number.isFinite(posicao) ? ` — slot ${posicao}` : ""}
+            {Number.isFinite(posicao)
+              ? t("panel.giftPicker.titleForSlot", { n: posicao })
+              : t("panel.giftPicker.title")}
           </h2>
           <button
             type="button"
             className="seletor-presente-fechar"
             onClick={aoFechar}
-            aria-label="Fechar"
+            aria-label={t("common.action.close")}
           >
             ×
           </button>
@@ -175,9 +180,7 @@ export function SeletorDePresente({
         {catalogo?.confirmado === false && (
           <div className="seletor-presente-semente">
             <p className="seletor-presente-semente-texto">
-              Catálogo da <strong>semente de desenvolvimento</strong> — id inventado e valor
-              em moedas não confirmado. Preset montado aqui não casa com presente de verdade:
-              use “Atualizar da TikTok” logo abaixo.
+              {t("panel.giftPicker.seedWarning")}
             </p>
           </div>
         )}
@@ -186,8 +189,8 @@ export function SeletorDePresente({
           ref={campoDeBuscaRef}
           type="search"
           className="seletor-presente-busca"
-          placeholder="Buscar presente pelo nome…"
-          aria-label="Buscar presente pelo nome"
+          placeholder={t("panel.giftPicker.searchPlaceholder")}
+          aria-label={t("panel.giftPicker.searchLabel")}
           value={busca}
           onChange={(evento) => definirBusca(evento.target.value)}
           disabled={carregando || comErro}
@@ -202,10 +205,12 @@ export function SeletorDePresente({
         {aoAtualizar && (
           <div className="seletor-presente-coleta">
             <span className="seletor-presente-coleta-conta">
-              {presentesDoCatalogo?.length ?? 0} presentes
               {catalogo?.atualizadoEm
-                ? ` · atualizado ${new Date(catalogo.atualizadoEm).toLocaleDateString("pt-BR")}`
-                : ""}
+                ? t("panel.giftPicker.giftCountUpdated", {
+                    n: presentesDoCatalogo?.length ?? 0,
+                    data: data(catalogo.atualizadoEm),
+                  })
+                : t("panel.giftPicker.giftCount", { n: presentesDoCatalogo?.length ?? 0 })}
             </span>
             <button
               type="button"
@@ -213,27 +218,29 @@ export function SeletorDePresente({
               onClick={aoAtualizar}
               disabled={atualizando}
             >
-              {atualizando ? "Buscando…" : "Atualizar da TikTok"}
+              {atualizando ? t("panel.giftPicker.fetching") : t("panel.giftPicker.refresh")}
             </button>
           </div>
         )}
 
         <div className="seletor-presente-lista">
-          {carregando && <p className="seletor-presente-estado">Carregando catálogo…</p>}
+          {carregando && (
+            <p className="seletor-presente-estado">{t("panel.giftPicker.loadingCatalog")}</p>
+          )}
 
           {comErro && (
-            <p className="seletor-presente-estado erro">
-              Não foi possível carregar o catálogo de presentes.
-            </p>
+            <p className="seletor-presente-estado erro">{t("panel.giftPicker.loadError")}</p>
           )}
 
           {catalogoVazio && (
-            <p className="seletor-presente-estado">
-              O catálogo está vazio. Clique em “Atualizar da TikTok” para buscar a lista de presentes.
-            </p>
+            <p className="seletor-presente-estado">{t("panel.giftPicker.emptyCatalog")}</p>
           )}
 
-          {semResultado && <p className="seletor-presente-estado">Nada encontrado para “{busca}”.</p>}
+          {semResultado && (
+            <p className="seletor-presente-estado">
+              {t("panel.giftPicker.noResults", { termo: busca })}
+            </p>
+          )}
 
           {!carregando &&
             !comErro &&
@@ -241,13 +248,13 @@ export function SeletorDePresente({
               const ehAtual = presente.presenteId === presenteIdAtual;
               const usadoEmOutroSlot = !ehAtual && idsUsadosEmOutrosSlots.has(presente.presenteId);
               const motivo = usadoEmOutroSlot
-                ? "Já está em outro slot deste preset."
+                ? t("panel.giftPicker.usedInOtherSlot")
                 : !presente.ativo
-                  ? "Não está mais disponível na live, mas continua neste slot."
+                  ? t("panel.giftPicker.unavailableKept")
                   : null;
               const moedasTexto = Number.isFinite(presente.moedas)
-                ? `${presente.moedas.toLocaleString("pt-BR")} moedas`
-                : "valor desconhecido";
+                ? t("panel.giftPicker.coins", { n: numero(presente.moedas) })
+                : t("panel.giftPicker.unknownValue");
 
               return (
                 <button
@@ -271,10 +278,18 @@ export function SeletorDePresente({
                         style={{ background: corDaFaixa(presente.faixa) }}
                         aria-hidden="true"
                       />
-                      <span>Faixa {NOME_DA_FAIXA[presente.faixa] ?? "?"}</span>
+                      <span>
+                        {t("panel.giftPicker.tier", {
+                          nome: NOME_DA_FAIXA[presente.faixa] ?? "?",
+                        })}
+                      </span>
                     </span>
                   </span>
-                  {ehAtual && <span className="seletor-presente-selo-atual">atual</span>}
+                  {ehAtual && (
+                    <span className="seletor-presente-selo-atual">
+                      {t("panel.giftPicker.currentBadge")}
+                    </span>
+                  )}
                   {motivo && <span className="seletor-presente-motivo">{motivo}</span>}
                 </button>
               );

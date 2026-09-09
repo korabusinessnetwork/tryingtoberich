@@ -1,0 +1,41 @@
+/* Troca de idioma do produto (ADR-P03). Estilo separado do JSX para o
+   white-label da Fase 3 (ver CLAUDE.md e 02_DESIGN_SYSTEM). */
+
+.seletor-de-idioma {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.seletor-de-idioma-rotulo {
+  font-size: 12px;
+  color: var(--painel-texto-secundario);
+}
+
+.seletor-de-idioma-opcoes {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.seletor-de-idioma-botao {
+  /* 40px é o mínimo do design system: o streamer clica com pressa. */
+  min-height: var(--alvo-minimo);
+  min-width: var(--alvo-minimo);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--painel-superficie);
+  color: var(--painel-texto-secundario);
+}
+
+/* O idioma ativo precisa ser óbvio de canto de olho: contraste na borda E no
+   texto, como faz a navegação — cor de fundo sozinha some em tela escura. */
+.seletor-de-idioma-botao-ativo {
+  border-color: var(--painel-texto-secundario);
+  color: var(--painel-texto-primario);
+}
+
+.seletor-de-idioma-botao:disabled {
+  opacity: 0.6;
+}

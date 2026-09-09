@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
 import {
   ehSlotExtra,
   listaDePresentes,
@@ -40,8 +42,11 @@ function listaDeAnimacoes(animacoes) {
 
 /** "1 e 4", "1, 3 e 5" — o streamer precisa saber ONDE está o repetido. */
 function listarPosicoes(posicoes) {
-  if (posicoes.length <= 1) return String(posicoes[0] ?? "—");
-  return `${posicoes.slice(0, -1).join(", ")} e ${posicoes[posicoes.length - 1]}`;
+  if (posicoes.length <= 1) return String(posicoes[0] ?? traduzir("common.value.none"));
+  return traduzir("panel.presetEditor.positionList", {
+    inicio: posicoes.slice(0, -1).join(", "),
+    fim: posicoes[posicoes.length - 1],
+  });
 }
 
 /**
@@ -75,6 +80,8 @@ export function EditorDePreset({
   aoEditarPresente,
   aoEditarAnimacao,
 }) {
+  const { t } = useTraducao();
+
   const porPresenteId = useMemo(
     () => new Map(listaDePresentes(catalogo).map((presente) => [String(presente.presenteId), presente])),
     [catalogo],
@@ -97,19 +104,22 @@ export function EditorDePreset({
 
   if (!preset) {
     return (
-      <section className="editor-preset editor-preset-sem-dado" aria-label="Preset">
-        <p className="secundario">Nenhum preset carregado. Escolha ou crie um para montar os slots.</p>
+      <section
+        className="editor-preset editor-preset-sem-dado"
+        aria-label={t("panel.presetEditor.regionLabel")}
+      >
+        <p className="secundario">{t("panel.presetEditor.emptyState")}</p>
       </section>
     );
   }
 
   return (
-    <section className="editor-preset" aria-label="Preset">
+    <section className="editor-preset" aria-label={t("panel.presetEditor.regionLabel")}>
       <header className="editor-preset-topo">
         <div className="editor-preset-identidade">
           <h2 className="editor-preset-nome">{preset.nome ?? preset.presetId}</h2>
           <p className="editor-preset-resumo secundario">
-            {preenchidos} de {slots.length} slots preenchidos
+            {t("panel.presetEditor.filledCount", { n: preenchidos, total: slots.length })}
             {preset.modalidade ? ` · ${preset.modalidade}` : ""}
           </p>
         </div>
@@ -123,7 +133,7 @@ export function EditorDePreset({
             onClick={aoAcrescentarSlot}
             disabled={noTeto}
           >
-            + Acrescentar presente
+            {t("panel.presetEditor.addGift")}
           </button>
           <button
             type="button"
@@ -131,7 +141,7 @@ export function EditorDePreset({
             onClick={aoSalvar}
             disabled={Boolean(salvando)}
           >
-            {salvando ? "Salvando…" : "Salvar preset"}
+            {salvando ? t("common.state.saving") : t("panel.presetEditor.saveButton")}
           </button>
         </div>
       </header>
@@ -139,8 +149,7 @@ export function EditorDePreset({
       {/* Botão desabilitado sem motivo à vista vira "o painel travou". */}
       {noTeto && (
         <p className="editor-preset-teto secundario">
-          O preset chegou nos {SLOTS_MAX} slots que a ponte aceita. Remova um extra para
-          acrescentar outro presente.
+          {t("panel.presetEditor.slotLimit", { n: SLOTS_MAX })}
         </p>
       )}
 
@@ -150,11 +159,16 @@ export function EditorDePreset({
       {repetidos.length > 0 && (
         <p className="pastilha pastilha-erro editor-preset-alerta" role="alert">
           <span>
-            Presente repetido:{" "}
-            {repetidos
-              .map((item) => `${item.nome} nos slots ${listarPosicoes(item.posicoes)}`)
-              .join("; ")}
-            . A ponte recusa preset com o mesmo presente em dois slots.
+            {t("panel.presetEditor.duplicateGift", {
+              lista: repetidos
+                .map((item) =>
+                  t("panel.presetEditor.duplicateAt", {
+                    nome: item.nome,
+                    posicoes: listarPosicoes(item.posicoes),
+                  }),
+                )
+                .join("; "),
+            })}
           </span>
         </p>
       )}

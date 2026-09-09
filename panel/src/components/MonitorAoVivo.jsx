@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
+import { numero as numeroNoLocale } from "../i18n/formatar.js";
 import { NOME_DA_FAIXA, combateDoEvento, corDaFaixa, faixaDeMoedas, formatarDelta, formatarLatencia, medianaDeLatencia, saudeDaLatencia } from "../lib/regras.js";
 import "./MonitorAoVivo.css";
 
@@ -47,16 +50,16 @@ const contarParticipantes = (valor) => {
   return Number.isFinite(valor) ? valor : null;
 };
 
-const emPtBr = (valor) => Math.round(valor).toLocaleString("pt-BR");
+const emPtBr = (valor) => numeroNoLocale(Math.round(valor));
 
 /** Tempo como o streamer lê de canto de olho: curto, sem relógio, sem data. */
 function formatarDesde(ms) {
-  if (!Number.isFinite(ms) || ms < 0) return "—";
-  if (ms < 2000) return "agora";
-  if (ms < 60000) return `há ${Math.floor(ms / 1000)}s`;
+  if (!Number.isFinite(ms) || ms < 0) return traduzir("common.value.none");
+  if (ms < 2000) return traduzir("panel.liveMonitor.justNow");
+  if (ms < 60000) return traduzir("panel.liveMonitor.secondsAgo", { n: Math.floor(ms / 1000) });
   const minutos = Math.floor(ms / 60000);
-  if (minutos < 60) return `há ${minutos}min`;
-  return `há ${Math.floor(minutos / 60)}h`;
+  if (minutos < 60) return traduzir("panel.liveMonitor.minutesAgo", { n: minutos });
+  return traduzir("panel.liveMonitor.hoursAgo", { n: Math.floor(minutos / 60) });
 }
 
 /**
@@ -90,12 +93,17 @@ const classes = (...nomes) => nomes.filter(Boolean).join(" ");
  * é o próprio recado.
  */
 function BalancaDoCombate({ somaSubida, somaDescida, liquido, empate }) {
+  const { t } = useTraducao();
   const subida = Math.abs(somaSubida);
   const descida = Math.abs(somaDescida);
   const total = subida + descida;
   const rotulo = empate
-    ? `Subida ${formatarDelta(somaSubida)}, descida ${formatarDelta(somaDescida)}, ninguém andou.`
-    : `Subida ${formatarDelta(somaSubida)}, descida ${formatarDelta(somaDescida)}, líquido ${formatarDelta(liquido)}.`;
+    ? t("panel.liveMonitor.balanceTie", { up: formatarDelta(somaSubida), down: formatarDelta(somaDescida) })
+    : t("panel.liveMonitor.balanceLabel", {
+        up: formatarDelta(somaSubida),
+        down: formatarDelta(somaDescida),
+        net: formatarDelta(liquido),
+      });
 
   return (
     <div className="monitor-balanca" role="img" aria-label={rotulo}>
@@ -111,6 +119,8 @@ function BalancaDoCombate({ somaSubida, somaDescida, liquido, empate }) {
  * lugar de `=`: o líquido é resultado da briga, não conta de aritmética.
  */
 function SomasDoCombate({ combate }) {
+  const { t } = useTraducao();
+
   return (
     <p className="monitor-somas">
       <span className="monitor-soma-subida">{formatarDelta(combate.somaSubida)}</span>
@@ -118,15 +128,17 @@ function SomasDoCombate({ combate }) {
       <span className="monitor-soma-descida">{formatarDelta(combate.somaDescida)}</span>
       <span className="monitor-somas-sinal secundario">→</span>
       {combate.empate ? (
-        <span className="monitor-soma-empate">0, ninguém andou</span>
+        <span className="monitor-soma-empate">{t("panel.liveMonitor.tieResult")}</span>
       ) : (
         <span className={`monitor-soma-liquido ${classeDaDirecao(combate.liquido)}`}>
-          {formatarDelta(combate.liquido)} líquido
+          {t("panel.liveMonitor.netResult", { net: formatarDelta(combate.liquido) })}
         </span>
       )}
       {combate.participantes !== null && (
         <span className="secundario monitor-somas-nota">
-          {combate.participantes} {combate.participantes === 1 ? "participante" : "participantes"}
+          {combate.participantes === 1
+            ? t("panel.liveMonitor.participantsOne", { n: combate.participantes })
+            : t("panel.liveMonitor.participantsMany", { n: combate.participantes })}
         </span>
       )}
     </p>
@@ -139,6 +151,7 @@ function SomasDoCombate({ combate }) {
  * impede a leitura errada de travamento.
  */
 function UltimoEvento({ evento, agora }) {
+  const { t } = useTraducao();
   const combate = combateDoEvento(evento);
   const desde = agora - evento.em;
   const parado = desde >= SILENCIO_MS;
@@ -147,13 +160,11 @@ function UltimoEvento({ evento, agora }) {
     return (
       <section className="monitor-destaque monitor-destaque--empate">
         <header className="monitor-destaque-topo">
-          <span className="monitor-etiqueta monitor-etiqueta--combate">Empate exato</span>
+          <span className="monitor-etiqueta monitor-etiqueta--combate">{t("panel.liveMonitor.exactTie")}</span>
           <span className="secundario">{formatarDesde(desde)}</span>
         </header>
         <p className="monitor-numerao monitor--neutro">0</p>
-        <p className="monitor-destaque-frase">
-          Os dois lados se anularam e ninguém andou. O jogo não travou — vale narrar.
-        </p>
+        <p className="monitor-destaque-frase">{t("panel.liveMonitor.tieExplanation")}</p>
         <BalancaDoCombate {...combate} />
         <SomasDoCombate combate={combate} />
       </section>
@@ -163,12 +174,14 @@ function UltimoEvento({ evento, agora }) {
   return (
     <section className={classes("monitor-destaque", combate && "monitor-destaque--disputa")}>
       <header className="monitor-destaque-topo">
-        {Number.isFinite(evento.slot) && <span className="monitor-slot">S{evento.slot}</span>}
-        <span className="monitor-destaque-presente">{evento.presenteNome ?? "presente"}</span>
-        {combate && <span className="monitor-etiqueta monitor-etiqueta--combate">Disputa</span>}
+        {Number.isFinite(evento.slot) && (
+          <span className="monitor-slot">{t("panel.liveMonitor.slotBadge", { n: evento.slot })}</span>
+        )}
+        <span className="monitor-destaque-presente">{evento.presenteNome ?? t("panel.liveMonitor.giftFallback")}</span>
+        {combate && <span className="monitor-etiqueta monitor-etiqueta--combate">{t("panel.liveMonitor.contestTag")}</span>}
         {evento.efeitoCurto && (
-          <span className="monitor-etiqueta monitor-etiqueta--curto" title="Combate fechou por tempo esgotado: líquido com efeito curto, sem animação completa (ADR-012.6).">
-            Efeito curto
+          <span className="monitor-etiqueta monitor-etiqueta--curto" title={t("panel.liveMonitor.shortEffectHint")}>
+            {t("panel.liveMonitor.shortEffectTag")}
           </span>
         )}
         <span className={classes("secundario", "monitor-destaque-tempo", parado && "monitor--alerta")}>
@@ -182,16 +195,14 @@ function UltimoEvento({ evento, agora }) {
         <>
           <BalancaDoCombate {...combate} />
           <SomasDoCombate combate={combate} />
-          <p className="monitor-destaque-frase">
-            Tocou a animação do lado vencedor: quem mandou o outro lado não viu a própria animação.
-          </p>
+          <p className="monitor-destaque-frase">{t("panel.liveMonitor.winnerAnimationNote")}</p>
         </>
       )}
 
       <p className="secundario monitor-destaque-rodape">
         {evento.nomeDoador ? `${evento.nomeDoador} · ` : ""}
-        {evento.animacaoId ?? "sem animação"}
-        {Number.isFinite(evento.intensidade) ? ` · força ${evento.intensidade}` : ""}
+        {evento.animacaoId ?? t("panel.liveMonitor.noAnimation")}
+        {Number.isFinite(evento.intensidade) ? ` · ${t("panel.liveMonitor.strength", { n: evento.intensidade })}` : ""}
         {Number.isFinite(evento.latenciaMs) ? ` · ${formatarLatencia(evento.latenciaMs)}` : ""}
       </p>
     </section>
@@ -200,6 +211,7 @@ function UltimoEvento({ evento, agora }) {
 
 /** Uma linha da lista. Densa por decisão: aqui o streamer confere, não estuda. */
 function LinhaDeEvento({ evento, agora }) {
+  const { t } = useTraducao();
   const combate = combateDoEvento(evento);
   const tempo = formatarDesde(agora - evento.em);
 
@@ -207,13 +219,13 @@ function LinhaDeEvento({ evento, agora }) {
     return (
       <li className="monitor-linha monitor-linha--empate">
         <span className="secundario monitor-linha-tempo">{tempo}</span>
-        <span className="monitor-etiqueta monitor-etiqueta--combate">Empate</span>
+        <span className="monitor-etiqueta monitor-etiqueta--combate">{t("panel.liveMonitor.tieTag")}</span>
         <span className="monitor-linha-corpo">
           <span className="monitor-soma-subida">{formatarDelta(combate.somaSubida)}</span>
           {" × "}
           <span className="monitor-soma-descida">{formatarDelta(combate.somaDescida)}</span>
           {" · "}
-          <span className="monitor-soma-empate">ninguém andou</span>
+          <span className="monitor-soma-empate">{t("panel.liveMonitor.nobodyMoved")}</span>
         </span>
       </li>
     );
@@ -226,8 +238,10 @@ function LinhaDeEvento({ evento, agora }) {
         {formatarDelta(numero(evento.delta))}
       </span>
       <span className="monitor-linha-corpo">
-        {Number.isFinite(evento.slot) && <span className="monitor-slot">S{evento.slot}</span>}
-        <span className="monitor-linha-presente">{evento.presenteNome ?? "presente"}</span>
+        {Number.isFinite(evento.slot) && (
+          <span className="monitor-slot">{t("panel.liveMonitor.slotBadge", { n: evento.slot })}</span>
+        )}
+        <span className="monitor-linha-presente">{evento.presenteNome ?? t("panel.liveMonitor.giftFallback")}</span>
         {combate && (
           <span className="monitor-linha-disputa">
             <span className="monitor-soma-subida">{formatarDelta(combate.somaSubida)}</span>
@@ -237,7 +251,7 @@ function LinhaDeEvento({ evento, agora }) {
         )}
       </span>
       <span className="secundario monitor-linha-latencia">
-        {Number.isFinite(evento.latenciaMs) ? formatarLatencia(evento.latenciaMs) : "—"}
+        {Number.isFinite(evento.latenciaMs) ? formatarLatencia(evento.latenciaMs) : t("common.value.none")}
       </span>
     </li>
   );
@@ -249,13 +263,14 @@ function LinhaDeEvento({ evento, agora }) {
  * inclinação, que se lê antes de qualquer dígito.
  */
 function TendenciaDeLatencia({ amostras }) {
+  const { t } = useTraducao();
   if (amostras.length === 0) return null;
   const emOrdem = [...amostras].reverse();
   const lidas = emOrdem.map((ms) => formatarLatencia(ms)).join(", ");
   const rotulo =
     emOrdem.length === 1
-      ? `Uma latência medida: ${lidas}.`
-      : `Últimas ${emOrdem.length} latências medidas, da mais antiga para a mais recente: ${lidas}.`;
+      ? t("panel.liveMonitor.oneLatencySample", { samples: lidas })
+      : t("panel.liveMonitor.latencySamples", { n: emOrdem.length, samples: lidas });
 
   return (
     <div className="monitor-tendencia" role="img" aria-label={rotulo}>
@@ -272,6 +287,7 @@ function TendenciaDeLatencia({ amostras }) {
 }
 
 export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincular }) {
+  const { t } = useTraducao();
   const lista = eventos ?? [];
   const perdidos = naoMapeados ?? [];
   const chaveMaisRecente = lista[0]?.chave ?? null;
@@ -338,38 +354,42 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
   const restantes = Math.max(0, lista.length - visiveis.length);
 
   return (
-    <section className={classes("monitor", !conectado && "monitor--cego")} aria-label="Monitor ao vivo">
+    <section className={classes("monitor", !conectado && "monitor--cego")} aria-label={t("panel.liveMonitor.title")}>
       {!conectado && (
         <p className="monitor-alarme" role="alert">
-          {cegoDesde && agora - cegoDesde >= 2000 ? `Painel cego ${formatarDesde(agora - cegoDesde)}` : "Painel cego"}
-          {" — sem fluxo da ponte. Tudo abaixo é passado: presente chegando agora não aparece aqui."}
+          {cegoDesde && agora - cegoDesde >= 2000
+            ? t("panel.liveMonitor.blindAlarmSince", { since: formatarDesde(agora - cegoDesde) })
+            : t("panel.liveMonitor.blindAlarm")}
         </p>
       )}
 
       <div className="monitor-metricas">
         <article className={`monitor-metrica monitor-metrica--${saude}`}>
-          <h3 className="monitor-rotulo">Latência típica</h3>
+          <h3 className="monitor-rotulo">{t("panel.liveMonitor.typicalLatency")}</h3>
           <p className="monitor-numerao">{formatarLatencia(latencia.tipica)}</p>
           <TendenciaDeLatencia amostras={latencia.amostras} />
           <p className="secundario monitor-metrica-nota">
             {latencia.amostras.length === 0
-              ? "nada medido ainda · alvo 600ms, teto 1000ms"
-              : `últ. ${formatarLatencia(latencia.ultima)} · pior ${formatarLatencia(latencia.pior)} · alvo 600ms`}
+              ? t("panel.liveMonitor.noLatencyYet")
+              : t("panel.liveMonitor.latencyNote", {
+                  last: formatarLatencia(latencia.ultima),
+                  worst: formatarLatencia(latencia.pior),
+                })}
           </p>
           {latencia.estouros > 0 && (
             <p className="monitor-metrica-alarme">
-              {latencia.estouros} de {latencia.amostras.length} acima do teto de 1000ms
+              {t("panel.liveMonitor.latencyOverBudget", { over: latencia.estouros, total: latencia.amostras.length })}
             </p>
           )}
         </article>
 
         <article className={`monitor-metrica ${naoMapeado.total > 0 ? "monitor-metrica--atencao" : "monitor-metrica--ok"}`}>
-          <h3 className="monitor-rotulo">Não mapeado</h3>
+          <h3 className="monitor-rotulo">{t("panel.liveMonitor.unmapped")}</h3>
           <p className="monitor-numerao">{emPtBr(naoMapeado.total)}</p>
           <p className="secundario monitor-metrica-nota">
             {naoMapeado.total === 0
-              ? "todo presente caiu num slot do preset"
-              : `descartados · ≈ ${emPtBr(naoMapeado.moedas)} moedas perdidas`}
+              ? t("panel.liveMonitor.allMapped")
+              : t("panel.liveMonitor.discardedCoins", { coins: emPtBr(naoMapeado.moedas) })}
           </p>
           {naoMapeado.topo.length > 0 && (
             <ul className="monitor-perdidos">
@@ -391,9 +411,9 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
                         type="button"
                         className="monitor-perdido-vincular"
                         onClick={() => aoVincular(item)}
-                        title={`Põe "${item.presenteNome}" no primeiro slot livre`}
+                        title={t("panel.liveMonitor.bindHint", { gift: item.presenteNome })}
                       >
-                        vincular
+                        {t("panel.liveMonitor.bindAction")}
                       </button>
                     )}
                   </li>
@@ -404,15 +424,21 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
         </article>
 
         <article className="monitor-metrica">
-          <h3 className="monitor-rotulo">Plataforma</h3>
+          <h3 className="monitor-rotulo">{t("panel.liveMonitor.platform")}</h3>
           <p className="monitor-numerao">
-            {Number.isFinite(estado?.plataformaAtual) ? emPtBr(estado.plataformaAtual) : "—"}
+            {Number.isFinite(estado?.plataformaAtual) ? emPtBr(estado.plataformaAtual) : t("common.value.none")}
           </p>
           <p className="secundario monitor-metrica-nota">
             {combates.disputas === 0 && combates.empates === 0
-              ? "nenhum combate nos últimos eventos"
-              : `${combates.disputas} ${combates.disputas === 1 ? "disputa" : "disputas"} · ${combates.empates} ${
-                  combates.empates === 1 ? "empate" : "empates"
+              ? t("panel.liveMonitor.noCombats")
+              : `${
+                  combates.disputas === 1
+                    ? t("panel.liveMonitor.contestsOne", { n: combates.disputas })
+                    : t("panel.liveMonitor.contestsMany", { n: combates.disputas })
+                } · ${
+                  combates.empates === 1
+                    ? t("panel.liveMonitor.tiesOne", { n: combates.empates })
+                    : t("panel.liveMonitor.tiesMany", { n: combates.empates })
                 }`}
           </p>
         </article>
@@ -420,9 +446,7 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
 
       {lista.length === 0 ? (
         <p className="monitor-vazio secundario">
-          {sessaoRodando
-            ? "Sessão rodando, nenhum presente ainda. O primeiro que chegar aparece aqui."
-            : "Sessão parada. Nada chega até o Start."}
+          {sessaoRodando ? t("panel.liveMonitor.emptyRunning") : t("panel.liveMonitor.emptyStopped")}
         </p>
       ) : (
         <>
@@ -431,8 +455,13 @@ export function MonitorAoVivo({ eventos, naoMapeados, estado, conectado, aoVincu
           {visiveis.length > 1 && (
             <div className="monitor-anteriores">
               <h3 className="monitor-rotulo">
-                Antes disso
-                {restantes > 0 && <span className="secundario monitor-rotulo-nota"> · mais {restantes} na sessão</span>}
+                {t("panel.liveMonitor.previously")}
+                {restantes > 0 && (
+                  <span className="secundario monitor-rotulo-nota">
+                    {" · "}
+                    {t("panel.liveMonitor.moreInSession", { n: restantes })}
+                  </span>
+                )}
               </h3>
               <ul className="monitor-lista">
                 {visiveis.slice(1).map((evento) => (

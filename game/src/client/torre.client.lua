@@ -21,6 +21,7 @@ local TweenService = game:GetService("TweenService")
 local Compartilhado = game:GetService("ReplicatedStorage"):WaitForChild("KoraCompartilhado")
 local Eventos = require(Compartilhado.eventos)
 local Tokens = require(Compartilhado.tokens)
+local Textos = require(Compartilhado.textos)
 
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
@@ -113,7 +114,7 @@ numero.Font = Enum.Font.GothamBlack
 numero.TextColor3 = Tokens.hud.texto
 numero.TextScaled = true
 numero.TextXAlignment = Enum.TextXAlignment.Right
-numero.Text = "0 / 0"
+numero.Text = Textos.t("hud.tower.progress", { n = 0, total = 0 })
 numero.Parent = painel
 
 local contornoNumero = Instance.new("UIStroke")
@@ -121,13 +122,23 @@ contornoNumero.Color = Tokens.hud.contorno
 contornoNumero.Thickness = 3
 contornoNumero.Parent = numero
 
---[[ "1372" vira "1.372": número grande sem separador não lê em vídeo vertical. ]]
+--[[
+	"1372" vira "1.372": número grande sem separador não lê em vídeo vertical.
+
+	O separador SEGUE O IDIOMA (ADR-P03, critério 13). Ponto em português e
+	espanhol, vírgula em inglês. Cravar o ponto fazia o espectador anglófono ler
+	"1.372" como um decimal — mil e trezentos virava um vírgula três, e a torre
+	parecia não ter saído do lugar.
+]]
+local SEPARADOR = { pt = ".", es = ".", en = "," }
+
 local function comPonto(valor)
 	local texto = tostring(math.max(0, math.floor(valor or 0)))
+	local marca = SEPARADOR[Textos.idioma()] or "."
 	local saida = ""
 	local sobra = texto
 	while #sobra > 3 do
-		saida = "." .. string.sub(sobra, -3) .. saida
+		saida = marca .. string.sub(sobra, -3) .. saida
 		sobra = string.sub(sobra, 1, #sobra - 3)
 	end
 	return sobra .. saida
@@ -138,7 +149,7 @@ local tweenAtual = nil
 local function atualizar(atual, total)
 	atual = math.max(0, math.floor(tonumber(atual) or 0))
 	total = math.max(0, math.floor(tonumber(total) or 0))
-	numero.Text = comPonto(atual) .. " / " .. comPonto(total)
+	numero.Text = Textos.t("hud.tower.progress", { n = comPonto(atual), total = comPonto(total) })
 
 	local fracao = 0
 	if total > 0 then

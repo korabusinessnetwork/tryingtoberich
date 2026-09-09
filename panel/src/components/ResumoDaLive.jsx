@@ -1,3 +1,5 @@
+import { useTraducao } from "../i18n/useTraducao.js";
+import { dataHora } from "../i18n/formatar.js";
 import { formatarLatencia, saudeDaLatencia } from "../lib/regras.js";
 
 import "./ResumoDaLive.css";
@@ -35,10 +37,12 @@ function formatarDuracao(segundos) {
 function formatarInstante(iso) {
   const data = new Date(iso);
   if (Number.isNaN(data.getTime())) return "—";
-  return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  return dataHora(data);
 }
 
 export function ResumoDaLive({ sessao, titulo, aoFechar }) {
+  const { t } = useTraducao();
+
   if (!sessao) return null;
 
   const resumo = sessao.resumo ?? null;
@@ -49,18 +53,22 @@ export function ResumoDaLive({ sessao, titulo, aoFechar }) {
   // útil que desenhar um card de zeros.
   if (!resumo) {
     return (
-      <section className="resumo" aria-label={titulo ?? "Resumo da live"}>
+      <section className="resumo" aria-label={titulo ?? t("panel.liveSummary.title")}>
         <header className="resumo-cabecalho">
-          <h2 className="resumo-titulo">{titulo ?? "Resumo da live"}</h2>
+          <h2 className="resumo-titulo">{titulo ?? t("panel.liveSummary.title")}</h2>
           {aoFechar && (
-            <button type="button" className="resumo-fechar" onClick={aoFechar} aria-label="Fechar resumo">
+            <button
+              type="button"
+              className="resumo-fechar"
+              onClick={aoFechar}
+              aria-label={t("panel.liveSummary.closeLabel")}
+            >
               ×
             </button>
           )}
         </header>
         <p className="resumo-recado">
-          Esta sessão começou em {formatarInstante(sessao.iniciadaEm)} e nunca foi encerrada —
-          a ponte parou antes do Stop. Sem o Stop não há resumo: é ele que fecha a conta.
+          {t("panel.liveSummary.noSummary", { quando: formatarInstante(sessao.iniciadaEm) })}
         </p>
       </section>
     );
@@ -76,44 +84,52 @@ export function ResumoDaLive({ sessao, titulo, aoFechar }) {
   const saude = saudeDaLatencia(resumo.latenciaMediaMs);
 
   return (
-    <section className="resumo" aria-label={titulo ?? "Resumo da live"}>
+    <section className="resumo" aria-label={titulo ?? t("panel.liveSummary.title")}>
       <header className="resumo-cabecalho">
         <div>
-          <h2 className="resumo-titulo">{titulo ?? "Resumo da live"}</h2>
+          <h2 className="resumo-titulo">{titulo ?? t("panel.liveSummary.title")}</h2>
           <p className="secundario resumo-quando">
-            {formatarInstante(sessao.iniciadaEm)} · preset <strong>{sessao.presetId}</strong>
-            {sessao.mapaId ? <> · mapa <strong>{sessao.mapaId}</strong></> : null}
+            {formatarInstante(sessao.iniciadaEm)} · {t("panel.liveSummary.presetLabel")}{" "}
+            <strong>{sessao.presetId}</strong>
+            {sessao.mapaId ? (
+              <> · {t("panel.liveSummary.mapLabel")} <strong>{sessao.mapaId}</strong></>
+            ) : null}
           </p>
         </div>
         {aoFechar && (
-          <button type="button" className="resumo-fechar" onClick={aoFechar} aria-label="Fechar resumo">
+          <button
+            type="button"
+            className="resumo-fechar"
+            onClick={aoFechar}
+            aria-label={t("panel.liveSummary.closeLabel")}
+          >
             ×
           </button>
         )}
       </header>
 
       {interrompida && (
-        <p className="pastilha pastilha-atencao">Interrompida — a ponte caiu antes do Stop</p>
+        <p className="pastilha pastilha-atencao">{t("panel.liveSummary.interrupted")}</p>
       )}
 
       <div className="resumo-numeros">
         <article className="resumo-numero">
-          <h3 className="resumo-rotulo">Presentes</h3>
+          <h3 className="resumo-rotulo">{t("panel.liveSummary.gifts")}</h3>
           <p className="resumo-valor">{resumo.totalPresentes ?? 0}</p>
         </article>
 
         <article className="resumo-numero">
-          <h3 className="resumo-rotulo">Plataforma máxima</h3>
+          <h3 className="resumo-rotulo">{t("panel.liveSummary.maxPlatform")}</h3>
           <p className="resumo-valor">{resumo.plataformaMaxima ?? 0}</p>
         </article>
 
         <article className="resumo-numero">
-          <h3 className="resumo-rotulo">Duração</h3>
+          <h3 className="resumo-rotulo">{t("panel.liveSummary.duration")}</h3>
           <p className="resumo-valor resumo-valor-texto">{formatarDuracao(resumo.duracaoSegundos)}</p>
         </article>
 
         <article className="resumo-numero">
-          <h3 className="resumo-rotulo">Latência média</h3>
+          <h3 className="resumo-rotulo">{t("panel.liveSummary.averageLatency")}</h3>
           {/* Média, e não mediana como no monitor ao vivo: é o que a ponte
               gravou no arquivo. Ao vivo a mediana protege contra o pico
               isolado; aqui a live acabou e a média é a conta honesta do
@@ -124,23 +140,23 @@ export function ResumoDaLive({ sessao, titulo, aoFechar }) {
         </article>
 
         <article className="resumo-numero">
-          <h3 className="resumo-rotulo">Quedas</h3>
+          <h3 className="resumo-rotulo">{t("panel.liveSummary.falls")}</h3>
           <p className="resumo-valor">{resumo.quedasNaturais ?? 0}</p>
         </article>
       </div>
 
       <div className="resumo-listas">
         <div className="resumo-lista">
-          <h3 className="resumo-rotulo">Presentes por slot</h3>
+          <h3 className="resumo-rotulo">{t("panel.liveSummary.giftsBySlot")}</h3>
           {porSlot.length === 0 ? (
-            <p className="resumo-recado">Nenhum presente casou com um slot nesta live.</p>
+            <p className="resumo-recado">{t("panel.liveSummary.noSlotMatched")}</p>
           ) : (
             <ul className="resumo-barras">
               {porSlot.map(({ slot, total }) => {
                 const maior = Math.max(...porSlot.map((s) => s.total));
                 return (
                   <li key={slot} className="resumo-barra">
-                    <span className="resumo-barra-slot">S{slot}</span>
+                    <span className="resumo-barra-slot">{t("panel.liveSummary.slotShort", { n: slot })}</span>
                     <span className="resumo-barra-trilho">
                       <span
                         className="resumo-barra-preenchida"
@@ -159,10 +175,11 @@ export function ResumoDaLive({ sessao, titulo, aoFechar }) {
           {/* F2.4 — o que o streamer deixou na mesa. É a lista que vira ação:
               todo presente aqui é um slot que faltou no preset da próxima. */}
           <h3 className="resumo-rotulo">
-            Não mapeados {totalNaoMapeado > 0 && <span className="resumo-contador">{totalNaoMapeado}</span>}
+            {t("panel.liveSummary.unmapped")}{" "}
+            {totalNaoMapeado > 0 && <span className="resumo-contador">{totalNaoMapeado}</span>}
           </h3>
           {naoMapeados.length === 0 ? (
-            <p className="resumo-recado">Todo presente que chegou casou com um slot.</p>
+            <p className="resumo-recado">{t("panel.liveSummary.allMatched")}</p>
           ) : (
             <ul className="resumo-perdidos">
               {naoMapeados
@@ -171,7 +188,9 @@ export function ResumoDaLive({ sessao, titulo, aoFechar }) {
                 .map((item) => (
                   <li key={item.presenteNome} className="resumo-perdido">
                     <span className="resumo-perdido-nome">{item.presenteNome}</span>
-                    <span className="resumo-perdido-contagem">×{item.contagem}</span>
+                    <span className="resumo-perdido-contagem">
+                      {t("panel.liveSummary.timesCount", { n: item.contagem })}
+                    </span>
                   </li>
                 ))}
             </ul>

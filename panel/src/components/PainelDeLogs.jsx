@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
+import { hora as horaNoLocale } from "../i18n/formatar.js";
 import "./PainelDeLogs.css";
 
 /**
@@ -20,8 +23,8 @@ import "./PainelDeLogs.css";
  */
 
 const NIVEIS = [
-  { id: "todos", rotulo: "Tudo" },
-  { id: "problemas", rotulo: "Só problemas" },
+  { id: "todos", chave: "panel.logs.filterAll" },
+  { id: "problemas", chave: "panel.logs.filterProblems" },
 ];
 
 const CLASSE_DO_NIVEL = {
@@ -34,7 +37,7 @@ const CLASSE_DO_NIVEL = {
 function hora(iso) {
   const data = new Date(iso);
   if (Number.isNaN(data.getTime())) return "--:--:--";
-  return data.toLocaleTimeString("pt-BR", { hour12: false });
+  return horaNoLocale(data, { hour12: false });
 }
 
 /**
@@ -43,7 +46,7 @@ function hora(iso) {
  */
 function legivel(evento) {
   const texto = String(evento ?? "").replace(/[_-]+/g, " ").trim();
-  return texto ? texto[0].toUpperCase() + texto.slice(1) : "sem evento";
+  return texto ? texto[0].toUpperCase() + texto.slice(1) : traduzir("panel.logs.noEvent");
 }
 
 /** O que sobra da linha depois de tirar os campos que já viraram coluna. */
@@ -58,6 +61,7 @@ const formatarValor = (valor) =>
   typeof valor === "object" && valor !== null ? JSON.stringify(valor) : String(valor);
 
 export function PainelDeLogs({ logs = [], aoLimpar }) {
+  const { t } = useTraducao();
   const [filtro, definirFiltro] = useState("todos");
 
   const visiveis = useMemo(
@@ -71,9 +75,9 @@ export function PainelDeLogs({ logs = [], aoLimpar }) {
   );
 
   return (
-    <section className="log" aria-label="Log da ponte e do painel">
+    <section className="log" aria-label={t("panel.logs.regionLabel")}>
       <header className="log-cabecalho">
-        <div className="log-filtros" role="group" aria-label="Filtrar log">
+        <div className="log-filtros" role="group" aria-label={t("panel.logs.filterLabel")}>
           {NIVEIS.map((nivel) => (
             <button
               key={nivel.id}
@@ -82,30 +86,32 @@ export function PainelDeLogs({ logs = [], aoLimpar }) {
               onClick={() => definirFiltro(nivel.id)}
               aria-pressed={filtro === nivel.id}
             >
-              {nivel.rotulo}
-              {nivel.id === "problemas" && problemas > 0 ? ` (${problemas})` : ""}
+              {nivel.id === "problemas" && problemas > 0
+                ? t("panel.logs.filterProblemsCount", { n: problemas })
+                : t(nivel.chave)}
             </button>
           ))}
         </div>
 
         <button type="button" className="log-limpar" onClick={aoLimpar} disabled={logs.length === 0}>
-          Limpar
+          {t("panel.logs.clear")}
         </button>
       </header>
 
       {visiveis.length === 0 ? (
         <p className="log-vazio secundario">
-          {logs.length === 0
-            ? "Nada registrado ainda. O que a ponte fizer aparece aqui."
-            : "Nenhum problema até agora."}
+          {logs.length === 0 ? t("panel.logs.emptyState") : t("panel.logs.noProblems")}
         </p>
       ) : (
         <ol className="log-lista">
           {visiveis.map((linha) => (
             <li key={linha.id} className={`log-linha ${CLASSE_DO_NIVEL[linha.nivel] ?? ""}`}>
               <time className="log-hora" dateTime={linha.em}>{hora(linha.em)}</time>
-              <span className="log-origem" title={linha.origem === "painel" ? "gerado pelo painel" : "vindo da ponte"}>
-                {linha.origem === "painel" ? "painel" : "ponte"}
+              <span
+                className="log-origem"
+                title={linha.origem === "painel" ? t("panel.logs.sourcePanelTitle") : t("panel.logs.sourceBridgeTitle")}
+              >
+                {linha.origem === "painel" ? t("panel.logs.sourcePanel") : t("panel.logs.sourceBridge")}
               </span>
               <span className="log-evento">{legivel(linha.evento)}</span>
               {detalhe(linha) ? <span className="log-detalhe secundario">{detalhe(linha)}</span> : null}

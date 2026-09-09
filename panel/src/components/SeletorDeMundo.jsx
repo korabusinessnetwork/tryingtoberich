@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./SeletorDeMundo.css";
 
 /**
@@ -23,11 +24,27 @@ import "./SeletorDeMundo.css";
 
 /** Como a torre é construída (ADR-009). A regra de jogabilidade muda junto. */
 const FORMATOS = [
-  { id: "disco", rotulo: "Escada", dica: "Degraus separados subindo pelo perímetro de um quadrado. O jogador pula." },
-  { id: "laje", rotulo: "Passarela", dica: "Degraus colados um no outro, em linha reta. O jogador sobe andando." },
+  { id: "disco", rotulo: "panel.worldPicker.shapeStairs", dica: "panel.worldPicker.shapeStairsHint" },
+  { id: "laje", rotulo: "panel.worldPicker.shapeWalkway", dica: "panel.worldPicker.shapeWalkwayHint" },
 ];
 
 const aprovadas = (itens) => (itens ?? []).filter((i) => i.status === "aprovado" && i.assetId);
+
+/**
+ * Costura de volta o texto traduzido que tem destaque no meio.
+ *
+ * O catálogo guarda a frase INTEIRA com `{marca}` onde entra o `<strong>` —
+ * quem traduz lê a frase toda, e a tela não é montada com pedaço de frase
+ * concatenado. Marca sem nó correspondente fica como veio, em vez de sumir sem
+ * aviso. Mesmo padrão do `PainelDeOverlay`.
+ */
+function comMarcadores(texto, nos) {
+  return texto.split(/(\{\w+\})/g).map((pedaco, indice) => {
+    const marca = /^\{(\w+)\}$/.exec(pedaco);
+    if (!marca || nos[marca[1]] === undefined) return pedaco;
+    return <Fragment key={indice}>{nos[marca[1]]}</Fragment>;
+  });
+}
 
 function Peca({ colecao, item, escolhida, aoClicar }) {
   return (
@@ -53,6 +70,7 @@ function Peca({ colecao, item, escolhida, aoClicar }) {
 }
 
 export function SeletorDeMundo({ acervo, mapa, montando, erro, recado, jogoOnline, aoMontar }) {
+  const { t } = useTraducao();
   const ceus = useMemo(() => aprovadas(acervo?.skybox), [acervo]);
   const texturas = useMemo(() => aprovadas(acervo?.texturas), [acervo]);
 
@@ -85,11 +103,11 @@ export function SeletorDeMundo({ acervo, mapa, montando, erro, recado, jogoOnlin
   const podeMontar = Boolean(ceuAtual) && texturasAtuais.length > 0 && !montando;
 
   return (
-    <section className="mundo" aria-label="Montar mundo">
+    <section className="mundo" aria-label={t("panel.worldPicker.regionLabel")}>
       <header className="mundo-cabecalho">
-        <h2 className="mundo-titulo">Montar mundo</h2>
+        <h2 className="mundo-titulo">{t("panel.worldPicker.title")}</h2>
         <span className="mundo-etiqueta">
-          {ceus.length} céus · {texturas.length} plataformas
+          {t("panel.worldPicker.catalogCounts", { skies: ceus.length, platforms: texturas.length })}
         </span>
       </header>
 
@@ -101,27 +119,34 @@ export function SeletorDeMundo({ acervo, mapa, montando, erro, recado, jogoOnlin
           lado. ]]*/}
       {mapa && (
         <p className="mundo-noar">
-          No ar: <strong>{mapa.nome}</strong> ·{" "}
-          {[mapa.plataformas?.materialAssetId ?? []].flat().filter(Boolean).length} plataformas ·{" "}
-          {mapa.plataformas?.formato === "laje" ? "passarela" : "escada"}
+          {comMarcadores(
+            t("panel.worldPicker.onAir", {
+              n: [mapa.plataformas?.materialAssetId ?? []].flat().filter(Boolean).length,
+              shape:
+                mapa.plataformas?.formato === "laje"
+                  ? t("panel.worldPicker.shapeWalkwayInline")
+                  : t("panel.worldPicker.shapeStairsInline"),
+            }),
+            { nome: <strong>{mapa.nome}</strong> },
+          )}
         </p>
       )}
 
       {recado && (
         <p className="mundo-recado" role="status">
           {recado}
-          {!jogoOnline && " O jogo está fora: a torre sobe quando o Roblox reconectar."}
+          {!jogoOnline && ` ${t("panel.worldPicker.gameOfflineNote")}`}
         </p>
       )}
 
       <p className="mundo-explicacao">
-        Escolha o céu e as plataformas. Com <strong>mais de uma</strong> textura elas
-        revezam degrau a degrau, e os degraus deixam de ser tingidos pela paleta — a
-        variedade passa a ser da textura. Entra no ar assim que você montar.
+        {comMarcadores(t("panel.worldPicker.explainer"), {
+          more: <strong>{t("panel.worldPicker.explainerMoreThanOne")}</strong>,
+        })}
       </p>
 
       <fieldset className="mundo-formato" disabled={montando}>
-        <legend className="mundo-rotulo">Como a torre é construída</legend>
+        <legend className="mundo-rotulo">{t("panel.worldPicker.shapeLegend")}</legend>
         {FORMATOS.map((opcao) => (
           <label key={opcao.id} className={formatoAtual === opcao.id ? "mundo-formato-opcao escolhida" : "mundo-formato-opcao"}>
             <input
@@ -130,18 +155,16 @@ export function SeletorDeMundo({ acervo, mapa, montando, erro, recado, jogoOnlin
               checked={formatoAtual === opcao.id}
               onChange={() => definirFormato(opcao.id)}
             />
-            <span className="mundo-formato-rotulo">{opcao.rotulo}</span>
-            <span className="mundo-formato-dica">{opcao.dica}</span>
+            <span className="mundo-formato-rotulo">{t(opcao.rotulo)}</span>
+            <span className="mundo-formato-dica">{t(opcao.dica)}</span>
           </label>
         ))}
       </fieldset>
 
       <div className="mundo-secao">
-        <h3 className="mundo-rotulo">Céu</h3>
+        <h3 className="mundo-rotulo">{t("panel.worldPicker.skyHeading")}</h3>
         {ceus.length === 0 ? (
-          <p className="mundo-vazio">
-            Nenhum céu aprovado. Use “Gerar e subir o que falta” no Acervo, abaixo.
-          </p>
+          <p className="mundo-vazio">{t("panel.worldPicker.noSkies")}</p>
         ) : (
           <ul className="mundo-grade">
             {ceus.map((item) => (
@@ -159,13 +182,16 @@ export function SeletorDeMundo({ acervo, mapa, montando, erro, recado, jogoOnlin
 
       <div className="mundo-secao">
         <h3 className="mundo-rotulo">
-          Plataformas <span className="secundario">{texturasAtuais.length} escolhidas</span>
+          {t("panel.worldPicker.platformsHeading")}{" "}
+          <span className="secundario">
+            {t("panel.worldPicker.selectedCount", { n: texturasAtuais.length })}
+          </span>
         </h3>
         {texturasAtuais.length === 0 && texturas.length > 0 && (
-          <p className="mundo-vazio">Escolha ao menos uma para poder montar.</p>
+          <p className="mundo-vazio">{t("panel.worldPicker.pickAtLeastOne")}</p>
         )}
         {texturas.length === 0 ? (
-          <p className="mundo-vazio">Nenhuma textura aprovada ainda.</p>
+          <p className="mundo-vazio">{t("panel.worldPicker.noTextures")}</p>
         ) : (
           <ul className="mundo-grade">
             {texturas.map((item) => (
@@ -189,7 +215,7 @@ export function SeletorDeMundo({ acervo, mapa, montando, erro, recado, jogoOnlin
         disabled={!podeMontar}
         onClick={() => aoMontar({ skybox: ceuAtual, texturas: texturasAtuais, formato: formatoAtual })}
       >
-        {montando ? "Montando…" : "Montar e usar este mundo"}
+        {montando ? t("panel.worldPicker.building") : t("panel.worldPicker.buildAction")}
       </button>
     </section>
   );

@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./ControleDaPartida.css";
 
 /**
@@ -18,26 +19,25 @@ import "./ControleDaPartida.css";
  * clicando um botão que não chega a lugar nenhum.
  */
 export function ControleDaPartida({ jogoOnline, ocupado, ultimoRecado, aoReiniciar, aoZerarPlacar, aoRecarregarMapa }) {
+  const { t } = useTraducao();
+
   const acoes = [
-    { chave: "reiniciar", rotulo: "Reiniciar corrida", dica: "Volta o boneco ao pé da torre. O placar continua.", aoClicar: aoReiniciar },
-    { chave: "placar", rotulo: "Zerar vitórias e derrotas", dica: "Zera o placar. A corrida continua de onde está.", aoClicar: aoZerarPlacar },
-    { chave: "mapa", rotulo: "Recarregar mapa", dica: "Reergue a torre com o mapa escolhido, sem parar a sessão.", aoClicar: aoRecarregarMapa },
+    { chave: "reiniciar", rotulo: t("panel.matchControl.restartLabel"), dica: t("panel.matchControl.restartHint"), aoClicar: aoReiniciar },
+    { chave: "placar", rotulo: t("panel.matchControl.resetScoreLabel"), dica: t("panel.matchControl.resetScoreHint"), aoClicar: aoZerarPlacar },
+    { chave: "mapa", rotulo: t("panel.matchControl.reloadMapLabel"), dica: t("panel.matchControl.reloadMapHint"), aoClicar: aoRecarregarMapa },
   ];
 
   return (
-    <section className="partida" aria-label="Controle da partida">
+    <section className="partida" aria-label={t("panel.matchControl.title")}>
       <header className="partida-cabecalho">
-        <h2 className="partida-titulo">Controle da partida</h2>
+        <h2 className="partida-titulo">{t("panel.matchControl.title")}</h2>
         <span className={jogoOnline ? "pastilha pastilha-ok" : "pastilha pastilha-erro"}>
-          {jogoOnline ? "jogo conectado" : "jogo offline"}
+          {jogoOnline ? t("panel.matchControl.gameOnline") : t("panel.matchControl.gameOffline")}
         </span>
       </header>
 
       {!jogoOnline ? (
-        <p className="partida-recado">
-          Com o Roblox fora, estas ordens são descartadas pelo long-poll e não
-          chegam a lugar nenhum.
-        </p>
+        <p className="partida-recado">{t("panel.matchControl.offlineWarning")}</p>
       ) : null}
 
       <div className="partida-acoes">

@@ -45,17 +45,54 @@
  *   ?esticar=nao desliga o pré-estique (ver o palco 9:16, abaixo)
  *
  * Nenhuma cor literal: as variáveis vêm de data/tokens.json (repos/tokens).
+ *
+ * Nenhum texto literal, pelo MESMO caminho das cores: as frases vêm de
+ * data/i18n (repos/i18n), recortadas no prefixo `hud.` e injetadas na página
+ * como JSON. Esta página não tem bundler e não pode importar módulo nenhum, e
+ * é por isso que o catálogo entra por aqui em vez de por import (ADR-P03).
+ *
+ * O idioma é o do streamer, lido da configuração NA ABERTURA da página — ver
+ * `idiomaDoStreamer`, no fim do arquivo.
  */
 
+import { carregarConfiguracao } from "../repos/configuracao.mjs";
+import { carregarTextos, normalizarIdioma, recortar } from "../repos/i18n.mjs";
 import { carregarTokens, cssDosTokens } from "../repos/tokens.mjs";
 
-const PAGINA_INICIO = `<!doctype html>
-<html lang="pt-BR">
+/**
+ * O locale de cada idioma: o `lang` da página e o `Intl` que formata os números
+ * do HUD. Não é frase visível, então não mora no catálogo, que só guarda texto
+ * de tela. Em `pt` o resultado é o mesmo `pt-BR` de sempre.
+ */
+const LOCALE = { pt: "pt-BR", es: "es-ES", en: "en-US" };
+
+/** O texto da chave; a chave crua é a rede quando falta tradução (ver o `t()` da página). */
+const diz = (textos, chave) => textos[chave] ?? chave;
+
+const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+
+/** Texto indo para dentro da marcação. */
+const emHtml = (texto) => String(texto).replace(/[&<>"]/g, (c) => ESCAPES[c]);
+
+/** O catálogo indo para dentro de um `<script>`: um `</script>` no meio fecharia a tag. */
+const emScript = (valor) => JSON.stringify(valor).replace(/</g, "\\u003c");
+
+/**
+ * O helper de texto chama-se `t` em toda parte — aqui, no corpo da página e no
+ * `t()` que roda no navegador. Além de ser o nome do painel e do Luau, é a
+ * FORMA que o detector de chave morta do `test/i18n.test.mjs` reconhece: chave
+ * escondida atrás de outro nome vira "chave sem uso" e some do catálogo.
+ */
+const paginaInicio = (idioma, textos) => {
+  const t = (chave) => emHtml(diz(textos, chave));
+  return `<!doctype html>
+<html lang="${LOCALE[idioma]}">
 <head>
 <meta charset="utf-8">
-<title>Kora — HUD da live</title>
+<title>${t("hud.overlay.pageTitle")}</title>
 <style>
 `;
+};
 
 // Depois das variáveis dos tokens. Sem hex nenhum: o que precisa de cor usa
 // var(), e o fundo translúcido das caixas é o --painel-fundo com opacity num
@@ -258,18 +295,32 @@ html, body {
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
-<body>
+`;
+
+/**
+ * O corpo da página, com os textos do idioma já dentro.
+ *
+ * Função, e não constante, por causa do idioma: o mesmo HTML sai em três
+ * versões, e cada uma é montada uma vez e guardada (ver `pagina`).
+ */
+const corpoDaPagina = (idioma, textos) => {
+  // O `t` da MARCAÇÃO, resolvido aqui na ponte; o `t` de dentro do `<script>` é
+  // outro, e resolve no navegador o texto que muda em cima do evento. Mesmo
+  // nome de propósito — ver `paginaInicio`.
+  const t = (chave) => emHtml(diz(textos, chave));
+  const textosDaPagina = emScript(textos);
+  return `<body>
 <div class="hud">
   <section class="jogo">
 
     <div class="placar caixa" data-el="placar">
-      <span class="placar-v texto"><span id="placar-vitorias">0</span> V</span>
-      <span class="placar-d texto"><span id="placar-derrotas">0</span> D</span>
+      <span class="placar-v texto"><span id="placar-vitorias">0</span> ${t("hud.overlay.winsShort")}</span>
+      <span class="placar-d texto"><span id="placar-derrotas">0</span> ${t("hud.overlay.lossesShort")}</span>
     </div>
 
     <div class="vs caixa" data-el="vs">
       <span class="vs-descida texto" id="vs-descida">-0</span>
-      <span class="vs-selo">VS</span>
+      <span class="vs-selo">${t("hud.overlay.versus")}</span>
       <span class="vs-subida texto" id="vs-subida">+0</span>
       <div class="vs-medidor"><div class="vs-medidor-descida" id="vs-medidor-descida"></div></div>
     </div>
@@ -279,7 +330,7 @@ html, body {
 
 
     <div class="portal caixa" id="portal" data-el="portal" hidden>
-      <div class="portal-rotulo"><span>PORTAL</span><span id="portal-numero">0</span></div>
+      <div class="portal-rotulo"><span>${t("hud.overlay.portal")}</span><span id="portal-numero">0</span></div>
       <div class="portal-trilho"><div class="portal-nivel" id="portal-nivel"></div></div>
     </div>
 
@@ -296,7 +347,7 @@ html, body {
 
     <div class="seguidor caixa" id="seguidor" data-el="seguidor">
       <span class="seguidor-nome texto" id="seguidor-nome"></span>
-      <span class="seguidor-frase texto">se tornou um vil&atilde;o</span>
+      <span class="seguidor-frase texto">${t("hud.overlay.newFollower")}</span>
     </div>
 
   </section>
@@ -304,6 +355,22 @@ html, body {
 
 <script>
 (function () {
+  //[[ Os textos da tela, recortados do catálogo pela ponte.
+  //
+  // A chave CRUA é a rede quando o catálogo não tem a frase: um HUD escrito
+  // "hud.overlay.tie" é feio, e uma página que quebra deixa a live sem HUD
+  // nenhum. Mesma escolha do painel (spec, edge cases). ]]
+  var T = ${textosDaPagina};
+  function t(chave, valores) {
+    var texto = T[chave] || chave;
+    for (var nome in valores) {
+      // split/join, e não replace com string: o replace troca só a PRIMEIRA
+      // ocorrência, e a mesma marca pode aparecer duas vezes numa tradução.
+      texto = texto.split("{" + nome + "}").join(valores[nome]);
+    }
+    return texto;
+  }
+
   var params = new URLSearchParams(location.search);
   var cam = Number(params.get("cam"));
   if (cam > 0 && cam < 100) document.documentElement.style.setProperty("--cam", cam + "%");
@@ -341,7 +408,9 @@ html, body {
   var presetNoAr = null;
 
   var formatar = function (n) {
-    return new Intl.NumberFormat("pt-BR").format(Math.max(0, Math.round(Number(n) || 0)));
+    // O locale acompanha o idioma do streamer: em espanhol e inglês o separador
+    // de milhar do HUD é o do público que lê a live, não o do dono da conta.
+    return new Intl.NumberFormat("${LOCALE[idioma]}").format(Math.max(0, Math.round(Number(n) || 0)));
   };
   function texto(id, valor) { document.getElementById(id).textContent = valor; }
 
@@ -364,7 +433,11 @@ html, body {
   function pintarCentro() {
     if (!contagem) { centro.classList.remove("aparecendo"); return; }
     var restante = Math.max(0, contagem.terminaEm - Date.now());
-    texto("centro-resultado", contagem.resultado === "vitoria" ? "TOPO!" : "CAIU!");
+    // Duas chamadas, e não uma com a chave escolhida dentro: a chave fica
+    // LITERAL no código, que é o que o detector de chave morta enxerga.
+    texto("centro-resultado", contagem.resultado === "vitoria"
+      ? t("hud.overlay.roundWin")
+      : t("hud.overlay.roundLoss"));
     document.getElementById("centro-resultado").style.color =
       contagem.resultado === "vitoria" ? "var(--hud-subida)" : "var(--hud-descida)";
     var numero = document.getElementById("centro-numero");
@@ -439,7 +512,10 @@ html, body {
     var linha = document.getElementById("presente-disputa");
     if (disputa && disputa.contestado) {
       linha.hidden = false;
-      linha.textContent = "DISPUTA  +" + formatar(disputa.somaSubida) + "  /  -" + formatar(disputa.somaDescida);
+      linha.textContent = t("hud.overlay.contested", {
+        up: formatar(disputa.somaSubida),
+        down: formatar(disputa.somaDescida),
+      });
     } else {
       linha.hidden = true;
     }
@@ -452,10 +528,15 @@ html, body {
   function aoCombateAnulado(dados) {
     if (!dados) return;
     var rotulo = document.getElementById("presente-delta");
-    rotulo.textContent = "EMPATE";
+    // Este rótulo tem TETO DE 8 CARACTERES (02_DESIGN_SYSTEM, B): é o mesmo
+    // lugar onde o "+100" do presente aparece, no maior corpo da caixa.
+    rotulo.textContent = t("hud.overlay.tie");
     rotulo.className = "presente-delta texto";
     rotulo.style.color = "var(--hud-combate)";
-    texto("presente-nome", "+" + formatar(dados.somaSubida) + " contra -" + formatar(dados.somaDescida));
+    texto("presente-nome", t("hud.overlay.tieDetail", {
+      up: formatar(dados.somaSubida),
+      down: formatar(dados.somaDescida),
+    }));
     document.getElementById("presente-disputa").hidden = true;
     caixaPresente.classList.add("aparecendo");
     clearTimeout(sumirPresente);
@@ -595,15 +676,44 @@ html, body {
 </script>
 </body>
 </html>`;
+};
 
-let paginaEmCache = null;
+/** Uma página pronta por idioma. Texto muda com `npm run gerar`, não durante a live. */
+const paginasEmCache = new Map();
 
-async function pagina() {
-  if (!paginaEmCache) {
+async function pagina(idioma) {
+  if (!paginasEmCache.has(idioma)) {
     const tokens = await carregarTokens();
-    paginaEmCache = `${PAGINA_INICIO}${cssDosTokens(tokens)}\n${PAGINA_ESTILO}`;
+    // Só o recorte do HUD: injetar o catálogo inteiro numa página que usa uma
+    // dúzia de frases seria peso à toa na fonte do OBS.
+    const textos = recortar(await carregarTextos(idioma), "hud.");
+    paginasEmCache.set(
+      idioma,
+      `${paginaInicio(idioma, textos)}${cssDosTokens(tokens)}\n${PAGINA_ESTILO}${corpoDaPagina(idioma, textos)}`,
+    );
   }
-  return paginaEmCache;
+  return paginasEmCache.get(idioma);
+}
+
+/**
+ * O idioma do streamer, na ABERTURA da página.
+ *
+ * Aqui e não no `montarOverlayHud` porque `criarAppDoPainel` é síncrono e não
+ * conhece a configuração — e porque ler na abertura é melhor para quem usa: o
+ * streamer troca o idioma no painel e atualiza a fonte do OBS, sem reiniciar a
+ * ponte no meio da live. É o mesmo espírito do layout, que chega pelo SSE.
+ *
+ * Uma leitura de JSON por ABERTURA de página, nunca no caminho crítico do
+ * presente (`CLAUDE.md`, princípio nº 1). Configuração ilegível cai no padrão:
+ * HUD em português é melhor que overlay que não abre.
+ */
+async function idiomaDoStreamer() {
+  try {
+    const { idioma } = await carregarConfiguracao();
+    return normalizarIdioma(idioma);
+  } catch {
+    return normalizarIdioma(null);
+  }
 }
 
 /** Registra a página do HUD no app do painel. Antes de `/overlay/video/:id`, por clareza. */
@@ -611,6 +721,6 @@ export function montarOverlayHud(rotas) {
   // Também em `/overlay/hud.html`, pelo TikTok LIVE Studio — ver overlay.mjs.
   rotas.get(["/overlay/hud", "/overlay/hud.html"], async (req, res) => {
     res.set("content-type", "text/html; charset=utf-8");
-    res.send(await pagina());
+    res.send(await pagina(await idiomaDoStreamer()));
   });
 }

@@ -51,7 +51,7 @@ test("todo componente do painel é montado por alguém", async () => {
   // os cartões de slot, e o cartão monta o aviso de curva. O que este teste
   // proíbe é componente que ninguém monta — código morto que passa no build.
   const arquivos = (await readdir(COMPONENTES)).filter((f) => f.endsWith(".jsx"));
-  assert.equal(arquivos.length, 28, "o 06_COMPONENTES lista os 28 componentes do painel");
+  assert.equal(arquivos.length, 29, "o 06_COMPONENTES lista os 29 componentes do painel");
 
   const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
   const fontes = await Promise.all(arquivos.map(lerComponente));
@@ -195,7 +195,14 @@ test("o modal de presente diz QUAL slot está editando", async () => {
   const fonte = await lerComponente("SeletorDePresente.jsx");
   const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
 
-  assert.match(fonte, /slot \$\{posicao\}/, "o título do modal precisa da posição");
+  // Depois do retrofit de i18n (ADR-P03) o título é chave, não frase: o que
+  // se cobra é a chave COM a posição, porque `titleForSlot` sem `n` volta
+  // a esconder qual slot está aberto — que é o bug que este teste guarda.
+  assert.match(
+    fonte,
+    /panel\.giftPicker\.titleForSlot[\s\S]{0,40}n:\s*posicao/,
+    "o título do modal precisa da posição",
+  );
   assert.match(app, /<SeletorDePresente[\s\S]{0,200}posicao=/, "o App é quem sabe qual slot está aberto");
 });
 

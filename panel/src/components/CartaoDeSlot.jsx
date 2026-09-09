@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
+import { numero } from "../i18n/formatar.js";
 import {
   avisoDeCurva,
   avisoDeDirecao,
@@ -75,13 +78,17 @@ const plural = (n, singular, plural) => (Math.abs(n) === 1 ? singular : plural);
 
 /** Milhar com ponto: "1.000 moedas" lê mais rápido de canto de olho que "1000". */
 function textoDeMoedas(moedas) {
-  if (!Number.isFinite(moedas)) return "valor desconhecido";
-  return `${moedas.toLocaleString("pt-BR")} ${plural(moedas, "moeda", "moedas")}`;
+  if (!Number.isFinite(moedas)) return traduzir("panel.slotCard.unknownValue");
+  return traduzir(plural(moedas, "panel.slotCard.coinsOne", "panel.slotCard.coinsMany"), {
+    n: numero(moedas),
+  });
 }
 
 /** Duração com vírgula, do jeito que se lê em português. */
 const textoDeDuracao = (segundos) =>
-  Number.isFinite(segundos) ? `${segundos.toFixed(1).replace(".", ",")}s` : "—";
+  Number.isFinite(segundos)
+    ? traduzir("panel.slotCard.durationSeconds", { n: segundos.toFixed(1).replace(".", ",") })
+    : traduzir("common.value.none");
 
 export function CartaoDeSlot({
   slot,
@@ -93,13 +100,15 @@ export function CartaoDeSlot({
   aoMudar,
   aoLimpar,
 }) {
+  const { t } = useTraducao();
+
   // Rascunho é o texto enquanto o campo está em foco. Fora do foco o campo
   // mostra `formatarDelta`, com o `+` que diferencia subida de descida de
   // relance; em foco mostra o número cru, que é o que dá para digitar.
   const [rascunho, definirRascunho] = useState(null);
   const [iconeQuebrado, definirIconeQuebrado] = useState(false);
 
-  const posicao = slot?.posicao ?? "—";
+  const posicao = slot?.posicao ?? t("common.value.none");
   const vazio = !slot || slot.vazio === true || slot.presenteId == null;
 
   //[[ Para um EXTRA, "Limpar" e "Remover de vez" são a mesma operação.
@@ -111,41 +120,39 @@ export function CartaoDeSlot({
   // sumir na hora. Dois botões que chamam a mesma coisa na tela principal
   // custariam um clique errado por live; o que muda é o RÓTULO, que passa a
   // dizer o que de fato acontece. ]]
-  const rotuloDeLimpar = ehExtra ? "Remover" : "Limpar";
+  const rotuloDeLimpar = ehExtra ? t("common.action.remove") : t("panel.slotCard.clear");
 
   // R1.3 — slot vazio é estado válido, não é buraco nem erro. O cartão diz o
   // que acontece com o presente que fica de fora e oferece a saída num alvo
   // grande.
   if (vazio) {
     return (
-      <section className="cartao cartao-slot cartao-slot-vazio" aria-label={`Slot ${posicao}, vazio`}>
+      <section
+        className="cartao cartao-slot cartao-slot-vazio"
+        aria-label={t("panel.slotCard.emptySlotAria", { n: posicao })}
+      >
         <header className="cartao-slot-topo">
           <span className={`cartao-slot-posicao${ehExtra ? " cartao-slot-posicao-extra" : ""}`}>
             {posicao}
           </span>
-          <span className="cartao-slot-rotulo">{ehExtra ? "Extra vazio" : "Vazio"}</span>
+          <span className="cartao-slot-rotulo">
+            {ehExtra ? t("panel.slotCard.emptyExtra") : t("panel.slotCard.empty")}
+          </span>
         </header>
         {/* O texto antigo dizia que presente fora dos 6 era descartado. Isso
             deixou de ser verdade no ADR-016: a tabela de movimento move a
             torre com o catálogo inteiro, e o slot passou a ser o lugar de dar
             animação e delta PRÓPRIOS a um presente. Manter a frase velha faria
             o streamer preencher slot por medo de perder presente. */}
-        <p className="cartao-slot-explicacao secundario">
-          Slot vazio é válido. O presente que ficar de fora não some: ele continua movendo a
-          torre pela tabela de movimento. O slot é o que dá a ele animação, delta e
-          intensidade próprios.
-        </p>
+        <p className="cartao-slot-explicacao secundario">{t("panel.slotCard.emptyExplanation")}</p>
         {/* Buraco no meio dos extras: a posição continua existindo porque ela
             viaja para os eventos da sessão, e renumerar reescreveria a que slot
             um evento já gravado se refere. Sem esta linha o cartão parece preso. */}
         {ehExtra && (
-          <p className="cartao-slot-explicacao secundario">
-            Esta posição sobrou de um extra removido. Ela some sozinha quando os extras acima
-            dela saírem.
-          </p>
+          <p className="cartao-slot-explicacao secundario">{t("panel.slotCard.leftoverExtra")}</p>
         )}
         <button type="button" className="cartao-slot-preencher" onClick={aoEditarPresente}>
-          Escolher presente
+          {t("panel.slotCard.pickGift")}
         </button>
       </section>
     );
@@ -195,7 +202,7 @@ export function CartaoDeSlot({
     <section
       className={`cartao cartao-slot${indisponivel ? " cartao-slot-indisponivel" : ""}`}
       style={estiloDaFaixa}
-      aria-label={`Slot ${posicao}`}
+      aria-label={t("panel.slotCard.slotAria", { n: posicao })}
     >
       <header className="cartao-slot-topo">
         <span className={`cartao-slot-posicao${ehExtra ? " cartao-slot-posicao-extra" : ""}`}>
@@ -204,7 +211,7 @@ export function CartaoDeSlot({
         {/* Texto, não só a borda tracejada: cor e forma sozinhas nunca decidem
             nada neste painel, e "este não é um dos 6 do painel de desejos" é
             justamente o que explica o rótulo Remover e o overlay desmarcado. */}
-        {ehExtra && <span className="cartao-slot-extra-marca">extra</span>}
+        {ehExtra && <span className="cartao-slot-extra-marca">{t("panel.slotCard.extraBadge")}</span>}
         {/* Marca periférica: o streamer vê que existe aviso sem ler o aviso. */}
         {avisos.length > 0 && (
           <span className="cartao-slot-alerta" aria-hidden="true">!</span>
@@ -213,7 +220,11 @@ export function CartaoDeSlot({
           type="button"
           className="cartao-slot-limpar"
           onClick={aoLimpar}
-          aria-label={`${rotuloDeLimpar} o slot ${posicao}`}
+          aria-label={
+            ehExtra
+              ? t("panel.slotCard.removeSlotAria", { n: posicao })
+              : t("panel.slotCard.clearSlotAria", { n: posicao })
+          }
         >
           {rotuloDeLimpar}
         </button>
@@ -223,7 +234,14 @@ export function CartaoDeSlot({
         type="button"
         className="cartao-slot-presente"
         onClick={aoEditarPresente}
-        title={presente ? `${presente.nome} — ${textoDeMoedas(presente.moedas)}` : "Trocar presente"}
+        title={
+          presente
+            ? t("panel.slotCard.giftTitle", {
+                nome: presente.nome,
+                moedas: textoDeMoedas(presente.moedas),
+              })
+            : t("panel.slotCard.changeGift")
+        }
       >
         <span className="cartao-slot-icone" aria-hidden="true">
           {temIcone ? (
@@ -239,13 +257,18 @@ export function CartaoDeSlot({
           )}
         </span>
         <span className="cartao-slot-presente-texto">
-          <span className="cartao-slot-nome">{presente?.nome ?? "Presente fora do catálogo"}</span>
+          <span className="cartao-slot-nome">
+            {presente?.nome ?? t("panel.slotCard.giftMissing")}
+          </span>
           <span className="cartao-slot-moedas secundario">
             {presente ? textoDeMoedas(presente.moedas) : String(slot.presenteId)}
           </span>
         </span>
         {faixa ? (
-          <span className="cartao-slot-faixa" title={`Faixa ${NOME_DA_FAIXA[faixa]}`}>
+          <span
+            className="cartao-slot-faixa"
+            title={t("panel.slotCard.tierTitle", { nome: NOME_DA_FAIXA[faixa] })}
+          >
             {NOME_DA_FAIXA[faixa]}
           </span>
         ) : null}
@@ -255,7 +278,7 @@ export function CartaoDeSlot({
           diz isso com texto, nunca só com cor. */}
       {indisponivel && (
         <p className="pastilha pastilha-erro cartao-slot-indicador">
-          {presente ? "Fora da live" : "Não está no catálogo"}
+          {presente ? t("panel.slotCard.giftInactive") : t("panel.slotCard.giftUnknown")}
         </p>
       )}
 
@@ -280,7 +303,7 @@ export function CartaoDeSlot({
             inputMode="numeric"
             autoComplete="off"
             spellCheck={false}
-            aria-label={`Delta do slot ${posicao}`}
+            aria-label={t("panel.slotCard.deltaAria", { n: posicao })}
           />
         </span>
         <div className="cartao-slot-passos">
@@ -288,7 +311,7 @@ export function CartaoDeSlot({
             type="button"
             className="cartao-slot-passo"
             onClick={() => aplicarPasso(-1)}
-            aria-label="Diminuir delta"
+            aria-label={t("panel.slotCard.decreaseDelta")}
           >
             −
           </button>
@@ -296,7 +319,7 @@ export function CartaoDeSlot({
             type="button"
             className="cartao-slot-passo"
             onClick={() => aplicarPasso(1)}
-            aria-label="Aumentar delta"
+            aria-label={t("panel.slotCard.increaseDelta")}
           >
             +
           </button>
@@ -305,48 +328,60 @@ export function CartaoDeSlot({
 
       <p className="cartao-slot-legenda secundario">
         {semDirecao
-          ? "sem direção"
-          : `${subindo ? "sobe" : "desce"} ${Math.abs(delta)} ${plural(delta, "plataforma", "plataformas")}`}
+          ? t("panel.slotCard.noDirection")
+          : t(
+              subindo
+                ? plural(delta, "panel.slotCard.risesOne", "panel.slotCard.risesMany")
+                : plural(delta, "panel.slotCard.fallsOne", "panel.slotCard.fallsMany"),
+              { n: Math.abs(delta) },
+            )}
       </p>
 
       {(rascunhoInvalido || guardadoInvalido) && (
         <p className="cartao-slot-aviso cartao-slot-aviso-regra">
-          Delta é um número inteiro, e nunca 0.
+          {t("panel.slotCard.deltaRule")}
         </p>
       )}
 
       <button type="button" className="cartao-slot-animacao" onClick={aoEditarAnimacao}>
-        <span className="cartao-slot-animacao-nome">{animacao?.nome ?? "Animação fora da biblioteca"}</span>
+        <span className="cartao-slot-animacao-nome">
+          {animacao?.nome ?? t("panel.slotCard.animationMissing")}
+        </span>
         <span className="cartao-slot-animacao-meta secundario">
           {animacao
             ? [
                 animacao.direcao,
-                `peso ${animacao.pesoVisual}`,
+                t("panel.slotCard.weight", { n: animacao.pesoVisual }),
                 textoDeDuracao(animacao.duracaoBase),
-                animacao.aceitaDeltaVariavel === false ? "delta fixo" : null,
+                animacao.aceitaDeltaVariavel === false ? t("panel.slotCard.fixedDelta") : null,
                 // Preset salvo antes da aposentadoria continua valendo e continua
                 // tocando no jogo. O cartão diz que está assim de propósito — sem
                 // isso, o streamer só descobriria ao abrir o seletor e não achar.
-                animacao.ativa === false ? "aposentada" : null,
+                animacao.ativa === false ? t("panel.slotCard.retired") : null,
               ]
                 .filter(Boolean)
                 .join(" · ")
-            : String(slot.animacaoId ?? "—")}
+            : String(slot.animacaoId ?? t("common.value.none"))}
         </span>
       </button>
 
       <div className="cartao-slot-secao">
         <span className="cartao-slot-legenda secundario">
-          Intensidade {intensidade}
-          {cooldownMs > 0 ? ` · espera ${cooldownMs}ms` : ""}
+          {cooldownMs > 0
+            ? t("panel.slotCard.intensityWait", { n: intensidade, ms: cooldownMs })
+            : t("panel.slotCard.intensityValue", { n: intensidade })}
         </span>
-        <div className="cartao-slot-niveis" role="group" aria-label="Intensidade">
+        <div
+          className="cartao-slot-niveis"
+          role="group"
+          aria-label={t("panel.slotCard.intensity")}
+        >
           {INTENSIDADES.map((nivel) => (
             <button
               key={nivel}
               type="button"
               className={`cartao-slot-nivel${nivel <= intensidade ? " cartao-slot-nivel-aceso" : ""}`}
-              aria-label={`Intensidade ${nivel}`}
+              aria-label={t("panel.slotCard.intensityValue", { n: nivel })}
               aria-pressed={nivel === intensidade}
               onClick={() => aoMudar?.({ intensidade: nivel })}
             />
@@ -362,10 +397,10 @@ export function CartaoDeSlot({
           type="checkbox"
           checked={mostraNoOverlay}
           onChange={(evento) => aoMudar?.({ mostrarNoOverlay: evento.target.checked })}
-          aria-label={`O slot ${posicao} aparece na legenda do overlay`}
+          aria-label={t("panel.slotCard.overlayAria", { n: posicao })}
         />
         <span className="cartao-slot-legenda secundario">
-          {mostraNoOverlay ? "Aparece no overlay" : "Fora do overlay"}
+          {mostraNoOverlay ? t("panel.slotCard.inOverlay") : t("panel.slotCard.outOfOverlay")}
         </span>
       </label>
 

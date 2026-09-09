@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import { listaDePresentes, opcoesDeCutscene } from "../lib/regras.js";
 import "./EditorDePlacar.css";
 
@@ -26,25 +27,43 @@ import "./EditorDePlacar.css";
 /** Espelha `Tipos.VIDA_PADRAO_DO_PORTAL` no jogo e `VIDA_PADRAO_DO_PORTAL` na ponte. */
 const VIDA_PADRAO_DO_PORTAL = 2000;
 
+/** `rotulo` e `quando` guardam CHAVE de texto, resolvida no render pelo `t()`. */
 const RESULTADOS = [
   {
     efeito: "vitoria",
     campo: "cutsceneDeVitoria",
-    rotulo: "Vitória",
-    quando: "Chegar ao topo, ou receber um destes presentes.",
+    rotulo: "panel.scoreEditor.winLabel",
+    quando: "panel.scoreEditor.winWhen",
   },
   {
     efeito: "derrota",
     campo: "cutsceneDeDerrota",
-    rotulo: "Derrota",
-    quando: "O portal quebrar, ou receber um destes presentes.",
+    rotulo: "panel.scoreEditor.lossLabel",
+    quando: "panel.scoreEditor.lossWhen",
   },
 ];
+
+/**
+ * Costura de volta o texto traduzido que tem destaque no meio.
+ *
+ * O catálogo guarda a frase INTEIRA com `{marca}` onde entra o `<strong>` ou o
+ * `<code>` — quem traduz lê a frase toda, e a tela não é montada com pedaço de
+ * frase concatenado. Marca sem nó correspondente fica como veio, em vez de
+ * sumir sem aviso.
+ */
+function comMarcadores(texto, nos) {
+  return texto.split(/(\{\w+\})/g).map((pedaco, indice) => {
+    const marca = /^\{(\w+)\}$/.exec(pedaco);
+    if (!marca || nos[marca[1]] === undefined) return pedaco;
+    return <Fragment key={indice}>{nos[marca[1]]}</Fragment>;
+  });
+}
 
 export function EditorDePlacar({
   preset, catalogo, presenteIdsEmSlot, cutscenes,
   aoAdicionar, aoRemover, aoEscolherCutscene, aoRecarregarCutscenes, aoMudarPortal,
 }) {
+  const { t } = useTraducao();
   const presentes = useMemo(() => listaDePresentes(catalogo), [catalogo]);
   const porId = useMemo(
     () => new Map(presentes.map((p) => [String(p.presenteId), p])),
@@ -69,22 +88,28 @@ export function EditorDePlacar({
 
   const nomeDe = (presenteId) => porId.get(String(presenteId))?.nome ?? String(presenteId);
 
+  // Os pedaços marcados das frases com destaque. `.mp4` e `.webm` são extensão
+  // de arquivo, não texto de tela: não traduzem.
+  const nosDaPasta = {
+    folder: <code>{pasta}</code>,
+    mp4: <code>.mp4</code>,
+    webm: <code>.webm</code>,
+  };
+
   return (
-    <section className="placar" aria-label="Presentes de placar">
+    <section className="placar" aria-label={t("panel.scoreEditor.title")}>
       <header className="placar-cabecalho">
-        <h2 className="placar-titulo">Presentes de placar</h2>
+        <h2 className="placar-titulo">{t("panel.scoreEditor.title")}</h2>
         {/* Sem número: o preset vai até 24 slots (R1 emendada), e o 6 deixou de
             ser o que separa esta lista da grade de slots. */}
-        <span className="placar-etiqueta">fora dos slots do preset</span>
+        <span className="placar-etiqueta">{t("panel.scoreEditor.badge")}</span>
       </header>
 
       <p className="placar-explicacao">
-        Estes presentes não animam o boneco: encerram a rodada e contam ponto.
-        Um presente de <strong>derrota</strong> quebra o portal na hora, sem
-        gastar a vida dele. Mandado em rajada, vale uma rodada por repetição —
-        e elas são cobradas uma a uma, cada queda com sua contagem. A{" "}
-        <strong>cutscene</strong> é o vídeo que o overlay toca no OBS quando a
-        rodada acaba, por cima do jogo.
+        {comMarcadores(t("panel.scoreEditor.explainer"), {
+          loss: <strong>{t("panel.scoreEditor.explainerLossWord")}</strong>,
+          cutscene: <strong>{t("panel.scoreEditor.explainerCutsceneWord")}</strong>,
+        })}
       </p>
 
       {RESULTADOS.map(({ efeito, campo, rotulo, quando }) => {
@@ -93,16 +118,20 @@ export function EditorDePlacar({
         const sumiu = opcoes.some((opcao) => opcao.id === escolhida && opcao.ausente);
         const meus = vinculos.filter((vinculo) => vinculo.efeito === efeito);
         const idDoSelect = `placar-cutscene-${efeito}`;
+        const rotuloTexto = t(rotulo);
+        const rotuloMinusculo = rotuloTexto.toLowerCase();
 
         return (
           <div className={`placar-resultado placar-resultado-${efeito}`} key={efeito}>
             <header className="placar-resultado-cabecalho">
-              <h3 className="placar-resultado-titulo">{rotulo}</h3>
-              <span className="placar-resultado-quando">{quando}</span>
+              <h3 className="placar-resultado-titulo">{rotuloTexto}</h3>
+              <span className="placar-resultado-quando">{t(quando)}</span>
             </header>
 
             <div className="placar-campo">
-              <label className="placar-rotulo" htmlFor={idDoSelect}>Cutscene</label>
+              <label className="placar-rotulo" htmlFor={idDoSelect}>
+                {t("panel.scoreEditor.cutsceneLabel")}
+              </label>
               <select
                 id={idDoSelect}
                 className="placar-cutscene"
@@ -110,35 +139,43 @@ export function EditorDePlacar({
                 disabled={carregando}
                 onChange={(evento) => aoEscolherCutscene(campo, evento.target.value || null)}
               >
-                <option value="">Nenhuma — só o placar muda</option>
+                <option value="">{t("panel.scoreEditor.cutsceneNone")}</option>
                 {opcoes.map((opcao) => (
                   <option key={opcao.id} value={opcao.id}>
-                    {opcao.ausente ? `${opcao.arquivo} (não está na pasta)` : opcao.arquivo}
+                    {opcao.ausente
+                      ? t("panel.scoreEditor.cutsceneMissingOption", { file: opcao.arquivo })
+                      : opcao.arquivo}
                   </option>
                 ))}
               </select>
               {sumiu ? (
                 <span className="placar-aviso">
-                  Esse vídeo não está mais em {pasta}. Sem ele, nada toca e nada avisa.
+                  {t("panel.scoreEditor.cutsceneGoneWarning", { folder: pasta })}
                 </span>
               ) : null}
             </div>
 
             <div className="placar-campo">
-              <span className="placar-rotulo">Presentes</span>
+              <span className="placar-rotulo">{t("panel.scoreEditor.giftsLabel")}</span>
               {meus.length === 0 ? (
                 <span className="placar-presentes-vazio">
-                  Nenhum presente dá {rotulo.toLowerCase()} ainda.
+                  {t("panel.scoreEditor.noGiftsYet", { result: rotuloMinusculo })}
                 </span>
               ) : (
-                <ul className="placar-presentes" aria-label={`Presentes que dão ${rotulo.toLowerCase()}`}>
+                <ul
+                  className="placar-presentes"
+                  aria-label={t("panel.scoreEditor.giftsListLabel", { result: rotuloMinusculo })}
+                >
                   {meus.map((vinculo) => (
                     <li className="placar-presente" key={vinculo.presenteId}>
                       <span className="placar-presente-nome">{nomeDe(vinculo.presenteId)}</span>
                       <button
                         type="button"
                         className="placar-remover"
-                        aria-label={`Tirar ${nomeDe(vinculo.presenteId)} da ${rotulo.toLowerCase()}`}
+                        aria-label={t("panel.scoreEditor.removeGiftLabel", {
+                          gift: nomeDe(vinculo.presenteId),
+                          result: rotuloMinusculo,
+                        })}
                         onClick={() => aoRemover(vinculo.presenteId)}
                       >
                         ×
@@ -154,12 +191,12 @@ export function EditorDePlacar({
                 <select
                   className="placar-adicionar"
                   value=""
-                  aria-label={`Acrescentar presente que dá ${rotulo.toLowerCase()}`}
+                  aria-label={t("panel.scoreEditor.addGiftLabel", { result: rotuloMinusculo })}
                   onChange={(evento) => {
                     if (evento.target.value) aoAdicionar(evento.target.value, efeito);
                   }}
                 >
-                  <option value="">Acrescentar presente…</option>
+                  <option value="">{t("panel.scoreEditor.addGiftPlaceholder")}</option>
                   {disponiveis.map((presente) => (
                     <option key={presente.presenteId} value={presente.presenteId}>
                       {presente.nome}
@@ -177,17 +214,11 @@ export function EditorDePlacar({
       <div className="placar-pasta">
         <span className="placar-pasta-texto">
           {carregando ? (
-            "Procurando vídeos…"
+            t("panel.scoreEditor.searchingVideos")
           ) : naPasta.length === 0 ? (
-            <>
-              Nenhum vídeo em <code>{pasta}</code>. Ponha um <code>.mp4</code> ou{" "}
-              <code>.webm</code> lá — nome só com minúsculas, números e hífen — e procure de novo.
-            </>
+            comMarcadores(t("panel.scoreEditor.noVideosInFolder"), nosDaPasta)
           ) : (
-            <>
-              Os vídeos vêm de <code>{pasta}</code>: <code>.mp4</code> ou <code>.webm</code>,
-              nome só com minúsculas, números e hífen.
-            </>
+            comMarcadores(t("panel.scoreEditor.videosFromFolder"), nosDaPasta)
           )}
         </span>
         {aoRecarregarCutscenes ? (
@@ -197,12 +228,12 @@ export function EditorDePlacar({
             onClick={aoRecarregarCutscenes}
             disabled={carregando}
           >
-            Procurar de novo
+            {t("panel.scoreEditor.searchAgain")}
           </button>
         ) : null}
         {ignorados.length > 0 ? (
           <span className="placar-pasta-ignorados">
-            Fora do padrão de nome, e por isso fora da lista: {ignorados.join(", ")}.
+            {t("panel.scoreEditor.ignoredFiles", { files: ignorados.join(", ") })}
           </span>
         ) : null}
       </div>
@@ -215,7 +246,7 @@ export function EditorDePlacar({
       {aoMudarPortal && (
         <div className="placar-portal">
           <label className="placar-portal-rotulo" htmlFor="placar-portal-vida">
-            Vida do portal
+            {t("panel.scoreEditor.portalHealthLabel")}
           </label>
           <input
             id="placar-portal-vida"
@@ -231,8 +262,9 @@ export function EditorDePlacar({
             }}
           />
           <span className="placar-portal-dica">
-            Em <strong>andares de empurrão</strong>, a mesma unidade do delta: um
-            presente que derruba 20 andares tira 20. Só presente negativo machuca.
+            {comMarcadores(t("panel.scoreEditor.portalHint"), {
+              unit: <strong>{t("panel.scoreEditor.portalHintUnit")}</strong>,
+            })}
           </span>
         </div>
       )}

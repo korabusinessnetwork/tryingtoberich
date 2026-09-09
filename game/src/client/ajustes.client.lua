@@ -20,6 +20,7 @@ local UserInputService = game:GetService("UserInputService")
 local Compartilhado = ReplicatedStorage:WaitForChild("KoraCompartilhado")
 local Eventos = require(Compartilhado.eventos)
 local Tokens = require(Compartilhado.tokens)
+local Textos = require(Compartilhado.textos)
 
 local CORES = Tokens.painel
 local COR_ERRO = Tokens.estado.erro
@@ -50,12 +51,12 @@ end
 	variacaoRaio de 1 em 1 seria inútil, e em totalPlataformas de 0,1 também.
 ]]
 local CAMPOS = {
-	{ chave = "espacamentoVertical", rotulo = "Altura do degrau", padrao = 3.5, passo = 0.5, min = 1, max = 20 },
-	{ chave = "raioBase", rotulo = "Tamanho da plataforma", padrao = 7.5, passo = 0.5, min = 1.5, max = 20 },
-	{ chave = "variacaoHorizontal", rotulo = "Distância entre degraus", padrao = 20, passo = 1, min = 1, max = 60 },
-	{ chave = "variacaoRaio", rotulo = "Variação de tamanho", padrao = 0.1, passo = 0.05, min = 0, max = 0.5 },
-	{ chave = "jumpHeight", rotulo = "Altura do pulo", padrao = 12, passo = 0.5, min = 7, max = 12 },
-	{ chave = "totalPlataformas", rotulo = "Quantidade de degraus", padrao = 5000, passo = 250, min = 10, max = 5000 },
+	{ chave = "espacamentoVertical", rotulo = Textos.t("game.tuning.fieldStepHeight"), padrao = 3.5, passo = 0.5, min = 1, max = 20 },
+	{ chave = "raioBase", rotulo = Textos.t("game.tuning.fieldPlatformSize"), padrao = 7.5, passo = 0.5, min = 1.5, max = 20 },
+	{ chave = "variacaoHorizontal", rotulo = Textos.t("game.tuning.fieldStepDistance"), padrao = 20, passo = 1, min = 1, max = 60 },
+	{ chave = "variacaoRaio", rotulo = Textos.t("game.tuning.fieldSizeVariation"), padrao = 0.1, passo = 0.05, min = 0, max = 0.5 },
+	{ chave = "jumpHeight", rotulo = Textos.t("game.tuning.fieldJumpHeight"), padrao = 12, passo = 0.5, min = 7, max = 12 },
+	{ chave = "totalPlataformas", rotulo = Textos.t("game.tuning.fieldStepCount"), padrao = 5000, passo = 250, min = 10, max = 5000 },
 }
 
 local valores = {}
@@ -93,7 +94,7 @@ local function recado(texto, cor)
 end
 
 local function aplicar()
-	recado("Reconstruindo a torre...", CORES.textoSecundario)
+	recado(Textos.t("game.tuning.rebuilding"), CORES.textoSecundario)
 	Eventos.obter(Eventos.AJUSTAR_MAPA):FireServer(valores)
 end
 
@@ -148,7 +149,7 @@ Novo("TextLabel", {
 	TextSize = 13,
 	TextColor3 = CORES.textoPrimario,
 	TextXAlignment = Enum.TextXAlignment.Left,
-	Text = "AFINAR A TORRE",
+	Text = Textos.t("game.tuning.title"),
 	ZIndex = 9,
 }, painel)
 
@@ -226,7 +227,7 @@ local aplicarBotao = Novo("TextButton", {
 	Font = FONTE_TITULO,
 	TextSize = 13,
 	TextColor3 = CORES.textoPrimario,
-	Text = "Aplicar e reconstruir",
+	Text = Textos.t("game.tuning.applyButton"),
 	ZIndex = 9,
 }, painel)
 Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, aplicarBotao)
@@ -241,7 +242,7 @@ rotuloRecado = Novo("TextLabel", {
 	TextColor3 = CORES.textoSecundario,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	TextWrapped = true,
-	Text = "Ajuste e clique em aplicar.",
+	Text = Textos.t("game.tuning.idleHint"),
 	ZIndex = 9,
 }, painel)
 
@@ -276,7 +277,7 @@ local copiarBotao = Novo("TextButton", {
 	Font = FONTE_TITULO,
 	TextSize = 12,
 	TextColor3 = CORES.textoPrimario,
-	Text = "Selecionar tudo (depois Ctrl+C)",
+	Text = Textos.t("game.tuning.selectAllButton"),
 	ZIndex = 9,
 }, painel)
 Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, copiarBotao)
@@ -286,7 +287,7 @@ copiarBotao.MouseButton1Click:Connect(function()
 	caixaJson:CaptureFocus()
 	caixaJson.SelectionStart = 1
 	caixaJson.CursorPosition = #caixaJson.Text + 1
-	recado("Selecionado. Aperte Ctrl+C e cole na conversa.", CORES.textoPrimario)
+	recado(Textos.t("game.tuning.selectedHint"), CORES.textoPrimario)
 end)
 
 -- O botão que abre, no canto inferior esquerdo.
@@ -300,7 +301,7 @@ local abrir = Novo("TextButton", {
 	Font = FONTE,
 	TextSize = 14,
 	TextColor3 = CORES.textoPrimario,
-	Text = "Afinar torre  (" .. TECLA_ATALHO.Name .. ")",
+	Text = Textos.t("game.tuning.openButton", { tecla = TECLA_ATALHO.Name }),
 	ZIndex = 8,
 }, telaCheia)
 Novo("UICorner", { CornerRadius = UDim.new(0, 8) }, abrir)
@@ -328,10 +329,10 @@ Eventos.obter(Eventos.AJUSTAR_MAPA).OnClientEvent:Connect(function(resposta)
 		return
 	end
 	if resposta.ok then
-		recado("Torre reconstruída. Copie o JSON quando gostar do resultado.", CORES.textoPrimario)
+		recado(Textos.t("game.tuning.rebuiltOk"), CORES.textoPrimario)
 		return
 	end
-	local motivo = "recusado"
+	local motivo = Textos.t("game.tuning.rejected")
 	if type(resposta.problemas) == "table" and resposta.problemas[1] then
 		motivo = tostring(resposta.problemas[1])
 	end

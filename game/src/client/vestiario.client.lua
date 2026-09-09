@@ -73,6 +73,7 @@ local Compartilhado = game:GetService("ReplicatedStorage"):WaitForChild("KoraCom
 local Eventos = require(Compartilhado.eventos)
 local Tokens = require(Compartilhado.tokens)
 local Efeitos = require(Compartilhado.efeitos)
+local Textos = require(Compartilhado.textos)
 
 local jogador = Players.LocalPlayer
 
@@ -141,13 +142,17 @@ local INTENSIDADE_PADRAO = 2
 -- Mesma tabela de shared/server/personagem.lua: nome de domínio do look ->
 -- propriedade real de HumanoidDescription. Duplicado aqui de propósito (não
 -- posso requerer módulo de ServerScriptService a partir do client).
+-- O rótulo é resolvido AQUI, com a chave escrita por extenso. A GUI é montada
+-- uma vez no carregamento, como todo rótulo deste arquivo, então adiar a
+-- resolução não mudaria nada na tela — e a chave literal é a única forma que o
+-- teste de chave morta (test/i18n.test.mjs) tem de enxergar que ela é usada.
 local CAMPO_COR = {
-	cabeca = { chave = "HeadColor", rotulo = "Cabeça" },
-	torso = { chave = "TorsoColor", rotulo = "Torso" },
-	bracoEsquerdo = { chave = "LeftArmColor", rotulo = "Braço E" },
-	bracoDireito = { chave = "RightArmColor", rotulo = "Braço D" },
-	pernaEsquerda = { chave = "LeftLegColor", rotulo = "Perna E" },
-	pernaDireita = { chave = "RightLegColor", rotulo = "Perna D" },
+	cabeca = { chave = "HeadColor", rotulo = Textos.t("game.wardrobe.bodyPartHead") },
+	torso = { chave = "TorsoColor", rotulo = Textos.t("game.wardrobe.bodyPartTorso") },
+	bracoEsquerdo = { chave = "LeftArmColor", rotulo = Textos.t("game.wardrobe.bodyPartLeftArm") },
+	bracoDireito = { chave = "RightArmColor", rotulo = Textos.t("game.wardrobe.bodyPartRightArm") },
+	pernaEsquerda = { chave = "LeftLegColor", rotulo = Textos.t("game.wardrobe.bodyPartLeftLeg") },
+	pernaDireita = { chave = "RightLegColor", rotulo = Textos.t("game.wardrobe.bodyPartRightLeg") },
 }
 local ORDEM_CAMPO_COR = { "cabeca", "torso", "bracoEsquerdo", "bracoDireito", "pernaEsquerda", "pernaDireita" }
 
@@ -385,10 +390,16 @@ local function estilizarCelulaResultado(assetId)
 	end
 end
 
+--[[ Nome de exibição de um item: o que veio do catálogo, ou o id cru quando a
+	resposta não trouxe rótulo. ]]
+local function nomeDeExibicao(assetId)
+	return nomesPorAssetId[assetId] or Textos.t("game.wardrobe.itemFallbackName", { id = assetId })
+end
+
 local function renderizarFallback()
 	limparFilhos(containerFallback)
 	for indice, assetId in ipairs(itensEquipadosLista) do
-		local nome = nomesPorAssetId[assetId] or ("Item " .. tostring(assetId))
+		local nome = nomeDeExibicao(assetId)
 		local linha = Novo("Frame", {
 			Name = "Fallback_" .. tostring(assetId),
 			BackgroundTransparency = 1,
@@ -454,7 +465,7 @@ local function alternarEquip(assetId, nome)
 	local jaEquipado = itensEquipadosSet[assetId] == true
 
 	if not jaEquipado and #itensEquipadosLista >= LIMITE_ITENS then
-		mostrarAviso("Máximo de " .. LIMITE_ITENS .. " peças por look.", Tokens.estado.atencao)
+		mostrarAviso(Textos.t("game.wardrobe.maxItemsWarning", { max = LIMITE_ITENS }), Tokens.estado.atencao)
 		return
 	end
 
@@ -489,7 +500,7 @@ local function alternarEquip(assetId, nome)
 	if not ok then
 		itensEquipadosLista = listaAnterior
 		itensEquipadosSet = setAnterior
-		mostrarAviso("Não foi possível equipar esse item agora.", Tokens.estado.erro)
+		mostrarAviso(Textos.t("game.wardrobe.equipFailed"), Tokens.estado.erro)
 		estilizarCelulaResultado(assetId)
 		renderizarEquipados()
 		return
@@ -502,7 +513,10 @@ local function alternarEquip(assetId, nome)
 end
 
 renderizarEquipados = function()
-	rotuloContagemEquipados.Text = "Equipados (" .. #itensEquipadosLista .. "/" .. LIMITE_ITENS .. ")"
+	rotuloContagemEquipados.Text = Textos.t("game.wardrobe.equippedCount", {
+		n = #itensEquipadosLista,
+		max = LIMITE_ITENS,
+	})
 
 	limparFilhos(containerEquipados)
 	if #itensEquipadosLista == 0 then
@@ -514,11 +528,11 @@ renderizarEquipados = function()
 			TextSize = 13,
 			TextColor3 = CORES.textoSecundario,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "Nada equipado ainda. Busque um item ao lado.",
+			Text = Textos.t("game.wardrobe.emptyState"),
 		}, containerEquipados)
 	else
 		for indice, assetId in ipairs(itensEquipadosLista) do
-			local nome = nomesPorAssetId[assetId] or ("Item " .. tostring(assetId))
+			local nome = nomeDeExibicao(assetId)
 			local linha = Novo("Frame", {
 				Name = "Equipado_" .. tostring(assetId),
 				BackgroundColor3 = CORES.fundo,
@@ -603,7 +617,7 @@ local function renderizarResultados(itens)
 			TextSize = 11,
 			TextColor3 = CORES.textoPrimario,
 			TextWrapped = true,
-			Text = item.nome or ("Item " .. tostring(item.assetId)),
+			Text = item.nome or Textos.t("game.wardrobe.itemFallbackName", { id = item.assetId }),
 		}, celula)
 
 		celulasResultado[item.assetId] = celula
@@ -632,7 +646,7 @@ local function executarBusca()
 
 	local termo = string.gsub(caixaBusca.Text, "^%s*(.-)%s*$", "%1")
 	if #termo < TAMANHO_MIN_BUSCA then
-		rotuloHintBusca.Text = "Digite ao menos " .. TAMANHO_MIN_BUSCA .. " letras."
+		rotuloHintBusca.Text = Textos.t("game.wardrobe.searchMinLength", { min = TAMANHO_MIN_BUSCA })
 		rotuloHintBusca.TextColor3 = Tokens.estado.atencao
 		return
 	end
@@ -641,14 +655,14 @@ local function executarBusca()
 	buscando = true
 	botaoBuscar.BackgroundTransparency = 0.5
 	ultimoTermoBuscado = termo
-	definirEstadoResultados("Buscando \"" .. termo .. "\"...", false)
+	definirEstadoResultados(Textos.t("game.wardrobe.searching", { termo = termo }), false)
 	RemotoBuscar:FireServer({ termo = termo })
 
 	task.delay(15, function()
 		if buscando and ultimoTermoBuscado == termo then
 			buscando = false
 			botaoBuscar.BackgroundTransparency = 0
-			definirEstadoResultados("A busca demorou demais. Tente de novo.", false)
+			definirEstadoResultados(Textos.t("game.wardrobe.searchTimeout"), false)
 		end
 	end)
 end
@@ -664,13 +678,13 @@ RemotoBuscar.OnClientEvent:Connect(function(dados)
 	botaoBuscar.BackgroundTransparency = 0
 
 	if type(dados.erro) == "string" then
-		definirEstadoResultados("Erro na busca: " .. dados.erro, false)
+		definirEstadoResultados(Textos.t("game.wardrobe.searchError", { erro = dados.erro }), false)
 		return
 	end
 
 	local itens = dados.itens
 	if type(itens) ~= "table" then
-		definirEstadoResultados("Resposta inválida do servidor.", false)
+		definirEstadoResultados(Textos.t("game.wardrobe.invalidResponse"), false)
 		return
 	end
 
@@ -688,7 +702,7 @@ RemotoBuscar.OnClientEvent:Connect(function(dados)
 	end
 
 	if #filtrados == 0 then
-		definirEstadoResultados("Nada encontrado para \"" .. tostring(dados.termo) .. "\".", false)
+		definirEstadoResultados(Textos.t("game.wardrobe.searchEmpty", { termo = tostring(dados.termo) }), false)
 		return
 	end
 
@@ -706,7 +720,10 @@ RemotoEquipar.OnClientEvent:Connect(function(dados)
 	if itensEquipadosSet[dados.assetId] then
 		local nome = nomesPorAssetId[dados.assetId]
 		alternarEquip(dados.assetId, nome)
-		mostrarAviso("O servidor recusou \"" .. tostring(nome or dados.assetId) .. "\": " .. tostring(dados.erro or "motivo não informado"), Tokens.estado.erro)
+		mostrarAviso(Textos.t("game.wardrobe.equipRejected", {
+			nome = tostring(nome or dados.assetId),
+			erro = tostring(dados.erro or Textos.t("game.wardrobe.reasonUnknown")),
+		}), Tokens.estado.erro)
 	end
 end)
 
@@ -715,16 +732,23 @@ end)
 -- ============================================================================
 -- A escala 1-5 reaproveita Tokens.faixa (já é uma rampa de 5 passos no
 -- design system) em vez de inventar cor nova só pro medidor de intensidade.
+--
+-- Dois campos de rótulo, cada um com um trabalho: `chaveRotulo` indexa o mapa
+-- `botoesTipoEfeito` (o texto traduzido não serve de chave — amarraria a busca
+-- do botão ao idioma, e duas traduções iguais deixariam um botão sem restilizar)
+-- e `rotulo` é o texto já resolvido, com a chave escrita por extenso para o
+-- teste de chave morta enxergar. `valor` não serve de chave: é nil na primeira
+-- opção, e nil não indexa tabela.
 local OPCOES_TIPO_EFEITO = {
-	{ valor = nil, rotulo = "Nenhum" },
-	{ valor = "aura", rotulo = "Aura" },
-	{ valor = "rastro", rotulo = "Rastro" },
-	{ valor = "brilho", rotulo = "Brilho" },
+	{ valor = nil, chaveRotulo = "game.wardrobe.effectNone", rotulo = Textos.t("game.wardrobe.effectNone") },
+	{ valor = "aura", chaveRotulo = "game.wardrobe.effectAura", rotulo = Textos.t("game.wardrobe.effectAura") },
+	{ valor = "rastro", chaveRotulo = "game.wardrobe.effectTrail", rotulo = Textos.t("game.wardrobe.effectTrail") },
+	{ valor = "brilho", chaveRotulo = "game.wardrobe.effectGlow", rotulo = Textos.t("game.wardrobe.effectGlow") },
 }
 
 local function restilizarBotoesTipoEfeito()
 	for _, opcao in ipairs(OPCOES_TIPO_EFEITO) do
-		local botao = botoesTipoEfeito[opcao.rotulo]
+		local botao = botoesTipoEfeito[opcao.chaveRotulo]
 		if botao then
 			local selecionado = opcao.valor == tipoEfeitoAtual
 			botao.BackgroundColor3 = selecionado and Tokens.estado.ok or CORES.fundo
@@ -810,7 +834,7 @@ local function criarCampoHex(pai, rotuloTexto, valorInicial, aoConfirmar)
 		if not corHexValida(texto) then
 			caixa.Text = ""
 			amostra.BackgroundColor3 = CORES.borda
-			mostrarAviso("Cor inválida. Use o formato #RRGGBB.", Tokens.estado.erro)
+			mostrarAviso(Textos.t("game.wardrobe.invalidColor"), Tokens.estado.erro)
 			aoConfirmar(nil)
 			return
 		end
@@ -877,10 +901,7 @@ local function restaurarPadrao()
 	renderizarEquipados()
 	atualizarPreviaPersonagem()
 
-	definirEstadoSalvar(
-		"Voltou ao padrão. Equipe ao menos um item e salve para valer também no próximo respawn.",
-		CORES.textoSecundario
-	)
+	definirEstadoSalvar(Textos.t("game.wardrobe.restoredDefault"), CORES.textoSecundario)
 end
 
 local function executarSalvar()
@@ -890,7 +911,7 @@ local function executarSalvar()
 
 	local nome = string.gsub(caixaNomeLook.Text, "^%s*(.-)%s*$", "%1")
 	if #nome < 1 or #nome > 60 then
-		definirEstadoSalvar("Dê um nome ao look (até 60 caracteres).", Tokens.estado.erro)
+		definirEstadoSalvar(Textos.t("game.wardrobe.nameRequired"), Tokens.estado.erro)
 		return
 	end
 
@@ -908,7 +929,7 @@ local function executarSalvar()
 		end
 	end
 	if #fallback == 0 then
-		definirEstadoSalvar("Equipe ao menos um item (ou marque uma reserva) antes de salvar.", Tokens.estado.erro)
+		definirEstadoSalvar(Textos.t("game.wardrobe.needItemToSave"), Tokens.estado.erro)
 		return
 	end
 
@@ -928,7 +949,7 @@ local function executarSalvar()
 
 	salvando = true
 	botaoSalvar.BackgroundTransparency = 0.5
-	definirEstadoSalvar("Salvando...", CORES.textoSecundario)
+	definirEstadoSalvar(Textos.t("game.wardrobe.saving"), CORES.textoSecundario)
 
 	-- roupaCustomizada nunca é mandado: rota paga adiada por regra de custo
 	-- do CLAUDE.md (regra 5 da tarefa / ADR-010). O servidor default para nil.
@@ -944,7 +965,7 @@ local function executarSalvar()
 		if salvando then
 			salvando = false
 			botaoSalvar.BackgroundTransparency = 0
-			definirEstadoSalvar("Sem resposta do servidor. Tente de novo.", Tokens.estado.erro)
+			definirEstadoSalvar(Textos.t("game.wardrobe.saveTimeout"), Tokens.estado.erro)
 		end
 	end)
 end
@@ -953,13 +974,21 @@ RemotoSalvar.OnClientEvent:Connect(function(dados)
 	salvando = false
 	botaoSalvar.BackgroundTransparency = 0
 	if type(dados) ~= "table" then
-		definirEstadoSalvar("Resposta inválida do servidor.", Tokens.estado.erro)
+		definirEstadoSalvar(Textos.t("game.wardrobe.invalidResponse"), Tokens.estado.erro)
 		return
 	end
 	if dados.ok == true then
-		definirEstadoSalvar("Look salvo como \"" .. tostring(dados.lookId) .. "\". Vale a partir do início da próxima sessão ou do próximo respawn.", Tokens.estado.ok)
+		definirEstadoSalvar(
+			Textos.t("game.wardrobe.saveSuccess", { lookId = tostring(dados.lookId) }),
+			Tokens.estado.ok
+		)
 	else
-		definirEstadoSalvar("Erro ao salvar: " .. tostring(dados.erro or "desconhecido"), Tokens.estado.erro)
+		definirEstadoSalvar(
+			Textos.t("game.wardrobe.saveError", {
+				erro = tostring(dados.erro or Textos.t("game.wardrobe.unknownReason")),
+			}),
+			Tokens.estado.erro
+		)
 	end
 end)
 
@@ -998,7 +1027,7 @@ local function tentarAbrirVestiario()
 		return
 	end
 	if sessaoEstaAtiva() then
-		mostrarAviso("Vestiário indisponível com a live no ar.", Tokens.estado.atencao)
+		mostrarAviso(Textos.t("game.wardrobe.lockedDuringLive"), Tokens.estado.atencao)
 		return
 	end
 	abrirVestiario()
@@ -1014,7 +1043,7 @@ task.spawn(function()
 	while true do
 		task.wait(1)
 		if guiAberta and sessaoEstaAtiva() then
-			fecharVestiario("A live entrou no ar. Vestiário fechado.", Tokens.estado.atencao)
+			fecharVestiario(Textos.t("game.wardrobe.closedByLive"), Tokens.estado.atencao)
 		end
 		if botaoAlternarVestiario then
 			botaoAlternarVestiario.BackgroundColor3 = sessaoEstaAtiva() and CORES.borda or CORES.superficie
@@ -1083,7 +1112,8 @@ botaoAlternarVestiario = Novo("TextButton", {
 	Font = FONTE_MEDIA,
 	TextSize = 14,
 	TextColor3 = CORES.textoPrimario,
-	Text = "Vestiário  (" .. TECLA_ATALHO.Name .. ")",
+	-- TECLA_ATALHO.Name é nome de tecla: entra cru, nunca traduzido.
+	Text = Textos.t("game.wardrobe.toggleButton", { tecla = TECLA_ATALHO.Name }),
 	ZIndex = 5,
 }, containerBotao)
 Novo("UICorner", { CornerRadius = UDim.new(0, 8) }, botaoAlternarVestiario)
@@ -1180,7 +1210,7 @@ Novo("TextLabel", {
 	TextSize = 20,
 	TextColor3 = CORES.textoPrimario,
 	TextXAlignment = Enum.TextXAlignment.Left,
-	Text = "Vestiário",
+	Text = Textos.t("game.wardrobe.title"),
 }, cabecalho)
 Novo("TextLabel", {
 	Name = "Subtitulo",
@@ -1191,7 +1221,7 @@ Novo("TextLabel", {
 	TextSize = 12,
 	TextColor3 = CORES.textoSecundario,
 	TextXAlignment = Enum.TextXAlignment.Left,
-	Text = "Monta o look aqui. Aplica no início da sessão ou no próximo respawn — nunca no meio da partida.",
+	Text = Textos.t("game.wardrobe.subtitle"),
 }, cabecalho)
 
 local botaoFechar = Novo("TextButton", {
@@ -1301,11 +1331,13 @@ local function criarAba(nome, rotulo, ordem)
 	return pagina
 end
 
-local abaGaleria = criarAba("Galeria", "Galeria", 0)
-local colunaEsquerda = criarAba("Itens", "Itens", 1)
-local abaCores = criarAba("Cores", "Cores", 2)
-local abaEfeito = criarAba("Efeito", "Efeito", 3)
-local abaSalvar = criarAba("Salvar", "Salvar", 4)
+-- O primeiro argumento é IDENTIFICADOR de aba (nome de instância e chave de
+-- `paginas`), o segundo é o rótulo na tela. Só o segundo é traduzido.
+local abaGaleria = criarAba("Galeria", Textos.t("game.wardrobe.tabGallery"), 0)
+local colunaEsquerda = criarAba("Itens", Textos.t("game.wardrobe.tabItems"), 1)
+local abaCores = criarAba("Cores", Textos.t("game.wardrobe.tabColors"), 2)
+local abaEfeito = criarAba("Efeito", Textos.t("game.wardrobe.tabEffect"), 3)
+local abaSalvar = criarAba("Salvar", Textos.t("game.wardrobe.tabSave"), 4)
 
 --[[
 	A galeria: skins de outras pessoas do Roblox, como BASE.
@@ -1327,21 +1359,21 @@ local recadoGaleria = Novo("TextLabel", {
 	LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 34),
 	Font = FONTE, TextSize = 12, TextColor3 = CORES.textoSecundario,
 	TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
-	Text = "Skins de quem já tem visual montado. Veste como base e ajusta nas outras abas.",
+	Text = Textos.t("game.wardrobe.galleryIntro"),
 }, abaGaleria)
 
 local botaoRecarregarGaleria = Novo("TextButton", {
 	LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 32),
 	BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
 	Font = FONTE_MEDIA, TextSize = 12, TextColor3 = CORES.textoPrimario,
-	Text = "Recarregar galeria",
+	Text = Textos.t("game.wardrobe.galleryReload"),
 }, abaGaleria)
 Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, botaoRecarregarGaleria)
 
 local RemotoGaleria = Eventos.obter(Eventos.VESTIARIO_GALERIA)
 
 function pedirGaleria()
-	recadoGaleria.Text = "Carregando a galeria..."
+	recadoGaleria.Text = Textos.t("game.wardrobe.galleryLoading")
 	RemotoGaleria:FireServer({ acao = "listar" })
 end
 
@@ -1353,11 +1385,11 @@ local function desenharGaleria(nicks)
 	end
 
 	if type(nicks) ~= "table" or #nicks == 0 then
-		recadoGaleria.Text = "Galeria vazia. Acrescente nicks do Roblox no painel, em Configurar."
+		recadoGaleria.Text = Textos.t("game.wardrobe.galleryEmpty")
 		return
 	end
 
-	recadoGaleria.Text = "Clique num nome para vestir a skin dele."
+	recadoGaleria.Text = Textos.t("game.wardrobe.galleryHint")
 	for indice, nick in ipairs(nicks) do
 		local cartao = Novo("TextButton", {
 			LayoutOrder = indice, Size = UDim2.new(1, 0, 0, 36),
@@ -1368,7 +1400,7 @@ local function desenharGaleria(nicks)
 		Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, cartao)
 
 		cartao.MouseButton1Click:Connect(function()
-			recadoGaleria.Text = "Vestindo " .. nick .. "..."
+			recadoGaleria.Text = Textos.t("game.wardrobe.galleryWearing", { nick = nick })
 			RemotoGaleria:FireServer({ acao = "vestir", nick = nick })
 		end)
 	end
@@ -1388,7 +1420,7 @@ RemotoGaleria.OnClientEvent:Connect(function(resposta)
 
 	if resposta.acao == "listar" then
 		if resposta.erro then
-			recadoGaleria.Text = "Não consegui ler a galeria: " .. tostring(resposta.erro)
+			recadoGaleria.Text = Textos.t("game.wardrobe.galleryListError", { erro = tostring(resposta.erro) })
 			return
 		end
 		desenharGaleria(resposta.nicks)
@@ -1399,9 +1431,12 @@ RemotoGaleria.OnClientEvent:Connect(function(resposta)
 		if resposta.ok then
 			-- Peças que o Roblox recusar somem em silêncio no ApplyDescription,
 			-- então dizer QUANTAS vieram é o que deixa isso visível.
-			recadoGaleria.Text = "Vestiu a skin de " .. tostring(resposta.nick) .. " (" .. tostring(resposta.pecas) .. " peças). Ajuste nas outras abas."
+			recadoGaleria.Text = Textos.t("game.wardrobe.galleryWorn", {
+				nick = tostring(resposta.nick),
+				pecas = tostring(resposta.pecas),
+			})
 		else
-			recadoGaleria.Text = "Não deu: " .. tostring(resposta.erro)
+			recadoGaleria.Text = Textos.t("game.wardrobe.galleryWearError", { erro = tostring(resposta.erro) })
 		end
 	end
 end)
@@ -1415,7 +1450,7 @@ local colunaDireita = abaCores
 Novo("TextLabel", {
 	LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	TextXAlignment = Enum.TextXAlignment.Left, Text = "Buscar item gratuito",
+	TextXAlignment = Enum.TextXAlignment.Left, Text = Textos.t("game.wardrobe.searchHeading"),
 }, colunaEsquerda)
 
 local linhaBusca = Novo("Frame", {
@@ -1425,7 +1460,7 @@ caixaBusca = Novo("TextBox", {
 	Size = UDim2.new(1, -96, 1, 0),
 	BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
 	Font = FONTE, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	PlaceholderText = "mínimo " .. TAMANHO_MIN_BUSCA .. " letras",
+	PlaceholderText = Textos.t("game.wardrobe.searchPlaceholder", { min = TAMANHO_MIN_BUSCA }),
 	PlaceholderColor3 = CORES.textoSecundario,
 	ClearTextOnFocus = false, Text = "",
 }, linhaBusca)
@@ -1438,7 +1473,7 @@ botaoBuscar = Novo("TextButton", {
 	Size = UDim2.new(0, 88, 1, 0),
 	BackgroundColor3 = CORES.borda, BorderSizePixel = 0,
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	Text = "Buscar",
+	Text = Textos.t("game.wardrobe.searchButton"),
 }, linhaBusca)
 Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, botaoBuscar)
 
@@ -1460,7 +1495,7 @@ rotuloEstadoResultados = Novo("TextLabel", {
 	BackgroundTransparency = 1,
 	Font = FONTE, TextSize = 13, TextColor3 = CORES.textoSecundario,
 	TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
-	Text = "Busque um item pra começar.",
+	Text = Textos.t("game.wardrobe.searchIdle"),
 	Visible = true,
 }, areaResultados)
 
@@ -1486,7 +1521,8 @@ Novo("UIGridLayout", {
 rotuloContagemEquipados = Novo("TextLabel", {
 	LayoutOrder = 5, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	TextXAlignment = Enum.TextXAlignment.Left, Text = "Equipados (0/" .. LIMITE_ITENS .. ")",
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Text = Textos.t("game.wardrobe.equippedCount", { n = 0, max = LIMITE_ITENS }),
 }, colunaEsquerda)
 
 containerEquipados = Novo("ScrollingFrame", {
@@ -1508,7 +1544,7 @@ Novo("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.Layo
 Novo("TextLabel", {
 	LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	TextXAlignment = Enum.TextXAlignment.Left, Text = "Cor de corpo",
+	TextXAlignment = Enum.TextXAlignment.Left, Text = Textos.t("game.wardrobe.bodyColorHeading"),
 }, colunaDireita)
 
 local blocoCores = Novo("Frame", {
@@ -1524,7 +1560,7 @@ colunaDireita = abaEfeito
 Novo("TextLabel", {
 	LayoutOrder = 3, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	TextXAlignment = Enum.TextXAlignment.Left, Text = "Efeito permanente",
+	TextXAlignment = Enum.TextXAlignment.Left, Text = Textos.t("game.wardrobe.effectHeading"),
 }, colunaDireita)
 
 local linhaTipoEfeito = Novo("Frame", {
@@ -1545,13 +1581,13 @@ for indice, opcao in ipairs(OPCOES_TIPO_EFEITO) do
 		Text = opcao.rotulo,
 	}, linhaTipoEfeito)
 	Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, botaoTipo)
-	botoesTipoEfeito[opcao.rotulo] = botaoTipo
+	botoesTipoEfeito[opcao.chaveRotulo] = botaoTipo
 	botaoTipo.MouseButton1Click:Connect(function()
 		selecionarTipoEfeito(opcao.valor)
 	end)
 end
 
-criarCampoHex(colunaDireita, "Cor", corEfeitoAtual, function(hex)
+criarCampoHex(colunaDireita, Textos.t("game.wardrobe.effectColorLabel"), corEfeitoAtual, function(hex)
 	corEfeitoAtual = hex or COR_EFEITO_PADRAO
 	aplicarEfeitoPreview()
 end).LayoutOrder = 5
@@ -1583,14 +1619,15 @@ colunaDireita = abaSalvar
 Novo("TextLabel", {
 	LayoutOrder = 7, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20),
 	Font = FONTE_MEDIA, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	TextXAlignment = Enum.TextXAlignment.Left, Text = "Salvar look",
+	TextXAlignment = Enum.TextXAlignment.Left, Text = Textos.t("game.wardrobe.saveHeading"),
 }, colunaDireita)
 
 caixaNomeLook = Novo("TextBox", {
 	LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 30),
 	BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
 	Font = FONTE, TextSize = 14, TextColor3 = CORES.textoPrimario,
-	PlaceholderText = "Nome do look", PlaceholderColor3 = CORES.textoSecundario,
+	PlaceholderText = Textos.t("game.wardrobe.lookNamePlaceholder"),
+	PlaceholderColor3 = CORES.textoSecundario,
 	ClearTextOnFocus = false, Text = "",
 }, colunaDireita)
 Novo("UICorner", { CornerRadius = UDim.new(0, 6) }, caixaNomeLook)
@@ -1600,7 +1637,7 @@ Novo("TextLabel", {
 	LayoutOrder = 9, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 16),
 	Font = FONTE, TextSize = 11, TextColor3 = CORES.textoSecundario,
 	TextXAlignment = Enum.TextXAlignment.Left,
-	Text = "Reserva (fallback) — some se um item sair do catálogo:",
+	Text = Textos.t("game.wardrobe.fallbackLabel"),
 }, colunaDireita)
 
 containerFallback = Novo("ScrollingFrame", {
@@ -1621,14 +1658,14 @@ Novo("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.Layo
 Novo("TextLabel", {
 	LayoutOrder = 11, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30),
 	Font = FONTE, TextSize = 11, TextColor3 = CORES.textoSecundario, TextWrapped = true,
-	Text = "Trocar de look não aplica no meio da partida: só no início da sessão ou no próximo respawn de checkpoint.",
+	Text = Textos.t("game.wardrobe.applyNote"),
 }, colunaDireita)
 
 local botaoRestaurar = Novo("TextButton", {
 	LayoutOrder = 11.5, Size = UDim2.new(1, 0, 0, 32),
 	BackgroundColor3 = CORES.fundo, BorderSizePixel = 0,
 	Font = FONTE, TextSize = 13, TextColor3 = CORES.textoSecundario,
-	Text = "Restaurar padrão",
+	Text = Textos.t("game.wardrobe.restoreButton"),
 }, colunaDireita)
 Novo("UICorner", { CornerRadius = UDim.new(0, 8) }, botaoRestaurar)
 
@@ -1636,7 +1673,7 @@ botaoSalvar = Novo("TextButton", {
 	LayoutOrder = 12, Size = UDim2.new(1, 0, 0, 38),
 	BackgroundColor3 = Tokens.estado.ok, BorderSizePixel = 0,
 	Font = FONTE_TITULO, TextSize = 15, TextColor3 = Color3.new(1, 1, 1),
-	Text = "Salvar look",
+	Text = Textos.t("game.wardrobe.saveButton"),
 }, colunaDireita)
 Novo("UICorner", { CornerRadius = UDim.new(0, 8) }, botaoSalvar)
 

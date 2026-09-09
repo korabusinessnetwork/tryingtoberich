@@ -1,6 +1,21 @@
 import { useEffect, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
+
 import "./ContaDaLive.css";
+
+/**
+ * Costura a conta em destaque de volta na frase traduzida.
+ *
+ * O catálogo guarda a frase INTEIRA com `{conta}` onde entra o `<strong>` —
+ * quem traduz lê a frase toda, e o negrito continua envolvendo só o `@conta`,
+ * como antes da i18n. Mesmo padrão do `HistoricoDeSessoes`.
+ */
+function comContaEmDestaque(texto, conta) {
+  return texto
+    .split(/(\{conta\})/g)
+    .map((pedaco, indice) => (pedaco === "{conta}" ? <strong key={indice}>@{conta}</strong> : pedaco));
+}
 
 /**
  * O @ da live. É ele que decide em QUAL live o jogo vai rodar.
@@ -14,6 +29,7 @@ import "./ContaDaLive.css";
  * live no meio da partida não é uma edição, é outra sessão.
  */
 export function ContaDaLive({ configuracao, salvando, travado, aoSalvar }) {
+  const { t } = useTraducao();
   const [texto, definirTexto] = useState("");
 
   // Sincroniza quando a carga chega, sem pisar no que o streamer está digitando.
@@ -31,8 +47,8 @@ export function ContaDaLive({ configuracao, salvando, travado, aoSalvar }) {
   };
 
   return (
-    <section className="conta" aria-label="Conta da live">
-      <h2 className="conta-titulo">Conta da live</h2>
+    <section className="conta" aria-label={t("panel.liveAccount.title")}>
+      <h2 className="conta-titulo">{t("panel.liveAccount.title")}</h2>
 
       <form className="conta-linha" onSubmit={enviar}>
         {/* A arroba é desenho, não texto do campo: a ponte quer o nome sem ela.
@@ -43,26 +59,26 @@ export function ContaDaLive({ configuracao, salvando, travado, aoSalvar }) {
           type="text"
           value={texto}
           onChange={(e) => definirTexto(e.target.value)}
-          placeholder="seu_usuario"
+          placeholder={t("panel.liveAccount.usernamePlaceholder")}
           disabled={travado}
           spellCheck="false"
           autoComplete="off"
-          aria-label="Usuário do TikTok, sem arroba"
+          aria-label={t("panel.liveAccount.usernameLabel")}
         />
         <button type="submit" className="conta-salvar" disabled={travado || salvando || !limpo || !mudou}>
-          {salvando ? "Salvando…" : "Salvar"}
+          {salvando ? t("common.state.saving") : t("common.action.save")}
         </button>
       </form>
 
       {travado ? (
-        <p className="conta-recado">A sessão está rodando. Pare para trocar de live.</p>
+        <p className="conta-recado">{t("panel.liveAccount.lockedNotice")}</p>
       ) : configuracao?.usuarioTiktok ? (
         <p className="conta-recado">
-          A sessão vai conectar em <strong>@{configuracao.usuarioTiktok}</strong>.
+          {comContaEmDestaque(t("panel.liveAccount.willConnect"), configuracao.usuarioTiktok)}
         </p>
       ) : (
         <p className="pastilha pastilha-atencao">
-          Sem conta configurada, a sessão não inicia.
+          {t("panel.liveAccount.missingAccount")}
         </p>
       )}
     </section>

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./BarraDeSessao.css";
 
 /**
@@ -15,7 +17,7 @@ const TEMPO_DE_CONFIRMACAO_MS = 5000;
 
 /** Cronômetro como o streamer lê de canto de olho: inteiro, sem casas. */
 function formatarDecorrido(ms) {
-  if (!Number.isFinite(ms) || ms < 0) return "—";
+  if (!Number.isFinite(ms) || ms < 0) return traduzir("common.value.none");
   const totalSegundos = Math.floor(ms / 1000);
   const horas = Math.floor(totalSegundos / 3600);
   const minutos = Math.floor((totalSegundos % 3600) / 60);
@@ -29,10 +31,13 @@ function formatarDecorrido(ms) {
  * F6 é explícito: "reconectando" é o estado que mais importa aparecer.
  */
 function descreverLive(live) {
-  if (live === "conectada") return { texto: "Live conectada", classe: "pastilha-ok", destaque: false };
-  if (live === "conectando") return { texto: "Live conectando…", classe: "pastilha-atencao", destaque: false };
-  if (live === "reconectando") return { texto: "Live reconectando…", classe: "pastilha-erro", destaque: true };
-  return { texto: "Live desligada", classe: "", destaque: false };
+  if (live === "conectada")
+    return { texto: traduzir("panel.sessionBar.liveConnected"), classe: "pastilha-ok", destaque: false };
+  if (live === "conectando")
+    return { texto: traduzir("panel.sessionBar.liveConnecting"), classe: "pastilha-atencao", destaque: false };
+  if (live === "reconectando")
+    return { texto: traduzir("panel.sessionBar.liveReconnecting"), classe: "pastilha-erro", destaque: true };
+  return { texto: traduzir("panel.sessionBar.liveOff"), classe: "", destaque: false };
 }
 
 /**
@@ -42,13 +47,14 @@ function descreverLive(live) {
  * vermelho seria alarme falso o painel inteiro exibe assim que abre.
  */
 function descreverJogo(jogo, sessaoRodando) {
-  if (jogo === "online") return { texto: "Jogo online", classe: "pastilha-ok", destaque: false };
+  if (jogo === "online")
+    return { texto: traduzir("panel.sessionBar.gameOnline"), classe: "pastilha-ok", destaque: false };
   if (jogo === "offline") {
     return sessaoRodando
-      ? { texto: "Jogo offline", classe: "pastilha-erro", destaque: true }
-      : { texto: "Jogo offline", classe: "", destaque: false };
+      ? { texto: traduzir("panel.sessionBar.gameOffline"), classe: "pastilha-erro", destaque: true }
+      : { texto: traduzir("panel.sessionBar.gameOffline"), classe: "", destaque: false };
   }
-  return { texto: "Jogo —", classe: "", destaque: false };
+  return { texto: traduzir("panel.sessionBar.gameUnknown"), classe: "", destaque: false };
 }
 
 function classesPastilha({ classe, destaque }) {
@@ -67,6 +73,7 @@ export function BarraDeSessao({
   aoParar,
   aoTrocarPreset,
 }) {
+  const { t } = useTraducao();
   const listaDePresets = presets ?? [];
   const listaDeCenarios = cenarios ?? [];
 
@@ -146,23 +153,19 @@ export function BarraDeSessao({
         <span className={classesPastilha(live)}>{live.texto}</span>
         <span className={classesPastilha(jogo)}>{jogo.texto}</span>
         <span className={`pastilha ${sessaoRodando ? "pastilha-ok" : ""}`}>
-          {sessaoRodando ? `Sessão rodando · ${formatarDecorrido(decorridoMs)}` : "Sessão parada"}
+          {sessaoRodando
+            ? t("panel.sessionBar.sessionRunning", { time: formatarDecorrido(decorridoMs) })
+            : t("panel.sessionBar.sessionStopped")}
         </span>
       </div>
 
       {(estado?.live === "reconectando" || (sessaoRodando && estado?.jogo === "offline")) && (
         <div className="barra-sessao-avisos">
           {estado?.live === "reconectando" && (
-            <p className="barra-sessao-aviso">
-              A ponte perdeu a conexão com a live e está tentando de novo. Nada é inventado enquanto isso —
-              presente enviado agora só conta quando reconectar.
-            </p>
+            <p className="barra-sessao-aviso">{t("panel.sessionBar.liveReconnectingWarning")}</p>
           )}
           {sessaoRodando && estado?.jogo === "offline" && (
-            <p className="barra-sessao-aviso">
-              O Roblox parou de responder. Presente chegando agora está sendo descartado, não acumulado —
-              reabra a experiência para voltar a valer.
-            </p>
+            <p className="barra-sessao-aviso">{t("panel.sessionBar.gameOfflineWarning")}</p>
           )}
         </div>
       )}
@@ -170,10 +173,12 @@ export function BarraDeSessao({
       <div className="barra-sessao-controles">
         <label className="barra-sessao-campo">
           <span className="secundario">
-            Preset
+            {t("panel.sessionBar.presetLabel")}
             {sessaoRodando && (
               <span className="barra-sessao-nota-inline">
-                {trocandoPreset ? " · trocando…" : " · vale do próximo presente em diante"}
+                {trocandoPreset
+                  ? t("panel.sessionBar.presetSwitching")
+                  : t("panel.sessionBar.presetFromNextGift")}
               </span>
             )}
           </span>
@@ -182,8 +187,10 @@ export function BarraDeSessao({
             onChange={(evento) => aoTrocarPreset(evento.target.value)}
             disabled={bloqueadoParaTrocarPreset || listaDePresets.length === 0}
           >
-            {listaDePresets.length === 0 && <option value="">Nenhum preset salvo</option>}
-            {listaDePresets.length > 0 && !presetId && <option value="">Escolha um preset</option>}
+            {listaDePresets.length === 0 && <option value="">{t("panel.sessionBar.noPresetSaved")}</option>}
+            {listaDePresets.length > 0 && !presetId && (
+              <option value="">{t("panel.sessionBar.choosePreset")}</option>
+            )}
             {listaDePresets.map((preset) => (
               <option key={preset.presetId} value={preset.presetId}>
                 {preset.nome}
@@ -194,13 +201,13 @@ export function BarraDeSessao({
 
         {listaDeCenarios.length > 0 && (
           <label className="barra-sessao-campo barra-sessao-teste">
-            <span className="barra-sessao-teste-rotulo">Modo de teste — sem live</span>
+            <span className="barra-sessao-teste-rotulo">{t("panel.sessionBar.testModeLabel")}</span>
             <select
               value={cenarioEscolhido}
               onChange={(evento) => definirCenarioEscolhido(evento.target.value)}
               disabled={bloqueadoParaEditar}
             >
-              <option value="">— nenhum (live real) —</option>
+              <option value="">{t("panel.sessionBar.noScenario")}</option>
               {listaDeCenarios.map((nome) => (
                 <option key={nome} value={nome}>
                   {nome}
@@ -218,12 +225,14 @@ export function BarraDeSessao({
               onClick={aoClicarIniciar}
               disabled={bloqueadoParaEditar || !presetId}
             >
-              {iniciando ? "Iniciando…" : cenarioEscolhido ? "Iniciar teste (sem live)" : "Iniciar live"}
+              {iniciando
+                ? t("panel.sessionBar.starting")
+                : cenarioEscolhido
+                  ? t("panel.sessionBar.startTest")
+                  : t("panel.sessionBar.startLive")}
             </button>
             <span className="secundario barra-sessao-nota">
-              {cenarioEscolhido
-                ? "Roda com evento de fixture, sem tocar na live de verdade."
-                : "Start é a confirmação de que a live começa a valer de verdade."}
+              {cenarioEscolhido ? t("panel.sessionBar.testNote") : t("panel.sessionBar.startNote")}
             </span>
           </div>
         ) : (
@@ -233,16 +242,14 @@ export function BarraDeSessao({
               className={`barra-sessao-botao ${confirmandoParar ? "barra-sessao-botao--confirmar" : "barra-sessao-botao--parar"}`}
               onClick={aoClicarParar}
             >
-              {confirmandoParar ? "Confirmar: encerrar e descartar" : "Parar"}
+              {confirmandoParar ? t("panel.sessionBar.confirmStop") : t("panel.sessionBar.stop")}
             </button>
             {confirmandoParar && (
               <button type="button" className="barra-sessao-botao barra-sessao-botao--cancelar" onClick={aoCancelarParar}>
-                Cancelar
+                {t("common.action.cancel")}
               </button>
             )}
-            <span className="secundario barra-sessao-nota">
-              Para a sessão e descarta todo dado de espectador do log.
-            </span>
+            <span className="secundario barra-sessao-nota">{t("panel.sessionBar.stopNote")}</span>
           </div>
         )}
       </div>

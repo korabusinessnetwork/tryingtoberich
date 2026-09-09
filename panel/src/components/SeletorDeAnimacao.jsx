@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import { animacoesOferecidas, avisoDeDirecao } from "../lib/regras.js";
 import "./SeletorDeAnimacao.css";
 
@@ -31,6 +32,7 @@ import "./SeletorDeAnimacao.css";
  * tenta "sugerir" — quem tem esse dado para cruzar é quem monta o slot.
  */
 export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoSlot, aoEscolher, aoFechar }) {
+  const { t } = useTraducao();
   const [filtroDirecao, definirFiltroDirecao] = useState("todas");
   const [pesosAtivos, definirPesosAtivos] = useState(() => new Set());
   const modalRef = useRef(null);
@@ -107,19 +109,28 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
         onClick={(evento) => evento.stopPropagation()}
       >
         <header className="seletor-anim-cabecalho">
-          <h2 id="seletor-anim-titulo">Escolher animação</h2>
-          <button type="button" className="seletor-anim-fechar" onClick={aoFechar} aria-label="Fechar">
+          <h2 id="seletor-anim-titulo">{t("panel.animationPicker.title")}</h2>
+          <button
+            type="button"
+            className="seletor-anim-fechar"
+            onClick={aoFechar}
+            aria-label={t("common.action.close")}
+          >
             ×
           </button>
         </header>
 
         {!carregando && !comErro && !semCadastro && (
-          <div className="seletor-anim-filtros" role="group" aria-label="Filtrar animações">
-            <div className="seletor-anim-filtro-grupo" role="group" aria-label="Filtrar por direção">
+          <div className="seletor-anim-filtros" role="group" aria-label={t("panel.animationPicker.filterGroup")}>
+            <div
+              className="seletor-anim-filtro-grupo"
+              role="group"
+              aria-label={t("panel.animationPicker.filterByDirection")}
+            >
               {[
-                ["todas", "Todas"],
-                ["subida", "↑ Subida"],
-                ["descida", "↓ Descida"],
+                ["todas", t("panel.animationPicker.filterAll")],
+                ["subida", t("panel.animationPicker.directionUp")],
+                ["descida", t("panel.animationPicker.directionDown")],
               ].map(([valor, rotulo]) => (
                 <button
                   key={valor}
@@ -133,14 +144,18 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
               ))}
             </div>
 
-            <div className="seletor-anim-filtro-grupo" role="group" aria-label="Filtrar por peso visual">
+            <div
+              className="seletor-anim-filtro-grupo"
+              role="group"
+              aria-label={t("panel.animationPicker.filterByWeight")}
+            >
               {[1, 2, 3, 4, 5].map((peso) => (
                 <button
                   key={peso}
                   type="button"
                   className="seletor-anim-chip seletor-anim-chip-peso"
                   aria-pressed={pesosAtivos.has(peso)}
-                  title={`Peso visual ${peso}`}
+                  title={t("panel.animationPicker.weightChipTitle", { n: peso })}
                   onClick={() => alternarPeso(peso)}
                 >
                   {peso}
@@ -150,29 +165,27 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
 
             {filtroAtivo && (
               <button type="button" className="seletor-anim-limpar" onClick={limparFiltros}>
-                Limpar filtro
+                {t("panel.animationPicker.clearFilter")}
               </button>
             )}
 
             <span className="seletor-anim-contagem secundario">
-              {listaFiltrada.length} de {listaCompleta.length}
+              {t("panel.animationPicker.countOfTotal", { n: listaFiltrada.length, total: listaCompleta.length })}
             </span>
           </div>
         )}
 
         <div className="seletor-anim-corpo">
-          {carregando && <p className="secundario">Carregando animações…</p>}
+          {carregando && <p className="secundario">{t("panel.animationPicker.loading")}</p>}
 
-          {comErro && <p className="pastilha pastilha-erro">Não foi possível carregar a biblioteca de animações.</p>}
+          {comErro && <p className="pastilha pastilha-erro">{t("panel.animationPicker.loadError")}</p>}
 
-          {semCadastro && (
-            <p className="secundario">Nenhuma animação cadastrada. Confira o índice de animações do jogo.</p>
-          )}
+          {semCadastro && <p className="secundario">{t("panel.animationPicker.noneRegistered")}</p>}
 
           {semResultadoDeFiltro && (
             <div className="seletor-anim-vazio">
-              <p className="secundario">Nenhuma animação encontrada com esse filtro.</p>
-              <button type="button" onClick={limparFiltros}>Limpar filtro</button>
+              <p className="secundario">{t("panel.animationPicker.noFilterResults")}</p>
+              <button type="button" onClick={limparFiltros}>{t("panel.animationPicker.clearFilter")}</button>
             </div>
           )}
 
@@ -202,14 +215,16 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
 
                       <div className="seletor-anim-meta">
                         <span className="secundario">
-                          {animacao.direcao === "subida" ? "↑ Subida" : "↓ Descida"}
+                          {animacao.direcao === "subida"
+                            ? t("panel.animationPicker.directionUp")
+                            : t("panel.animationPicker.directionDown")}
                         </span>
                         <span className="secundario">{formatarDuracao(animacao.duracaoBase)}</span>
                       </div>
 
                       <div
                         className="seletor-anim-peso"
-                        title={`Peso visual ${animacao.pesoVisual} de 5 — quanto de tela o efeito ocupa`}
+                        title={t("panel.animationPicker.weightCardTitle", { n: animacao.pesoVisual })}
                       >
                         {pesoParaPontos(animacao.pesoVisual).map((preenchido, indice) => (
                           <span
@@ -218,17 +233,19 @@ export function SeletorDeAnimacao({ aberto, animacoes, animacaoIdAtual, deltaDoS
                             aria-hidden="true"
                           />
                         ))}
-                        <span className="secundario">peso {animacao.pesoVisual}</span>
+                        <span className="secundario">
+                          {t("panel.animationPicker.weightLabel", { n: animacao.pesoVisual })}
+                        </span>
                       </div>
 
                       {!animacao.aceitaDeltaVariavel && (
-                        <span className="seletor-anim-fixo secundario">Efeito fixo — não estica com o delta</span>
+                        <span className="seletor-anim-fixo secundario">
+                          {t("panel.animationPicker.fixedEffect")}
+                        </span>
                       )}
 
                       {animacao.ativa === false && (
-                        <p className="seletor-anim-aviso">
-                          Aposentada da biblioteca, mas continua neste slot.
-                        </p>
+                        <p className="seletor-anim-aviso">{t("panel.animationPicker.retiredInSlot")}</p>
                       )}
 
                       {aviso && <p className="seletor-anim-aviso">{aviso}</p>}

@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./NavegacaoDePaginas.css";
 
 /**
@@ -13,8 +14,10 @@ import "./NavegacaoDePaginas.css";
  * 2 segundos: alvo de 40px, e o rótulo sempre à vista, sem abrir nada antes.
  */
 export function NavegacaoDePaginas({ paginas, atual, aoTrocar }) {
+  const { t } = useTraducao();
+
   return (
-    <nav className="navegacao" role="tablist" aria-label="Páginas do painel">
+    <nav className="navegacao" role="tablist" aria-label={t("panel.nav.ariaLabel")}>
       {paginas.map((pagina) => {
         const ativa = pagina.id === atual;
 

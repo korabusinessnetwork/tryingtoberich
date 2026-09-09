@@ -6,6 +6,8 @@
  * nunca decide.** Ele ordena, colore e avisa. Nenhuma regra de jogo lê faixa.
  */
 
+import { traduzir } from "../i18n/traduzir.js";
+
 /* ---------------------------------------------------------------- */
 /* ADR-009 — jogabilidade do mapa                                    */
 /* ---------------------------------------------------------------- */
@@ -82,13 +84,19 @@ export function avisoDeCurva({ moedas, delta }) {
   // barato: aviso que aparece sempre é ruído, e ruído some da vista junto com
   // o aviso que importava.
   if (faixa <= 2 && forca >= 250) {
-    return `${forca} plataformas por ${moedas} ${moedas === 1 ? "moeda" : "moedas"} é muito para um presente barato — ele chega em rajada.`;
+    return traduzir(moedas === 1 ? "panel.rules.burstWarningOneCoin" : "panel.rules.burstWarning", {
+      platforms: forca,
+      coins: moedas,
+    });
   }
 
   // Faixa V é o presente mais caro do catálogo. Delta pequeno nele decepciona
   // quem pagou, e decepção some com o próximo presente caro.
   if (faixa >= 4 && forca <= 3) {
-    return `${moedas} moedas para mover ${forca} ${forca === 1 ? "plataforma" : "plataformas"} vai decepcionar quem mandar.`;
+    return traduzir(forca === 1 ? "panel.rules.letdownWarningOnePlatform" : "panel.rules.letdownWarning", {
+      coins: moedas,
+      platforms: forca,
+    });
   }
 
   return null;
@@ -104,10 +112,10 @@ export function avisoDeDirecao({ animacao, delta }) {
   if (!animacao || !Number.isFinite(delta) || delta === 0) return null;
   const subindo = delta > 0;
   if (animacao.direcao === "subida" && !subindo) {
-    return "Animação de subida com delta negativo: o boneco desce enquanto o efeito sobe.";
+    return traduzir("panel.rules.directionUpWithNegativeDelta");
   }
   if (animacao.direcao === "descida" && subindo) {
-    return "Animação de descida com delta positivo: o boneco sobe enquanto o efeito desce.";
+    return traduzir("panel.rules.directionDownWithPositiveDelta");
   }
   return null;
 }
@@ -347,7 +355,7 @@ export function medianaDeLatencia(valores) {
 }
 
 /** Milissegundos como o streamer lê de canto de olho: inteiro, com unidade. */
-export const formatarLatencia = (ms) => (Number.isFinite(ms) ? `${Math.round(ms)}ms` : "—");
+export const formatarLatencia = (ms) => (Number.isFinite(ms) ? `${Math.round(ms)}ms` : traduzir("common.value.none"));
 
 /**
  * O orçamento do Princípio nº1: alvo de 600ms, teto de 1000ms. O painel
@@ -605,13 +613,14 @@ export function lerRespostaDoLayout(resposta) {
  * seria pior que aviso nenhum.
  */
 const ANCORAS_QUE_PULAM = {
-  "direita-topo": "à direita",
-  "direita-base": "à direita e à base",
-  "esquerda-base": "à base",
-  "centro-topo": "pelo centro",
-  "faixa-topo": "pela largura inteira",
+  "direita-topo": "panel.rules.anchorRight",
+  "direita-base": "panel.rules.anchorRightAndBottom",
+  "esquerda-base": "panel.rules.anchorBottom",
+  "centro-topo": "panel.rules.anchorCenter",
+  "faixa-topo": "panel.rules.anchorFullWidth",
 };
 
 export function avisoDeAncora(ancora) {
-  return ANCORAS_QUE_PULAM[ancora] ?? null;
+  const chave = ANCORAS_QUE_PULAM[ancora];
+  return chave ? traduzir(chave) : null;
 }

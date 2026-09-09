@@ -19,6 +19,10 @@
       "description": "O preset que a ponte serve ao jogo. Persistido porque o Roblox pede GET /jogo/mapa na ENTRADA, e antes disto a ponte esquecia o preset a cada reinício: o jogo caía num mundo vazio sem erro nenhum na tela.",
       "oneOf": [{ "$ref": "comuns.schema.json#/$defs/identificador" }, { "type": "null" }]
     },
+    "idioma": {
+      "description": "Idioma da interface do produto: painel, HUD do jogo e overlay (ADR-P03). Ausente ou nulo = o painel decide pelo locale do sistema e cai em pt. Mora aqui, e não no .env, porque é escolha de produto do streamer, igual à conta da live. O console do operador NÃO usa este campo: ele é PT apenas e nunca traduz (ADR-P05).",
+      "oneOf": [{ "enum": ["pt", "es", "en"] }, { "type": "null" }]
+    },
     "galeriaDeSkins": {
       "description": "Nicks do Roblox cujas skins o streamer usa como base no vestiário. Curada no PAINEL, que é superfície local: o jogo só lê. Escrever isto pela superfície pública seria deixar o túnel alterar configuração do streamer.",
       "type": "array",

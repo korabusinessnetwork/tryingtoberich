@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
+
 import "./GaleriaDeSkins.css";
 
 /**
@@ -15,6 +17,7 @@ import "./GaleriaDeSkins.css";
  * o nick de fora e aqui confere que é a pessoa certa.
  */
 export function GaleriaDeSkins({ nicks, espiada, espiando, salvando, aoEspiar, aoAdicionar, aoRemover }) {
+  const { t } = useTraducao();
   const [nick, definirNick] = useState("");
 
   const limpo = nick.trim().replace(/^@+/, "");
@@ -26,16 +29,13 @@ export function GaleriaDeSkins({ nicks, espiada, espiando, salvando, aoEspiar, a
   };
 
   return (
-    <section className="galeria" aria-label="Galeria de skins">
+    <section className="galeria" aria-label={t("panel.skinGallery.title")}>
       <header className="galeria-cabecalho">
-        <h2 className="galeria-titulo">Galeria de skins</h2>
-        <span className="galeria-etiqueta">{nicks.length} na lista</span>
+        <h2 className="galeria-titulo">{t("panel.skinGallery.title")}</h2>
+        <span className="galeria-etiqueta">{t("panel.skinGallery.countInList", { n: nicks.length })}</span>
       </header>
 
-      <p className="galeria-explicacao">
-        Nicks do Roblox cujas skins o vestiário veste como base. Confira a
-        imagem antes de acrescentar.
-      </p>
+      <p className="galeria-explicacao">{t("panel.skinGallery.explanation")}</p>
 
       <form className="galeria-busca" onSubmit={espiar}>
         <input
@@ -43,30 +43,37 @@ export function GaleriaDeSkins({ nicks, espiada, espiando, salvando, aoEspiar, a
           type="text"
           value={nick}
           onChange={(evento) => definirNick(evento.target.value)}
-          placeholder="nick do Roblox"
+          placeholder={t("panel.skinGallery.nickPlaceholder")}
           spellCheck="false"
           autoComplete="off"
-          aria-label="Nick do Roblox"
+          aria-label={t("panel.skinGallery.nickLabel")}
         />
         <button type="submit" className="galeria-espiar" disabled={limpo.length < 3 || espiando}>
-          {espiando ? "Buscando…" : "Ver skin"}
+          {espiando ? t("panel.skinGallery.peeking") : t("panel.skinGallery.peekAction")}
         </button>
       </form>
 
       {espiada ? (
         <div className="galeria-previa">
           {espiada.imagemUrl ? (
-            <img className="galeria-previa-imagem" src={espiada.imagemUrl} alt={`Avatar de ${espiada.nick}`} />
+            <img
+              className="galeria-previa-imagem"
+              src={espiada.imagemUrl}
+              alt={t("panel.skinGallery.avatarAlt", { nick: espiada.nick })}
+            />
           ) : (
             // A miniatura pode vir "Pending" enquanto o Roblox a gera. Sem
             // figura ainda dá para adicionar — só não dá para conferir.
-            <div className="galeria-previa-imagem galeria-previa-vazia">sem imagem</div>
+            <div className="galeria-previa-imagem galeria-previa-vazia">{t("panel.skinGallery.noImage")}</div>
           )}
 
           <div className="galeria-previa-dados">
             <strong className="galeria-previa-nick">{espiada.nick}</strong>
             <span className="galeria-previa-detalhe">
-              {espiada.assets.length} peças · {espiada.playerAvatarType ?? "?"}
+              {t("panel.skinGallery.previewDetail", {
+                n: espiada.assets.length,
+                type: espiada.playerAvatarType ?? "?",
+              })}
             </span>
             <button
               type="button"
@@ -74,14 +81,14 @@ export function GaleriaDeSkins({ nicks, espiada, espiando, salvando, aoEspiar, a
               disabled={jaEsta || salvando}
               onClick={() => aoAdicionar(espiada.nick)}
             >
-              {jaEsta ? "Já está na galeria" : "Acrescentar à galeria"}
+              {jaEsta ? t("panel.skinGallery.alreadyAdded") : t("panel.skinGallery.addAction")}
             </button>
           </div>
         </div>
       ) : null}
 
       {nicks.length === 0 ? (
-        <p className="galeria-vazio">Galeria vazia. O vestiário não vai ter o que oferecer.</p>
+        <p className="galeria-vazio">{t("panel.skinGallery.emptyState")}</p>
       ) : (
         <ul className="galeria-lista">
           {nicks.map((n) => (
@@ -90,7 +97,7 @@ export function GaleriaDeSkins({ nicks, espiada, espiando, salvando, aoEspiar, a
               <button
                 type="button"
                 className="galeria-remover"
-                aria-label={`Remover ${n}`}
+                aria-label={t("panel.skinGallery.removeLabel", { nick: n })}
                 disabled={salvando}
                 onClick={() => aoRemover(n)}
               >

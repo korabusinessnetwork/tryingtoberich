@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./PainelDeAcervo.css";
 
 /**
@@ -21,17 +22,20 @@ import "./PainelDeAcervo.css";
  * campo de número sugeriria um trabalho que não existe.
  */
 
+// O `id` é o valor gravado no acervo e não se traduz; o rótulo visível vem do
+// catálogo pela chave (ADR-P03).
 const STATUS = [
-  { id: "pendente-upload", rotulo: "Pendente", classe: "" },
-  { id: "em-moderacao", rotulo: "Em moderação", classe: "pastilha-atencao" },
-  { id: "aprovado", rotulo: "Aprovado", classe: "pastilha-ok" },
-  { id: "rejeitado", rotulo: "Rejeitado", classe: "pastilha-erro" },
+  { id: "pendente-upload", chave: "panel.assetLibrary.statusPending", classe: "" },
+  { id: "em-moderacao", chave: "panel.assetLibrary.statusModerating", classe: "pastilha-atencao" },
+  { id: "aprovado", chave: "panel.assetLibrary.statusApproved", classe: "pastilha-ok" },
+  { id: "rejeitado", chave: "panel.assetLibrary.statusRejected", classe: "pastilha-erro" },
 ];
 
 const classeDoStatus = (status) => STATUS.find((s) => s.id === status)?.classe ?? "";
-const rotuloDoStatus = (status) => STATUS.find((s) => s.id === status)?.rotulo ?? status;
+const chaveDoStatus = (status) => STATUS.find((s) => s.id === status)?.chave ?? status;
 
 function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
+  const { t } = useTraducao();
   // O campo é local até o streamer confirmar: teclar 5 dígitos de um assetId
   // não pode disparar 5 gravações em disco, e cada uma revalida o acervo
   // inteiro contra o schema.
@@ -54,13 +58,13 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
         <img
           className="acervo-item-foto"
           src={`/api/acervo/imagem/${colecao}/${encodeURIComponent(item.id)}`}
-          alt={`Prévia de ${item.nome}`}
+          alt={t("panel.assetLibrary.itemPreviewAlt", { nome: item.nome })}
           loading="lazy"
           width={56}
           height={56}
         />
         <span className="acervo-item-nome">{item.nome}</span>
-        <span className={`pastilha ${classeDoStatus(item.status)}`}>{rotuloDoStatus(item.status)}</span>
+        <span className={`pastilha ${classeDoStatus(item.status)}`}>{t(chaveDoStatus(item.status))}</span>
       </div>
 
       <code className="acervo-item-id">{item.id}</code>
@@ -80,14 +84,14 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
             type="text"
             inputMode="numeric"
             value={assetId}
-            placeholder="—"
+            placeholder={t("common.value.none")}
             disabled={salvando}
             onChange={(evento) => definirAssetId(evento.target.value)}
           />
         </label>
 
         <label className="acervo-campo">
-          <span className="secundario">Status</span>
+          <span className="secundario">{t("panel.assetLibrary.statusField")}</span>
           <select
             value={item.status}
             disabled={salvando}
@@ -95,7 +99,7 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
           >
             {STATUS.map((status) => (
               <option key={status.id} value={status.id}>
-                {status.rotulo}
+                {t(status.chave)}
               </option>
             ))}
           </select>
@@ -110,7 +114,7 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
             disabled={salvando}
             onClick={() => aoAnotar(colecao, item.id, { assetId: assetId.trim() })}
           >
-            Salvar número
+            {t("panel.assetLibrary.saveAssetId")}
           </button>
         )}
       </div>
@@ -119,9 +123,11 @@ function ItemDoAcervo({ colecao, item, salvando, aoAnotar }) {
 }
 
 export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, aoAnotar, aoPublicar }) {
+  const { t } = useTraducao();
+
   const colecoes = [
-    { id: "skybox", rotulo: "Skybox", itens: acervo?.skybox ?? [] },
-    { id: "texturas", rotulo: "Texturas de plataforma", itens: acervo?.texturas ?? [] },
+    { id: "skybox", rotulo: t("panel.assetLibrary.collectionSkybox"), itens: acervo?.skybox ?? [] },
+    { id: "texturas", rotulo: t("panel.assetLibrary.collectionTextures"), itens: acervo?.texturas ?? [] },
   ];
 
   const pendentes = colecoes
@@ -129,21 +135,19 @@ export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, 
     .filter((item) => item.status !== "aprovado" || item.assetId === null).length;
 
   return (
-    <section className="acervo" aria-label="Acervo de assets">
+    <section className="acervo" aria-label={t("panel.assetLibrary.regionLabel")}>
       <header className="acervo-cabecalho">
-        <h2 className="acervo-titulo">Acervo</h2>
+        <h2 className="acervo-titulo">{t("panel.assetLibrary.title")}</h2>
         {pendentes > 0 ? (
-          <span className="pastilha pastilha-atencao">{pendentes} sem aprovação</span>
+          <span className="pastilha pastilha-atencao">
+            {t("panel.assetLibrary.pendingCount", { n: pendentes })}
+          </span>
         ) : (
-          <span className="pastilha pastilha-ok">tudo aprovado</span>
+          <span className="pastilha pastilha-ok">{t("panel.assetLibrary.allApproved")}</span>
         )}
       </header>
 
-      <p className="acervo-recado">
-        O Gemini escolhe daqui e nunca inventa asset (ADR-004). Item não aprovado não entra no
-        prompt, e mapa que depende dele <strong>não vai ao ar</strong>. Com um céu aprovado, todo
-        mapa gerado sai com o mesmo céu — não é o modelo repetindo, é ele escolhendo entre um.
-      </p>
+      <p className="acervo-recado">{t("panel.assetLibrary.notice")}</p>
 
       {/*[[ O botão que tira o acervo do papel.
 
@@ -154,11 +158,10 @@ export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, 
       {aoPublicar && (
         <div className="acervo-publicar">
           <button type="button" className="acervo-publicar-botao" onClick={aoPublicar} disabled={publicando}>
-            {publicando ? "Desenhando e subindo…" : "Gerar e subir o que falta"}
+            {publicando ? t("panel.assetLibrary.publishing") : t("panel.assetLibrary.publishAction")}
           </button>
           <span className="acervo-publicar-dica">
-            Desenha as imagens que faltam, sobe no Roblox e anota o assetId. Não gasta Robux.
-            Precisa de <code>ROBLOX_API_KEY</code> no <code>.env</code>.
+            {t("panel.assetLibrary.publishHint", { chave: "ROBLOX_API_KEY", arquivo: ".env" })}
           </span>
         </div>
       )}
@@ -168,7 +171,9 @@ export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, 
           {relatorio.map((linha) => (
             <li className={`acervo-relatorio-linha acervo-relatorio-${linha.acao}`} key={`${linha.colecao}/${linha.id}`}>
               <strong>{linha.id}</strong>{" "}
-              {linha.acao === "falhou" ? `não subiu: ${linha.motivo}` : `${linha.acao} · ${linha.status}`}
+              {linha.acao === "falhou"
+                ? t("panel.assetLibrary.uploadFailed", { motivo: linha.motivo })
+                : `${linha.acao} · ${linha.status}`}
             </li>
           ))}
         </ul>
@@ -183,7 +188,9 @@ export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, 
           </h3>
 
           {itens.length === 0 ? (
-            <p className="acervo-recado">Nada em <code>acervo.{id}</code>.</p>
+            <p className="acervo-recado">
+              {t("panel.assetLibrary.emptyCollection", { alvo: `acervo.${id}` })}
+            </p>
           ) : (
             <ul className="acervo-lista">
               {itens.map((item) => (
@@ -202,11 +209,10 @@ export function PainelDeAcervo({ acervo, salvando, erro, publicando, relatorio, 
 
       <div className="acervo-colecao">
         <h3 className="acervo-colecao-titulo">
-          Props nativos <span className="secundario">{(acervo?.props ?? []).length}</span>
+          {t("panel.assetLibrary.nativeProps")}{" "}
+          <span className="secundario">{(acervo?.props ?? []).length}</span>
         </h3>
-        <p className="acervo-recado">
-          Efeito nativo do Roblox: não passa por moderação, não tem assetId, está sempre disponível.
-        </p>
+        <p className="acervo-recado">{t("panel.assetLibrary.nativePropsNote")}</p>
         <ul className="acervo-props">
           {(acervo?.props ?? []).map((prop) => (
             <li key={prop.id} className="acervo-prop">

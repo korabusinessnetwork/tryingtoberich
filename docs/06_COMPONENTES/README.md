@@ -10,6 +10,7 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `NavegacaoDePaginas` | Troca entre as 8 páginas do painel, com contador de problemas | página atual |
 | `BarraDeSessao` | Start/stop, estado da live e do jogo, cronômetro | estado do SSE |
 | `SeletorModalidade` | Escolhe a modalidade (Fase 1: só Escalada) | lista de modalidades |
+| `SeletorDeIdioma` | Troca o idioma do produto entre PT, ES e EN (ADR-P03) | nenhuma — lê o contexto de tradução |
 | `EditorDePlacar` | Por resultado: a cutscene que o OBS toca e os presentes que contam vitória ou derrota; e a vida do portal | preset, catálogo, `/api/cutscenes` |
 | `EditorDePreset` | Container dos slots do preset — 6 por padrão, com o botão de acrescentar até 24 —, salva o preset | preset |
 | `CartaoDeSlot` | Um slot: presente, animação, delta, intensidade, "aparece no overlay"; e, se for extra (posição acima de 6), o remover de vez | slot, catálogo, animações |

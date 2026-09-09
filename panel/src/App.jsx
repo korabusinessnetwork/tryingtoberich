@@ -29,6 +29,10 @@ import { SeletorModalidade } from "./components/SeletorModalidade.jsx";
 import { TabelaDeMovimento } from "./components/TabelaDeMovimento.jsx";
 import { TestadorDeAnimacao } from "./components/TestadorDeAnimacao.jsx";
 import { TestadorDePresente } from "./components/TestadorDePresente.jsx";
+import { SeletorDeIdioma } from "./components/SeletorDeIdioma.jsx";
+import { TraducaoProvider } from "./i18n/TraducaoProvider.jsx";
+import { useTraducao } from "./i18n/useTraducao.js";
+import { hora } from "./i18n/formatar.js";
 import "./App.css";
 
 /**
@@ -49,7 +53,25 @@ import "./App.css";
  * Regra de negócio mora em `lib/regras.js`, rede em `lib/api.js`, e desenho
  * nos componentes. Aqui só sobra fiação.
  */
+/**
+ * A casca: só o provider de idioma (ADR-P03).
+ *
+ * O provider fica FORA do painel porque o painel usa `t` já nas telas de
+ * carregando e de erro, que renderizam antes de a configuração chegar do
+ * disco. Ele abre no idioma do sistema e o `Painel` corrige com o idioma
+ * gravado assim que a configuração responde.
+ */
 export function App() {
+  return (
+    <TraducaoProvider aoTrocarIdioma={(codigo) => api.salvarIdioma(codigo)}>
+      <Painel />
+    </TraducaoProvider>
+  );
+}
+
+function Painel() {
+  const { t, sincronizarIdioma } = useTraducao();
+
   const [dados, definirDados] = useState(null);
   const [erroDeCarga, definirErroDeCarga] = useState(null);
 
@@ -106,6 +128,8 @@ export function App() {
           api.looks(), api.mapas(), api.sessao(), api.cenarios(), api.configuracao(), api.cutscenes(),
         ]);
       definirDados({ modalidades, presets, animacoes, catalogo, looks, mapas, sessao, cenarios, configuracao, cutscenes });
+      // O painel abriu no idioma do sistema; agora vale o que o streamer gravou.
+      sincronizarIdioma(configuracao?.idioma);
       // O que a ponte registrou ANTES do painel abrir. O que vem depois chega
       // pelo SSE, e o hook junta os dois.
       api.logs()
@@ -307,7 +331,7 @@ export function App() {
       // A HORA é o que faz montar duas vezes o mesmo mundo ainda dar sinal: o
       // nome e as peças seriam idênticos, e a tela pareceria não ter reagido.
       definirRecadoDoMundo(
-        `Mundo montado às ${new Date().toLocaleTimeString("pt-BR")}. A torre está sendo reerguida.`,
+        `Mundo montado às ${hora(new Date())}. A torre está sendo reerguida.`,
       );
     }
     definirMontandoMundo(false);
@@ -698,9 +722,9 @@ export function App() {
   if (erroDeCarga) {
     return (
       <main className="app app-vazio">
-        <h1 className="app-titulo">Kora Stream Games</h1>
+        <h1 className="app-titulo">{t("panel.app.title")}</h1>
         <p className="pastilha pastilha-erro">{erroDeCarga.message}</p>
-        <button onClick={carregar}>Tentar de novo</button>
+        <button onClick={carregar}>{t("common.action.retry")}</button>
       </main>
     );
   }
@@ -708,8 +732,8 @@ export function App() {
   if (!dados) {
     return (
       <main className="app app-vazio">
-        <h1 className="app-titulo">Kora Stream Games</h1>
-        <p className="secundario">Carregando…</p>
+        <h1 className="app-titulo">{t("panel.app.title")}</h1>
+        <p className="secundario">{t("common.state.loading")}</p>
       </main>
     );
   }
@@ -733,18 +757,18 @@ export function App() {
 
       <NavegacaoDePaginas
         paginas={[
-          { id: "aovivo", rotulo: "Ao vivo" },
+          { id: "aovivo", rotulo: t("panel.nav.live") },
           // Vizinha da Ao vivo de propósito: a tabela (ADR-016) é a irmã dos 6
           // slots — os slots dizem o que ANIMA, ela diz quanto o resto ANDA.
-          { id: "presentes", rotulo: "Presentes" },
-          { id: "configurar", rotulo: "Configurar" },
-          { id: "jogo", rotulo: "Jogo" },
-          { id: "overlay", rotulo: "Overlay" },
+          { id: "presentes", rotulo: t("panel.nav.gifts") },
+          { id: "configurar", rotulo: t("panel.nav.configure") },
+          { id: "jogo", rotulo: t("panel.nav.game") },
+          { id: "overlay", rotulo: t("panel.nav.overlay") },
           // A irmã da aba de overlay: uma diz a URL para colar no OBS, a outra
           // arruma o que aparece nela.
-          { id: "estudio", rotulo: "Estúdio" },
-          { id: "historico", rotulo: "Histórico" },
-          { id: "log", rotulo: "Log", contador: naoVistos },
+          { id: "estudio", rotulo: t("panel.nav.studio") },
+          { id: "historico", rotulo: t("panel.nav.history") },
+          { id: "log", rotulo: t("panel.nav.log"), contador: naoVistos },
         ]}
         atual={pagina}
         aoTrocar={(destino) => {
@@ -753,6 +777,11 @@ export function App() {
           if (destino === "log") definirProblemasVistos(problemas);
         }}
       />
+
+      {/* Vizinho da navegação porque é da mesma natureza: decisão de moldura,
+          não de partida. Fica fora das páginas para valer em todas, e não
+          entra na barra de sessão — lá é só estado da live (ADR-P03). */}
+      <SeletorDeIdioma />
 
       {pagina === "aovivo" ? (
         <div className="app-pagina">

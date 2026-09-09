@@ -11,6 +11,8 @@
  * Ver `docs/11_SEGURANCA`, camada 2.
  */
 
+import { traduzir } from "../i18n/traduzir.js";
+
 /**
  * Vazio significa MESMA ORIGEM, e é o caminho normal: o servidor de
  * desenvolvimento do Vite encaminha `/api` para a ponte (ver vite.config.js).
@@ -52,7 +54,7 @@ async function chamar(caminho, opcoes = {}) {
   } catch (erro) {
     throw new ErroDaPonte(
       "ponte_offline",
-      `A ponte não respondeu em ${BASE}. Ela está rodando? (npm run ponte)`,
+      traduzir("panel.api.bridgeOffline", { base: BASE }),
       0,
     );
   }
@@ -69,7 +71,7 @@ async function chamar(caminho, opcoes = {}) {
   if (!resposta.ok) {
     throw new ErroDaPonte(
       corpo?.erro ?? "erro_desconhecido",
-      corpo?.mensagem ?? `A ponte respondeu ${resposta.status}.`,
+      corpo?.mensagem ?? traduzir("panel.api.bridgeStatus", { status: resposta.status }),
       resposta.status,
     );
   }
@@ -195,6 +197,15 @@ export const api = {
   configuracao: () => chamar("/api/configuracao").then((r) => r.configuracao),
 
   salvarConfiguracao: (usuarioTiktok) => chamar("/api/configuracao", json("PUT", { usuarioTiktok })),
+
+  /**
+   * O idioma do produto (ADR-P03): painel, HUD do jogo e overlay.
+   *
+   * Rota própria, e não um campo do PUT de configuração, porque a gravação lá
+   * é parcial por campo: um PUT genérico faria trocar de idioma apagar a conta
+   * da live.
+   */
+  salvarIdioma: (idioma) => chamar("/api/idioma", json("PUT", { idioma })),
 
   /** Espia a skin de um nick ANTES de acrescentar à galeria. Traz a miniatura. */
   espiarSkin: (nick) => chamar(`/api/skin?nick=${encodeURIComponent(nick)}`),

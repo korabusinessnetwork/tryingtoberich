@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import { NOME_DA_FAIXA, corDaFaixa, formatarDelta, slotsDoPreset } from "../lib/regras.js";
 import "./TestadorDePresente.css";
 
@@ -19,6 +20,7 @@ import "./TestadorDePresente.css";
  * Nunca fica confundível com a live: o bloco inteiro é âmbar e diz o que é.
  */
 export function TestadorDePresente({ preset, catalogo, aoDisparar, sessaoRodando, disparando }) {
+  const { t } = useTraducao();
   const [selecionados, definirSelecionados] = useState([]);
   const [repeticoes, definirRepeticoes] = useState(1);
 
@@ -53,20 +55,17 @@ export function TestadorDePresente({ preset, catalogo, aoDisparar, sessaoRodando
   }, [ehCombate, selecionados, slots, repeticoes]);
 
   return (
-    <section className="testador" aria-label="Testar presente">
+    <section className="testador" aria-label={t("panel.giftTester.title")}>
       <header className="testador-cabecalho">
-        <h2 className="testador-titulo">Testar presente</h2>
-        <span className="testador-etiqueta">não é a live</span>
+        <h2 className="testador-titulo">{t("panel.giftTester.title")}</h2>
+        <span className="testador-etiqueta">{t("panel.giftTester.notLiveBadge")}</span>
       </header>
 
-      <p className="testador-explicacao secundario">
-        O disparo passa pelo mesmo caminho de um presente de verdade e aparece no monitor.
-        Escolha dois ou mais para ver o combate.
-      </p>
+      <p className="testador-explicacao secundario">{t("panel.giftTester.explanation")}</p>
 
       {!sessaoRodando && (
         <p className="testador-bloqueio" role="status">
-          Comece uma sessão para testar: é ela que carrega o preset e abre a ligação com o jogo.
+          {t("panel.giftTester.sessionRequired")}
         </p>
       )}
 
@@ -79,7 +78,7 @@ export function TestadorDePresente({ preset, catalogo, aoDisparar, sessaoRodando
             return (
               <li key={slot.posicao} className="testador-slot testador-slot-vazio">
                 <span className="testador-posicao">{slot.posicao}</span>
-                <span className="secundario">vazio</span>
+                <span className="secundario">{t("panel.giftTester.emptySlot")}</span>
               </li>
             );
           }
@@ -111,7 +110,7 @@ export function TestadorDePresente({ preset, catalogo, aoDisparar, sessaoRodando
 
       <div className="testador-controles">
         <label className="testador-repeticoes">
-          Repetições
+          {t("panel.giftTester.repeats")}
           <input
             type="number"
             min="1"
@@ -128,21 +127,27 @@ export function TestadorDePresente({ preset, catalogo, aoDisparar, sessaoRodando
           onClick={disparar}
           disabled={!sessaoRodando || selecionados.length === 0 || disparando}
         >
-          {disparando ? "Disparando…" : ehCombate ? `Disparar ${selecionados.length} juntos` : "Disparar"}
+          {disparando
+            ? t("panel.giftTester.firing")
+            : ehCombate
+              ? t("panel.giftTester.fireTogether", { n: selecionados.length })
+              : t("panel.giftTester.fire")}
         </button>
       </div>
 
       {repeticoes > 1 && (
-        <p className="testador-nota secundario">
-          Com repetições, o delta multiplica e a intensidade sobe um nível, com teto em 5 (R4).
-        </p>
+        <p className="testador-nota secundario">{t("panel.giftTester.repeatsNote")}</p>
       )}
 
       {ehCombate && (
         <p className="testador-nota testador-combate" role="status">
-          Combate: os {selecionados.length} chegam juntos, as subidas somam, as descidas somam e
-          o boneco anda o líquido —{" "}
-          <strong>{liquido === 0 ? "empate, ninguém anda" : `${formatarDelta(liquido)} plataformas`}</strong>.
+          {t("panel.giftTester.combatNote", { n: selecionados.length })}{" "}
+          <strong>
+            {liquido === 0
+              ? t("panel.giftTester.combatTie")
+              : t("panel.giftTester.combatNet", { delta: formatarDelta(liquido) })}
+          </strong>
+          .
         </p>
       )}
     </section>

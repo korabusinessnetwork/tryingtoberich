@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { traduzir } from "../i18n/traduzir.js";
 import { api } from "./api.js";
 
 /**
@@ -79,7 +80,7 @@ export function useFluxo() {
       definirConectado((estavaConectado) => {
         // Só registra na transição: o EventSource tenta reconectar sozinho e
         // dispararia onerror a cada tentativa, enchendo o log de ruído.
-        if (estavaConectado) registrarLocal("erro", "fluxo_caiu", { detalhe: "o painel parou de receber a live" });
+        if (estavaConectado) registrarLocal("erro", "fluxo_caiu", { detalhe: traduzir("panel.flow.streamDropped") });
         return false;
       });
     };

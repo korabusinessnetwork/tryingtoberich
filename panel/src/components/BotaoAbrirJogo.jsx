@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./BotaoAbrirJogo.css";
 
 /**
@@ -15,22 +16,29 @@ import "./BotaoAbrirJogo.css";
  * Sobra o Play. Só isso.
  */
 export function BotaoAbrirJogo({ abrindo, resultado, erro, aoAbrir }) {
+  const { t } = useTraducao();
+
   const recado = () => {
     if (erro) return { texto: erro, classe: "pastilha pastilha-erro" };
     if (!resultado) return null;
 
     return {
-      texto: "Studio abrindo com o jogo montado e a ponte já configurada. É só dar Play.",
+      texto: t("panel.openGame.ready"),
       classe: "pastilha pastilha-ok",
     };
   };
 
   const aviso = recado();
 
+  // A frase do passo é UMA chave só, com o marcador {action} no meio: quem
+  // traduz vê a frase inteira, e o "Play" — nome do botão do Studio, que não
+  // se traduz — continua em negrito sem quebrar o texto em dois pedaços.
+  const [antesDoPlay, depoisDoPlay] = t("panel.openGame.afterOpen").split("{action}");
+
   return (
-    <section className="abrir-jogo" aria-label="Abrir o jogo">
+    <section className="abrir-jogo" aria-label={t("panel.openGame.sectionLabel")}>
       <button type="button" className="abrir-jogo-botao" disabled={abrindo} onClick={aoAbrir}>
-        {abrindo ? "Montando o jogo…" : "Abrir o jogo no Studio"}
+        {abrindo ? t("panel.openGame.building") : t("panel.openGame.action")}
       </button>
 
       {aviso ? <p className={aviso.classe}>{aviso.texto}</p> : null}
@@ -39,7 +47,13 @@ export function BotaoAbrirJogo({ abrindo, resultado, erro, aoAbrir }) {
           porque um Studio abrindo é lento, e saber o que fazer quando ele abrir
           evita o "e agora?". */}
       <p className="abrir-jogo-passos">
-        Quando o Studio abrir: aperte <strong>Play</strong>. O resto já vai montado.
+        {antesDoPlay}
+        {/* Nome do botão do Roblox Studio: é o mesmo nos três idiomas e não
+            entra no catálogo. Fica como expressão, e não como texto solto,
+            para o teste de string cravada não confundir identificador de
+            outro programa com frase de tela. */}
+        <strong>{"Play"}</strong>
+        {depoisDoPlay}
       </p>
     </section>
   );

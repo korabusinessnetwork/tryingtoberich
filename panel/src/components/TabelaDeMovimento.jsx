@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
+import { numero } from "../i18n/formatar.js";
 import {
   comExcecao,
   corDaFaixa,
@@ -35,11 +37,11 @@ import "./TabelaDeMovimento.css";
  */
 
 const FILTROS = [
-  ["todos", "Todos"],
-  ["movem", "Que mexem na torre"],
-  ["excecoes", "Editados à mão"],
-  ["slots", "Nos 6 slots"],
-  ["parados", "Que não fazem nada"],
+  ["todos", "panel.movementTable.filterAll"],
+  ["movem", "panel.movementTable.filterMoving"],
+  ["excecoes", "panel.movementTable.filterEdited"],
+  ["slots", "panel.movementTable.filterSlots"],
+  ["parados", "panel.movementTable.filterIdle"],
 ];
 
 const PASSO_DA_LISTA = 100;
@@ -88,6 +90,7 @@ export function TabelaDeMovimento({
   aoMudarMovimento,
   aoSalvar,
 }) {
+  const { t } = useTraducao();
   const [busca, definirBusca] = useState("");
   const [filtro, definirFiltro] = useState("todos");
   const [limite, definirLimite] = useState(PASSO_DA_LISTA);
@@ -154,7 +157,7 @@ export function TabelaDeMovimento({
   if (!preset) {
     return (
       <section className="movimento">
-        <p className="movimento-vazio">Escolha ou crie um preset para montar a tabela de presentes.</p>
+        <p className="movimento-vazio">{t("panel.movementTable.noPreset")}</p>
       </section>
     );
   }
@@ -162,15 +165,13 @@ export function TabelaDeMovimento({
   return (
     <section className="movimento">
       <header className="movimento-cabecalho">
-        <h2 className="movimento-titulo">Presentes: subida e descida</h2>
-        <span className="movimento-etiqueta">{linhas.length} no catálogo</span>
+        <h2 className="movimento-titulo">{t("panel.movementTable.title")}</h2>
+        <span className="movimento-etiqueta">
+          {t("panel.movementTable.catalogCount", { n: linhas.length })}
+        </span>
       </header>
 
-      <p className="movimento-explicacao">
-        Quanto a torre anda com cada presente da live. O número sai de uma conta — moedas do
-        presente × multiplicador — e você muda o que quiser, um por um. Os presentes que estão
-        nos slots não entram nesta conta: eles têm animação e delta próprios, na página Ao vivo.
-      </p>
+      <p className="movimento-explicacao">{t("panel.movementTable.explanation")}</p>
 
       <div className="movimento-regra">
         <label className="movimento-chave">
@@ -180,25 +181,24 @@ export function TabelaDeMovimento({
             onChange={(evento) => mudarRegra("ativo", evento.target.checked)}
           />
           <span>
-            <strong>{valendo ? "Tabela ligada" : "Tabela desligada"}</strong>
-            <span className="movimento-chave-nota">
-              Desligada, só os 6 slots mexem na torre e o resto volta a ser contado como não
-              mapeado. O que você editou aqui fica guardado.
-            </span>
+            <strong>
+              {valendo ? t("panel.movementTable.tableOn") : t("panel.movementTable.tableOff")}
+            </strong>
+            <span className="movimento-chave-nota">{t("panel.movementTable.toggleNote")}</span>
           </span>
         </label>
 
         {valendo ? null : (
           <p className="movimento-previa">
             {temTabela
-              ? "Os números abaixo são o que a tabela FARIA. Ligue e salve para valerem na live."
-              : "Este preset ainda não tem tabela. Os números abaixo são a conta pronta — ligue e salve para valerem na live."}
+              ? t("panel.movementTable.previewSaved")
+              : t("panel.movementTable.previewUnsaved")}
           </p>
         )}
 
         <div className="movimento-campos">
           <label className="movimento-campo">
-            <span className="movimento-campo-rotulo">Andares por moeda</span>
+            <span className="movimento-campo-rotulo">{t("panel.movementTable.floorsPerCoin")}</span>
             <input
               type="number"
               min="0"
@@ -211,12 +211,12 @@ export function TabelaDeMovimento({
               }}
             />
             <span className="movimento-campo-nota">
-              10 quer dizer: presente de 1 moeda sobe 10 andares.
+              {t("panel.movementTable.floorsPerCoinNote")}
             </span>
           </label>
 
           <label className="movimento-campo">
-            <span className="movimento-campo-rotulo">Animação de quem sobe</span>
+            <span className="movimento-campo-rotulo">{t("panel.movementTable.riseAnimation")}</span>
             <select
               value={movimento.animacaoDeSubida}
               onChange={(evento) => mudarRegra("animacaoDeSubida", evento.target.value)}
@@ -230,7 +230,7 @@ export function TabelaDeMovimento({
           </label>
 
           <label className="movimento-campo">
-            <span className="movimento-campo-rotulo">Animação de quem desce</span>
+            <span className="movimento-campo-rotulo">{t("panel.movementTable.fallAnimation")}</span>
             <select
               value={movimento.animacaoDeDescida}
               onChange={(evento) => mudarRegra("animacaoDeDescida", evento.target.value)}
@@ -244,7 +244,7 @@ export function TabelaDeMovimento({
           </label>
 
           <label className="movimento-campo">
-            <span className="movimento-campo-rotulo">Intensidade</span>
+            <span className="movimento-campo-rotulo">{t("panel.movementTable.intensity")}</span>
             <select
               value={movimento.intensidade}
               onChange={(evento) => mudarRegra("intensidade", Number(evento.target.value))}
@@ -253,18 +253,19 @@ export function TabelaDeMovimento({
                 <option key={nivel} value={nivel}>{nivel}</option>
               ))}
             </select>
-            <span className="movimento-campo-nota">Vale para todo presente da tabela.</span>
+            <span className="movimento-campo-nota">{t("panel.movementTable.intensityNote")}</span>
           </label>
         </div>
       </div>
 
       <ul className="movimento-resumo">
-        <li><strong>{resumo.movem}</strong> mexem na torre</li>
-        <li><strong>{resumo.excecoes}</strong> editados à mão</li>
-        <li><strong>{resumo.parados}</strong> não fazem nada</li>
+        <li><strong>{resumo.movem}</strong> {t("panel.movementTable.summaryMoving")}</li>
+        <li><strong>{resumo.excecoes}</strong> {t("panel.movementTable.summaryEdited")}</li>
+        <li><strong>{resumo.parados}</strong> {t("panel.movementTable.summaryIdle")}</li>
         {resumo.maior ? (
           <li>
-            maior: <strong>{formatarDelta(resumo.maior.delta)}</strong> ({resumo.maior.nome})
+            {t("panel.movementTable.summaryBiggest")}{" "}
+            <strong>{formatarDelta(resumo.maior.delta)}</strong> ({resumo.maior.nome})
           </li>
         ) : null}
       </ul>
@@ -275,10 +276,15 @@ export function TabelaDeMovimento({
           antes da live ou ao vivo. */}
       {valendo && resumo.varremATorre ? (
         <p className="pastilha pastilha-atencao movimento-aviso">
-          {resumo.varremATorre} presente{resumo.varremATorre > 1 ? "s" : ""} sozinho
-          {resumo.varremATorre > 1 ? "s" : ""} já {resumo.varremATorre > 1 ? "andam" : "anda"} a torre
-          inteira ({totalPlataformas} andares). Não quebra nada — o jogo para nas pontas —, mas a
-          corrida acaba num presente. Baixe o multiplicador ou edite esses presentes.
+          {resumo.varremATorre > 1
+            ? t("panel.movementTable.sweepWarnMany", {
+                n: resumo.varremATorre,
+                total: totalPlataformas,
+              })
+            : t("panel.movementTable.sweepWarnOne", {
+                n: resumo.varremATorre,
+                total: totalPlataformas,
+              })}
         </p>
       ) : null}
 
@@ -286,8 +292,8 @@ export function TabelaDeMovimento({
         <input
           type="search"
           className="movimento-busca"
-          placeholder="Buscar presente pelo nome…"
-          aria-label="Buscar presente pelo nome"
+          placeholder={t("panel.movementTable.searchPlaceholder")}
+          aria-label={t("panel.movementTable.searchLabel")}
           value={busca}
           onChange={(evento) => {
             definirBusca(evento.target.value);
@@ -296,7 +302,7 @@ export function TabelaDeMovimento({
           autoComplete="off"
           spellCheck={false}
         />
-        <div className="movimento-filtros" role="group" aria-label="Filtrar presentes">
+        <div className="movimento-filtros" role="group" aria-label={t("panel.movementTable.filterGroupLabel")}>
           {FILTROS.map(([id, rotulo]) => (
             <button
               key={id}
@@ -308,7 +314,7 @@ export function TabelaDeMovimento({
                 definirLimite(PASSO_DA_LISTA);
               }}
             >
-              {rotulo}
+              {t(rotulo)}
             </button>
           ))}
         </div>
@@ -317,8 +323,8 @@ export function TabelaDeMovimento({
       {visiveis.length === 0 ? (
         <p className="movimento-vazio">
           {linhas.length === 0
-            ? "O catálogo está vazio. Atualize a lista da TikTok na página Ao vivo, ao escolher um presente."
-            : "Nenhum presente com esse filtro."}
+            ? t("panel.movementTable.emptyCatalog")
+            : t("panel.movementTable.emptyFilter")}
         </p>
       ) : (
         <ul className="movimento-lista">
@@ -333,22 +339,34 @@ export function TabelaDeMovimento({
                 <span className="movimento-presente">
                   <span className="movimento-nome">{linha.nome}</span>
                   <span className="movimento-detalhe">
-                    <span>{linha.moedas.toLocaleString("pt-BR")} moedas</span>
+                    <span>
+                      {t("panel.movementTable.coins", {
+                        n: numero(linha.moedas),
+                      })}
+                    </span>
                     <span
                       className="movimento-faixa"
                       style={{ background: corDaFaixa(linha.faixa) }}
                       aria-hidden="true"
                     />
-                    <span>Faixa {NOME_DA_FAIXA[linha.faixa] ?? "?"}</span>
-                    {linha.ativo ? null : <span className="movimento-inativo">fora da live</span>}
+                    <span>
+                      {t("panel.movementTable.tier", {
+                        name: NOME_DA_FAIXA[linha.faixa] ?? "?",
+                      })}
+                    </span>
+                    {linha.ativo ? null : (
+                      <span className="movimento-inativo">{t("panel.movementTable.offLive")}</span>
+                    )}
                   </span>
                 </span>
 
                 {/* Texto junto do estado, nunca cor sozinha (02_DESIGN_SYSTEM). */}
                 <span className={`movimento-origem movimento-origem-${linha.origem}`}>
-                  {linha.origem === "slot" ? `slot ${linha.slot}` : null}
-                  {linha.origem === "excecao" ? "à mão" : null}
-                  {linha.origem === "regra" ? "da conta" : null}
+                  {linha.origem === "slot"
+                    ? t("panel.movementTable.originSlot", { n: linha.slot })
+                    : null}
+                  {linha.origem === "excecao" ? t("panel.movementTable.originManual") : null}
+                  {linha.origem === "regra" ? t("panel.movementTable.originRule") : null}
                 </span>
 
                 <span className={`movimento-delta ${linha.delta > 0 ? "sobe" : linha.delta < 0 ? "desce" : "parado"}`}>
@@ -357,7 +375,7 @@ export function TabelaDeMovimento({
                       type="number"
                       step="1"
                       className="movimento-delta-campo"
-                      aria-label={`Andares de ${linha.nome}`}
+                      aria-label={t("panel.movementTable.floorsFor", { name: linha.nome })}
                       value={valor}
                       onChange={(evento) => escreverDelta(linha, evento.target.value)}
                       onBlur={() => comitarDelta(linha)}
@@ -366,7 +384,10 @@ export function TabelaDeMovimento({
                       }}
                     />
                   ) : (
-                    <span className="movimento-delta-fixo" title="Vem do slot, na página Ao vivo">
+                    <span
+                      className="movimento-delta-fixo"
+                      title={t("panel.movementTable.deltaFromSlotTitle")}
+                    >
                       {formatarDelta(linha.delta)}
                     </span>
                   )}
@@ -379,9 +400,9 @@ export function TabelaDeMovimento({
                       className="movimento-acao"
                       onClick={() => inverter(linha)}
                       disabled={linha.delta === 0}
-                      title="Troca o sinal: quem sobe passa a descer"
+                      title={t("panel.movementTable.invertTitle")}
                     >
-                      Inverter
+                      {t("panel.movementTable.invert")}
                     </button>
                   ) : null}
                   {linha.origem === "excecao" ? (
@@ -389,9 +410,11 @@ export function TabelaDeMovimento({
                       type="button"
                       className="movimento-acao"
                       onClick={() => voltarParaRegra(linha)}
-                      title={`Volta para a conta: ${formatarDelta(linha.daRegra)}`}
+                      title={t("panel.movementTable.backToRuleTitle", {
+                        delta: formatarDelta(linha.daRegra),
+                      })}
                     >
-                      Voltar à conta
+                      {t("panel.movementTable.backToRule")}
                     </button>
                   ) : null}
                 </span>
@@ -407,17 +430,18 @@ export function TabelaDeMovimento({
           className="movimento-mais"
           onClick={() => definirLimite((atual) => atual + PASSO_DA_LISTA)}
         >
-          Mostrar mais {Math.min(PASSO_DA_LISTA, visiveis.length - limite)} de {visiveis.length - limite}
+          {t("panel.movementTable.showMore", {
+            n: Math.min(PASSO_DA_LISTA, visiveis.length - limite),
+            total: visiveis.length - limite,
+          })}
         </button>
       ) : null}
 
       <div className="movimento-rodape">
         <button type="button" className="movimento-salvar" onClick={aoSalvar} disabled={salvando}>
-          {salvando ? "Salvando…" : "Salvar tabela"}
+          {salvando ? t("common.state.saving") : t("panel.movementTable.saveTable")}
         </button>
-        <span className="movimento-rodape-nota">
-          Vale a partir do próximo presente. Trocar de preset no meio da live troca a tabela junto.
-        </span>
+        <span className="movimento-rodape-nota">{t("panel.movementTable.footerNote")}</span>
       </div>
     </section>
   );

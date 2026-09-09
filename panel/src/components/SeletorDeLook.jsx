@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./SeletorDeLook.css";
 
 /**
@@ -19,34 +20,27 @@ import "./SeletorDeLook.css";
  * nada mais neste componente muda.
  */
 export function SeletorDeLook({ looks, lookId, aoEscolher, travado }) {
+  const { t } = useTraducao();
   const carregando = looks == null;
   const comErro = !carregando && !Array.isArray(looks);
   const semLooks = !carregando && !comErro && looks.length === 0;
 
   return (
-    <section className="seletor-look" aria-label="Look do personagem">
+    <section className="seletor-look" aria-label={t("panel.lookPicker.title")}>
       <header className="seletor-look-cabecalho">
-        <h2>Look do personagem</h2>
-        {travado && <span className="pastilha pastilha-atencao">Travado nesta sessão</span>}
+        <h2>{t("panel.lookPicker.title")}</h2>
+        {travado && <span className="pastilha pastilha-atencao">{t("panel.lookPicker.lockedBadge")}</span>}
       </header>
 
       {travado && (
-        <p className="secundario seletor-look-aviso-travado">
-          Sessão rodando: trocar de look não aplica no meio da partida (ADR-011).
-          Vale a partir do início da próxima sessão ou do próximo respawn de checkpoint.
-        </p>
+        <p className="secundario seletor-look-aviso-travado">{t("panel.lookPicker.lockedNotice")}</p>
       )}
 
-      {carregando && <p className="secundario">Carregando looks…</p>}
+      {carregando && <p className="secundario">{t("panel.lookPicker.loading")}</p>}
 
-      {comErro && <p className="pastilha pastilha-erro">Não foi possível carregar os looks salvos.</p>}
+      {comErro && <p className="pastilha pastilha-erro">{t("panel.lookPicker.loadError")}</p>}
 
-      {semLooks && (
-        <p className="secundario">
-          Nenhum look salvo ainda — isso é normal no começo. Monte um no vestiário dentro do jogo
-          (Roblox Studio, experiência privada) para ele aparecer aqui.
-        </p>
-      )}
+      {semLooks && <p className="secundario">{t("panel.lookPicker.emptyState")}</p>}
 
       {!carregando && !comErro && !semLooks && (
         <ul className="seletor-look-lista">
@@ -69,14 +63,18 @@ export function SeletorDeLook({ looks, lookId, aoEscolher, travado }) {
                     {selecionado && <span className="seletor-look-marca" aria-hidden="true">✓</span>}
                   </div>
 
-                  <div className="seletor-look-pecas" role="list" aria-label={`Peças do look ${look.nome}`}>
-                    {pecas.length === 0 && <span className="secundario">Sem peça equipada</span>}
+                  <div
+                    className="seletor-look-pecas"
+                    role="list"
+                    aria-label={t("panel.lookPicker.partsLabel", { nome: look.nome })}
+                  >
+                    {pecas.length === 0 && <span className="secundario">{t("panel.lookPicker.noParts")}</span>}
                     {pecas.map((assetId, indice) => (
                       <span
                         key={`${assetId}-${indice}`}
                         className="seletor-look-peca"
                         role="listitem"
-                        title={`Item do catálogo Roblox nº ${assetId} — ícone chega quando o vestiário buscar o catálogo`}
+                        title={t("panel.lookPicker.partTitle", { assetId })}
                       >
                         {assetId}
                       </span>
@@ -94,8 +92,10 @@ export function SeletorDeLook({ looks, lookId, aoEscolher, travado }) {
                         aria-hidden="true"
                       />
                       <span className="secundario">
-                        Efeito permanente: {rotularEfeito(look.efeitoPermanente.tipo)} (intensidade{" "}
-                        {look.efeitoPermanente.intensidade})
+                        {t("panel.lookPicker.permanentEffect", {
+                          efeito: rotularEfeito(look.efeitoPermanente.tipo),
+                          intensidade: look.efeitoPermanente.intensidade,
+                        })}
                       </span>
                     </div>
                   )}

@@ -1,8 +1,25 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import { idDePreset } from "../lib/regras.js";
 
 import "./GerenciadorDePresets.css";
+
+/**
+ * Costura de volta o texto traduzido que tem destaque no meio.
+ *
+ * O catálogo guarda a frase INTEIRA com `{marca}` onde entra o `<code>` — quem
+ * traduz lê a frase toda, e a tela não é montada com pedaço de frase
+ * concatenado. Marca sem nó correspondente fica como veio, em vez de sumir sem
+ * aviso.
+ */
+function comMarcadores(texto, nos) {
+  return texto.split(/(\{\w+\})/g).map((pedaco, indice) => {
+    const marca = /^\{(\w+)\}$/.exec(pedaco);
+    if (!marca || nos[marca[1]] === undefined) return pedaco;
+    return <Fragment key={indice}>{nos[marca[1]]}</Fragment>;
+  });
+}
 
 /**
  * Criar, duplicar e apagar preset.
@@ -21,6 +38,7 @@ import "./GerenciadorDePresets.css";
  * inteiro num painel que fica aberto durante a live.
  */
 export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, aoCriar, aoDuplicar, aoApagar }) {
+  const { t } = useTraducao();
   const lista = Array.isArray(presets) ? presets : [];
 
   const [nome, definirNome] = useState("");
@@ -46,28 +64,27 @@ export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, 
   };
 
   return (
-    <section className="presets" aria-label="Presets">
+    <section className="presets" aria-label={t("panel.presetManager.title")}>
       <header className="presets-cabecalho">
-        <h2 className="presets-titulo">Presets</h2>
+        <h2 className="presets-titulo">{t("panel.presetManager.title")}</h2>
         <span className="secundario presets-contagem">
-          {lista.length === 1 ? "1 salvo" : `${lista.length} salvos`}
+          {lista.length === 1
+            ? t("panel.presetManager.countOne")
+            : t("panel.presetManager.countOther", { n: lista.length })}
         </span>
       </header>
 
       {travado && (
-        <p className="presets-recado">
-          A sessão está rodando. Criar e apagar preset é trabalho de antes da live —
-          o que dá para fazer agora é trocar o preset ativo, na barra do topo (R7).
-        </p>
+        <p className="presets-recado">{t("panel.presetManager.lockedNotice")}</p>
       )}
 
       <div className="presets-criar">
         <label className="presets-campo">
-          <span className="secundario">Novo preset</span>
+          <span className="secundario">{t("panel.presetManager.newLabel")}</span>
           <input
             type="text"
             value={nome}
-            placeholder="Ex.: Escalada da madrugada"
+            placeholder={t("panel.presetManager.newPlaceholder")}
             disabled={travado || salvando}
             onChange={(evento) => definirNome(evento.target.value)}
             onKeyDown={(evento) => {
@@ -77,7 +94,7 @@ export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, 
         </label>
 
         <button type="button" className="presets-botao" onClick={criar} disabled={!podeCriar}>
-          Criar vazio
+          {t("panel.presetManager.createEmpty")}
         </button>
 
         <button
@@ -85,9 +102,13 @@ export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, 
           className="presets-botao"
           onClick={() => aoDuplicar(presetAtual)}
           disabled={!presetAtual || travado || salvando}
-          title={presetAtual ? `Copia os slots de "${presetAtual.nome}"` : "Escolha um preset para duplicar"}
+          title={
+            presetAtual
+              ? t("panel.presetManager.duplicateHint", { name: presetAtual.nome })
+              : t("panel.presetManager.duplicatePickFirst")
+          }
         >
-          Duplicar o atual
+          {t("panel.presetManager.duplicateCurrent")}
         </button>
       </div>
 
@@ -98,11 +119,14 @@ export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, 
       {nome.trim().length > 0 && (
         <p className="presets-recado">
           {id.length === 0 ? (
-            <>Esse nome não deixa nada aproveitável para o id do arquivo. Use ao menos uma letra ou número.</>
+            t("panel.presetManager.idEmpty")
           ) : jaExiste ? (
-            <>Já existe um preset com o id <code>{id}</code>. Escolha outro nome.</>
+            comMarcadores(t("panel.presetManager.idTaken"), { id: <code>{id}</code> })
           ) : (
-            <>Vai virar <code>{id}</code> em <code>data/presets/</code>.</>
+            comMarcadores(t("panel.presetManager.idPreview"), {
+              id: <code>{id}</code>,
+              folder: <code>data/presets/</code>,
+            })
           )}
         </p>
       )}
@@ -114,7 +138,9 @@ export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, 
           onClick={apagar}
           disabled={!presetAtual || travado || salvando}
         >
-          {confirmandoApagar ? `Confirmar: apagar "${presetAtual?.nome}"` : "Apagar o preset atual"}
+          {confirmandoApagar
+            ? t("panel.presetManager.deleteConfirm", { name: presetAtual?.nome })
+            : t("panel.presetManager.deleteCurrent")}
         </button>
         {confirmandoApagar && (
           <button
@@ -122,7 +148,7 @@ export function GerenciadorDePresets({ presets, presetAtual, travado, salvando, 
             className="presets-botao"
             onClick={() => definirConfirmandoApagar(false)}
           >
-            Cancelar
+            {t("common.action.cancel")}
           </button>
         )}
       </div>

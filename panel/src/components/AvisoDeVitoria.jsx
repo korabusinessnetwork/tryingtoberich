@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./AvisoDeVitoria.css";
 
 /**
@@ -18,6 +19,8 @@ import "./AvisoDeVitoria.css";
  * streamer precisa saber disso antes de clicar de novo achando que travou.
  */
 export function AvisoDeVitoria({ estado, reiniciando, aoReiniciar }) {
+  const { t } = useTraducao();
+
   if (!estado?.vitoria) return null;
 
   const plataforma = Number.isFinite(estado.plataformaAtual) ? estado.plataformaAtual : null;
@@ -30,12 +33,12 @@ export function AvisoDeVitoria({ estado, reiniciando, aoReiniciar }) {
   return (
     <section className="vitoria" role="status" aria-live="polite">
       <div className="vitoria-texto">
-        <h2 className="vitoria-titulo">Topo da torre</h2>
+        <h2 className="vitoria-titulo">{t("panel.victoryNotice.title")}</h2>
         <p className="vitoria-detalhe">
           {plataforma !== null && total !== null
-            ? `O boneco chegou na plataforma ${plataforma} de ${total}.`
-            : "O boneco chegou ao topo do mapa."}{" "}
-          A corrida não recomeça sozinha — presente de subida não tem mais para onde levar.
+            ? t("panel.victoryNotice.reachedPlatform", { n: plataforma, total })
+            : t("panel.victoryNotice.reachedTop")}{" "}
+          {t("panel.victoryNotice.noAutoRestart")}
         </p>
       </div>
 
@@ -46,11 +49,11 @@ export function AvisoDeVitoria({ estado, reiniciando, aoReiniciar }) {
           onClick={aoReiniciar}
           disabled={reiniciando}
         >
-          {reiniciando ? "Reiniciando…" : "Reiniciar corrida"}
+          {reiniciando ? t("panel.victoryNotice.restarting") : t("panel.victoryNotice.restart")}
         </button>
         {!jogoOnline && (
           <span className="secundario vitoria-nota">
-            O Roblox está offline: o comando seria descartado. Reabra a experiência primeiro.
+            {t("panel.victoryNotice.gameOffline")}
           </span>
         )}
       </div>

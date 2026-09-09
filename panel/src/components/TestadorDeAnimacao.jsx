@@ -1,8 +1,25 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import { animacoesOferecidas, contarAposentadas } from "../lib/regras.js";
 
 import "./TestadorDeAnimacao.css";
+
+/**
+ * Costura de volta o texto traduzido que tem destaque no meio.
+ *
+ * O catálogo guarda a frase INTEIRA com `{marca}` onde entra o `<code>` — quem
+ * traduz lê a frase toda, e a tela não é montada com pedaço de frase
+ * concatenado. Marca sem nó correspondente fica como veio, em vez de sumir sem
+ * aviso.
+ */
+function comMarcadores(texto, nos) {
+  return texto.split(/(\{\w+\})/g).map((pedaco, indice) => {
+    const marca = /^\{(\w+)\}$/.exec(pedaco);
+    if (!marca || nos[marca[1]] === undefined) return pedaco;
+    return <Fragment key={indice}>{nos[marca[1]]}</Fragment>;
+  });
+}
 
 /**
  * Um botão por animação. Clicou, a animação toca no Roblox.
@@ -26,6 +43,8 @@ import "./TestadorDeAnimacao.css";
  * para o próximo clique e não muda nada no preset.
  */
 export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDisparada, aoDisparar }) {
+  const { t } = useTraducao();
+
   // 3 é o mesmo padrão da ponte quando o painel não manda nada: começar no
   // meio da escala mostra a animação como ela é, sem exagero nem timidez.
   const [intensidade, definirIntensidade] = useState(3);
@@ -47,18 +66,18 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
   const aposentadas = contarAposentadas(animacoes);
 
   const grupos = [
-    { direcao: "subida", rotulo: "Subida", sinal: "+1" },
-    { direcao: "descida", rotulo: "Descida", sinal: "−1" },
+    { direcao: "subida", rotulo: t("panel.animationTester.up"), sinal: "+1" },
+    { direcao: "descida", rotulo: t("panel.animationTester.down"), sinal: "−1" },
   ];
 
   return (
-    <section className="animacoes" aria-label="Testar animação">
+    <section className="animacoes" aria-label={t("panel.animationTester.title")}>
       <header className="animacoes-cabecalho">
-        <h2 className="animacoes-titulo">Testar animação</h2>
+        <h2 className="animacoes-titulo">{t("panel.animationTester.title")}</h2>
         {/* O estado do jogo fica no cabeçalho porque é o que decide se clicar
             adianta: com o Roblox fora, o long-poll descarta e o clique some. */}
         <span className={jogoOnline ? "pastilha pastilha-ok" : "pastilha pastilha-erro"}>
-          {jogoOnline ? "jogo conectado" : "jogo offline"}
+          {jogoOnline ? t("panel.animationTester.gameOnline") : t("panel.animationTester.gameOffline")}
         </span>
       </header>
 
@@ -66,8 +85,8 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
           (R2). Sem este seletor o painel só sabia testar no nível 3, e "como
           fica a Fênix no 5?" era uma pergunta que exigia montar um preset,
           iniciar sessão e mandar um presente de verdade. */}
-      <div className="animacoes-intensidade" role="group" aria-label="Intensidade do teste">
-        <span className="animacoes-grupo-titulo">Intensidade</span>
+      <div className="animacoes-intensidade" role="group" aria-label={t("panel.animationTester.intensityGroup")}>
+        <span className="animacoes-grupo-titulo">{t("panel.animationTester.intensity")}</span>
         {[1, 2, 3, 4, 5].map((nivel) => (
           <button
             key={nivel}
@@ -86,16 +105,13 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
       </div>
 
       {!jogoOnline ? (
-        <p className="animacoes-recado">
-          O Roblox não está conectado na ponte. Abra o jogo e espere o long-poll
-          entrar — sem isso o disparo é descartado e nada acontece na tela.
-        </p>
+        <p className="animacoes-recado">{t("panel.animationTester.gameOfflineHint")}</p>
       ) : null}
 
       {grupos.map(({ direcao, rotulo, sinal }) => (
         <div className="animacoes-grupo" key={direcao}>
           <h3 className="animacoes-grupo-titulo">
-            {rotulo} <span className="animacoes-grupo-sinal">delta {sinal}</span>
+            {rotulo} <span className="animacoes-grupo-sinal">{t("panel.animationTester.delta", { sign: sinal })}</span>
           </h3>
 
           <div className="animacoes-grade">
@@ -108,12 +124,18 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
                 }
                 disabled={disparando}
                 onClick={() => aoDisparar(animacao.id, intensidade)}
-                title={`${animacao.id} — ${animacao.duracaoBase}s, peso visual ${animacao.pesoVisual}`}
+                title={t("panel.animationTester.buttonTitle", {
+                  id: animacao.id,
+                  duration: animacao.duracaoBase,
+                  weight: animacao.pesoVisual,
+                })}
               >
                 <span className="animacoes-nome">{animacao.nome}</span>
                 {/* Duração junto do nome: é ela que arma o watchdog do R11 e o
                     que explica por que um clique parece "não fazer nada" ainda. */}
-                <span className="animacoes-duracao">{animacao.duracaoBase}s</span>
+                <span className="animacoes-duracao">
+                  {t("panel.animationTester.seconds", { n: animacao.duracaoBase })}
+                </span>
               </button>
             ))}
           </div>
@@ -123,13 +145,14 @@ export function TestadorDeAnimacao({ animacoes, jogoOnline, disparando, ultimaDi
       {porDirecao.subida.length + porDirecao.descida.length === 0 ? (
         <p className="animacoes-recado">
           {aposentadas > 0
-            ? `As ${aposentadas} animações da biblioteca estão aposentadas. Marque alguma como ativa na tabela de biblioteca-animacoes.md e rode npm run gerar.`
-            : "Nenhuma animação no índice. Rode npm run gerar na raiz."}
+            ? t("panel.animationTester.allRetired", { n: aposentadas })
+            : t("panel.animationTester.emptyIndex")}
         </p>
       ) : aposentadas > 0 ? (
         <p className="animacoes-recado secundario">
-          {aposentadas} aposentadas não aparecem aqui. Ver a coluna Ativa em{" "}
-          <code>biblioteca-animacoes.md</code>.
+          {comMarcadores(t("panel.animationTester.retiredHidden", { n: aposentadas }), {
+            file: <code>biblioteca-animacoes.md</code>,
+          })}
         </p>
       ) : null}
     </section>

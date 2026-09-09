@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./AvisoDeCurva.css";
 
 /**
@@ -15,6 +16,8 @@ import "./AvisoDeCurva.css";
  * chamar atenção sem travar nada.
  */
 export function AvisoDeCurva({ aviso }) {
+  const { t } = useTraducao();
+
   if (!aviso) return null;
 
   return (
@@ -22,7 +25,9 @@ export function AvisoDeCurva({ aviso }) {
       {/* Só para leitor de tela: quem enxerga já tem a cor e o ponto de
           atenção; quem não enxerga precisa do motivo de o texto ter
           aparecido no meio da tela. */}
-      <span className="aviso-de-curva-rotulo">Atenção —</span>
+      <span className="aviso-de-curva-rotulo">
+        {t("panel.curveWarning.attentionLabel")}
+      </span>
       {aviso}
     </p>
   );

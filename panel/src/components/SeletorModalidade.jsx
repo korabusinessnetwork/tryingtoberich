@@ -1,3 +1,4 @@
+import { useTraducao } from "../i18n/useTraducao.js";
 import "./SeletorModalidade.css";
 
 /**
@@ -12,24 +13,25 @@ import "./SeletorModalidade.css";
  * Só React, sem chamada de rede: `modalidades` chega pronta por prop.
  */
 export function SeletorModalidade({ modalidades, modalidade, aoTrocar, travado }) {
+  const { t } = useTraducao();
   const lista = modalidades ?? [];
 
   if (lista.length <= 1) {
     const unica = lista[0];
     return (
       <div className="seletor-modalidade seletor-modalidade-unica">
-        <span className="secundario">Modalidade</span>
-        <span className="seletor-modalidade-valor">{unica?.nome ?? "—"}</span>
+        <span className="secundario">{t("panel.modePicker.label")}</span>
+        <span className="seletor-modalidade-valor">{unica?.nome ?? t("common.value.none")}</span>
         <span className="secundario seletor-modalidade-nota">
-          {unica ? "única disponível por enquanto" : "nenhuma modalidade disponível"}
+          {unica ? t("panel.modePicker.onlyOne") : t("panel.modePicker.noneAvailable")}
         </span>
       </div>
     );
   }
 
   return (
-    <div className="seletor-modalidade" role="group" aria-label="Modalidade">
-      <span className="secundario seletor-modalidade-rotulo">Modalidade</span>
+    <div className="seletor-modalidade" role="group" aria-label={t("panel.modePicker.label")}>
+      <span className="secundario seletor-modalidade-rotulo">{t("panel.modePicker.label")}</span>
       <div className="seletor-modalidade-opcoes">
         {lista.map((item) => {
           const ativa = item.id === modalidade;
@@ -43,15 +45,15 @@ export function SeletorModalidade({ modalidades, modalidade, aoTrocar, travado }
               disabled={travado || indisponivel}
               title={
                 travado
-                  ? "Pare a sessão para trocar de modalidade."
+                  ? t("panel.modePicker.lockedHint")
                   : indisponivel
-                    ? "Ainda não disponível."
+                    ? t("panel.modePicker.unavailableHint")
                     : undefined
               }
               onClick={() => aoTrocar(item.id)}
             >
               {item.nome}
-              {indisponivel && <span className="seletor-modalidade-em-breve">em breve</span>}
+              {indisponivel && <span className="seletor-modalidade-em-breve">{t("panel.modePicker.comingSoon")}</span>}
             </button>
           );
         })}

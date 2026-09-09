@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useTraducao } from "../i18n/useTraducao.js";
 import { api } from "../lib/api.js";
 import {
   avisoDeAncora,
@@ -105,6 +106,7 @@ function mesmoLayout(a, b) {
 }
 
 export function EstudioDeOverlay() {
+  const { t } = useTraducao();
   const [dados, definirDados] = useState(null);
   const [erro, definirErro] = useState(null);
   const [elementos, definirElementos] = useState({});
@@ -129,7 +131,7 @@ export function EstudioDeOverlay() {
       // único estado sem mensagem e sem o botão de repetir — ninguém sai dele
       // sem recarregar o painel.
       if (!resposta || typeof resposta !== "object") {
-        throw new Error("A ponte respondeu vazio ao layout do overlay.");
+        throw new Error(t("panel.overlayStudio.emptyResponse"));
       }
       const { elementos: guardados } = lerRespostaDoLayout(resposta);
       definirDados(resposta);
@@ -138,7 +140,7 @@ export function EstudioDeOverlay() {
     } catch (falha) {
       definirErro(falha.message);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     carregar();
@@ -311,7 +313,7 @@ export function EstudioDeOverlay() {
     return (
       <section className="estudio">
         <p className="pastilha pastilha-erro">{erro}</p>
-        <button type="button" onClick={carregar}>Tentar de novo</button>
+        <button type="button" onClick={carregar}>{t("common.action.retry")}</button>
       </section>
     );
   }
@@ -319,7 +321,7 @@ export function EstudioDeOverlay() {
   if (!dados) {
     return (
       <section className="estudio">
-        <p className="estudio-nota">Carregando…</p>
+        <p className="estudio-nota">{t("common.state.loading")}</p>
       </section>
     );
   }
@@ -334,40 +336,31 @@ export function EstudioDeOverlay() {
   return (
     <section className="estudio">
       <header className="estudio-cabecalho">
-        <h2 className="estudio-titulo">Estúdio de overlay</h2>
+        <h2 className="estudio-titulo">{t("panel.overlayStudio.title")}</h2>
         <span className="estudio-etiqueta">
-          {catalogo.length} elementos · {mexidos} fora do padrão
+          {t("panel.overlayStudio.counts", { n: catalogo.length, m: mexidos })}
         </span>
       </header>
 
-      <p className="estudio-nota">
-        Arraste cada peça do HUD para o lugar dela na sua cena. O palco é a tela vertical inteira
-        (9:16), a mesma que a fonte do OBS desenha. Só o que você mexer é guardado — o resto
-        continua onde a página já põe.
-      </p>
+      <p className="estudio-nota">{t("panel.overlayStudio.intro")}</p>
 
       {catalogo.length === 0 ? (
-        <p className="pastilha pastilha-atencao">
-          A ponte não mandou o catálogo de elementos. Sem ele não há o que posicionar.
-        </p>
+        <p className="pastilha pastilha-atencao">{t("panel.overlayStudio.noCatalog")}</p>
       ) : null}
 
       {cam === null ? (
-        <p className="pastilha pastilha-atencao">
-          A ponte não mandou a altura da cam. A faixa não aparece sombreada e ninguém avisa se
-          uma caixa cair em cima dela (ADR-015).
-        </p>
+        <p className="pastilha pastilha-atencao">{t("panel.overlayStudio.noCamHeight")}</p>
       ) : null}
 
       {mexidos === 0 ? (
-        <p className="estudio-nota">nada movido ainda: o overlay está no padrão</p>
+        <p className="estudio-nota">{t("panel.overlayStudio.nothingMoved")}</p>
       ) : null}
 
       <div className="estudio-mesa">
         <div className="estudio-palco" ref={palcoRef}>
           {cam === null ? null : (
             <div className="estudio-cam" style={{ height: `${cam}%` }}>
-              <span className="estudio-cam-rotulo">CAM — nada é desenhado aqui (ADR-015)</span>
+              <span className="estudio-cam-rotulo">{t("panel.overlayStudio.camBand")}</span>
             </div>
           )}
 
@@ -386,7 +379,11 @@ export function EstudioDeOverlay() {
                 key={item.id}
                 role="button"
                 tabIndex={0}
-                aria-label={`${item.rotulo}, em x ${caixa.x.toFixed(1)}% e y ${caixa.y.toFixed(1)}%. Setas movem.`}
+                aria-label={t("panel.overlayStudio.boxAriaLabel", {
+                  rotulo: item.rotulo,
+                  x: caixa.x.toFixed(1),
+                  y: caixa.y.toFixed(1),
+                })}
                 className={classes.join(" ")}
                 // A caixa é pequena e só cabe o rótulo curto; a descrição do
                 // catálogo diz o que ela desenha de verdade na live.
@@ -405,7 +402,9 @@ export function EstudioDeOverlay() {
               >
                 <span className="estudio-caixa-nome">{item.rotulo}</span>
                 {/* Texto junto, nunca só a cor esmaecida (02_DESIGN_SYSTEM). */}
-                {caixa.visivel ? null : <span className="estudio-caixa-marca">oculto</span>}
+                {caixa.visivel ? null : (
+                  <span className="estudio-caixa-marca">{t("panel.overlayStudio.hiddenMark")}</span>
+                )}
               </div>
             );
           })}
@@ -416,7 +415,10 @@ export function EstudioDeOverlay() {
             <li key={item.id} className="estudio-linha">
               <span className="estudio-linha-nome" title={item.descricao ?? undefined}>{item.rotulo}</span>
               <span className="estudio-linha-posicao">
-                x {caixa.x.toFixed(1)}% · y {caixa.y.toFixed(1)}%
+                {t("panel.overlayStudio.position", {
+                  x: caixa.x.toFixed(1),
+                  y: caixa.y.toFixed(1),
+                })}
               </span>
 
               {/* O pulo do primeiro arrastar, dito ANTES de acontecer
@@ -425,13 +427,12 @@ export function EstudioDeOverlay() {
                   aviso viraria enfeite permanente. */}
               {!caixa.movido && avisoDeAncora(item.ancora) ? (
                 <span className="estudio-linha-ancora">
-                  hoje preso {avisoDeAncora(item.ancora)}: a primeira mexida prende pela esquerda e pelo
-                  topo, e ele dá um pulo.
+                  {t("panel.overlayStudio.anchorWarning", { ancora: avisoDeAncora(item.ancora) })}
                 </span>
               ) : null}
 
               <label className="estudio-linha-escala">
-                <span className="estudio-linha-legenda">Tamanho</span>
+                <span className="estudio-linha-legenda">{t("panel.overlayStudio.sizeLabel")}</span>
                 <input
                   type="range"
                   min={ESCALA_MINIMA}
@@ -451,14 +452,14 @@ export function EstudioDeOverlay() {
                   checked={caixa.visivel}
                   onChange={(evento) => mudar(item, { visivel: evento.target.checked })}
                 />
-                <span>visível</span>
+                <span>{t("panel.overlayStudio.visibleLabel")}</span>
               </label>
 
               <button
                 type="button"
                 className="estudio-linha-voltar"
-                title="Voltar este elemento ao padrão da página"
-                aria-label={`Voltar ${item.rotulo} ao padrão`}
+                title={t("panel.overlayStudio.resetOneTitle")}
+                aria-label={t("panel.overlayStudio.resetOneAria", { rotulo: item.rotulo })}
                 disabled={!caixa.movido}
                 onClick={() => voltarElemento(item.id)}
               >
@@ -471,8 +472,9 @@ export function EstudioDeOverlay() {
 
       {invasores.length > 0 ? (
         <p className="pastilha pastilha-atencao estudio-aviso">
-          Encostando na faixa da cam: {invasores.map(({ item }) => item.rotulo).join(", ")}. Nada é
-          desenhado sobre a cam de propósito (ADR-015) — ali o elemento fica atrás do seu rosto.
+          {t("panel.overlayStudio.camOverlap", {
+            lista: invasores.map(({ item }) => item.rotulo).join(", "),
+          })}
         </p>
       ) : null}
 
@@ -480,14 +482,12 @@ export function EstudioDeOverlay() {
 
       <footer className="estudio-rodape">
         <button type="button" className="estudio-salvar" disabled={semMudanca || salvando} onClick={salvar}>
-          {salvando ? "Salvando…" : "Salvar layout"}
+          {salvando ? t("common.state.saving") : t("panel.overlayStudio.saveLayout")}
         </button>
         <button type="button" disabled={mexidos === 0} onClick={voltarTudo}>
-          Voltar tudo ao padrão
+          {t("panel.overlayStudio.resetAll")}
         </button>
-        <span className="estudio-nota">
-          Ao salvar, a fonte já aberta no OBS se ajusta sozinha — não precisa recarregar nada lá.
-        </span>
+        <span className="estudio-nota">{t("panel.overlayStudio.saveHint")}</span>
       </footer>
     </section>
   );

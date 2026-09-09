@@ -158,6 +158,19 @@ export function rotasDoPainel(nucleo) {
   });
 
   /**
+   * O idioma do produto: painel, HUD do jogo e overlay (ADR-P03).
+   *
+   * Rota própria, como a galeria, e pelo mesmo motivo: `salvarConfiguracao` é
+   * parcial de propósito, e cada campo tem um caminho de escrita diferente. Um
+   * PUT genérico faria a troca de idioma apagar a conta da live.
+   *
+   * O console do operador NÃO passa por aqui: ele é PT sempre (ADR-P05).
+   */
+  rotas.put("/idioma", async (req, res) => {
+    res.json(await nucleo.definirConfiguracao({ idioma: req.body?.idioma }));
+  });
+
+  /**
    * A galeria de skins: nicks do Roblox usados como base no vestiário.
    *
    * A curadoria vive AQUI, na superfície local, e o jogo só lê. É configuração

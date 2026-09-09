@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/i18n.schema.json",
+  "title": "Catálogo de tradução",
+  "description": "Um idioma do produto. Fonte única: scripts/gerar-i18n.mjs espelha isto em panel/src/i18n/catalogo.js e game/src/shared/textos.lua, no mesmo padrão de data/tokens.json. Chave é sempre em inglês, no formato <superficie>.<contexto>.<slug> (ADR-P03). O que NÃO mora aqui: nome de presente da TikTok (vem da API), texto do próprio streamer (nome de preset, de mapa, de look) e o console do operador, que é PT apenas e nunca traduz (ADR-P05).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["idioma", "chaves"],
+  "properties": {
+    "_leia": { "type": "string" },
+    "idioma": {
+      "description": "O código deste catálogo. Bate com o nome do arquivo.",
+      "enum": ["pt", "es", "en"]
+    },
+    "chaves": {
+      "description": "Mapa plano de chave para texto. Plano, e não aninhado, porque a checagem de paridade entre os três idiomas e a geração do Luau ficam triviais — e porque chave faltando em um idioma é o erro que o teste precisa pegar.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "description": "<superficie>.<contexto>.<slug>, tudo em inglês, minúsculas com camelCase no slug.",
+        "pattern": "^(panel|game|hud|common)\\.[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 400
+      }
+    }
+  }
+}

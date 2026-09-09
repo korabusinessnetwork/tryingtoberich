@@ -1,3 +1,6 @@
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
+import { dataHora } from "../i18n/formatar.js";
 import "./HistoricoDeSessoes.css";
 
 /**
@@ -17,36 +20,52 @@ import "./HistoricoDeSessoes.css";
 
 function formatarInstante(iso) {
   const data = new Date(iso);
-  if (Number.isNaN(data.getTime())) return "—";
-  return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  if (Number.isNaN(data.getTime())) return traduzir("common.value.none");
+  return dataHora(data);
 }
 
 function formatarDuracao(segundos) {
-  if (!Number.isFinite(segundos) || segundos <= 0) return "—";
+  if (!Number.isFinite(segundos) || segundos <= 0) return traduzir("common.value.none");
   const minutos = Math.round(segundos / 60);
-  if (minutos < 60) return `${minutos}min`;
-  return `${Math.floor(minutos / 60)}h ${String(minutos % 60).padStart(2, "0")}min`;
+  if (minutos < 60) return traduzir("panel.sessionHistory.durationMinutes", { n: minutos });
+  return traduzir("panel.sessionHistory.durationHours", {
+    h: Math.floor(minutos / 60),
+    m: String(minutos % 60).padStart(2, "0"),
+  });
+}
+
+/**
+ * Costura o número em destaque de volta na frase traduzida.
+ *
+ * O catálogo guarda a frase INTEIRA com `{n}` onde entra o número — quem traduz
+ * lê a frase toda, e o `<strong>` que o CSS pinta continua envolvendo só o
+ * número, como antes. Mesmo padrão do `EditorDePlacar`.
+ */
+function comNumeroEmDestaque(texto, valor) {
+  return texto
+    .split(/(\{n\})/g)
+    .map((pedaco, indice) => (pedaco === "{n}" ? <strong key={indice}>{valor}</strong> : pedaco));
 }
 
 export function HistoricoDeSessoes({ sessoes, carregando, sessaoEscolhida, aoEscolher, aoAtualizar }) {
+  const { t } = useTraducao();
   const lista = Array.isArray(sessoes) ? sessoes : [];
 
   return (
-    <section className="historico" aria-label="Histórico de lives">
+    <section className="historico" aria-label={t("panel.sessionHistory.regionLabel")}>
       <header className="historico-cabecalho">
-        <h2 className="historico-titulo">Lives anteriores</h2>
+        <h2 className="historico-titulo">{t("panel.sessionHistory.title")}</h2>
         <button type="button" className="historico-atualizar" onClick={aoAtualizar} disabled={carregando}>
-          {carregando ? "Lendo…" : "Atualizar"}
+          {carregando ? t("panel.sessionHistory.refreshing") : t("panel.sessionHistory.refresh")}
         </button>
       </header>
 
-      {carregando && lista.length === 0 && <p className="historico-recado">Lendo as sessões do disco…</p>}
+      {carregando && lista.length === 0 && (
+        <p className="historico-recado">{t("panel.sessionHistory.loadingNotice")}</p>
+      )}
 
       {!carregando && lista.length === 0 && (
-        <p className="historico-recado">
-          Nenhuma live registrada ainda. Toda sessão encerrada com o Stop vira uma linha aqui,
-          já reduzida ao resumo — o detalhe por evento é descartado no encerramento (F5).
-        </p>
+        <p className="historico-recado">{t("panel.sessionHistory.emptyState")}</p>
       )}
 
       {lista.length > 0 && (
@@ -69,14 +88,22 @@ export function HistoricoDeSessoes({ sessoes, carregando, sessaoEscolhida, aoEsc
                     // Existe em disco e nunca foi encerrada: a ponte caiu antes
                     // do Stop. Sem esta marca, ela leria como uma live de zero
                     // presentes, que é uma história bem diferente.
-                    <span className="pastilha pastilha-atencao historico-marca">Interrompida</span>
+                    <span className="pastilha pastilha-atencao historico-marca">
+                      {t("panel.sessionHistory.interruptedBadge")}
+                    </span>
                   ) : (
                     <>
                       <span className="historico-numero">
-                        <strong>{resumo?.totalPresentes ?? 0}</strong> presentes
+                        {comNumeroEmDestaque(
+                          t("panel.sessionHistory.giftCount"),
+                          resumo?.totalPresentes ?? 0,
+                        )}
                       </span>
                       <span className="historico-numero">
-                        plataforma <strong>{resumo?.plataformaMaxima ?? 0}</strong>
+                        {comNumeroEmDestaque(
+                          t("panel.sessionHistory.platformPeak"),
+                          resumo?.plataformaMaxima ?? 0,
+                        )}
                       </span>
                       <span className="historico-numero historico-duracao">
                         {formatarDuracao(resumo?.duracaoSegundos)}

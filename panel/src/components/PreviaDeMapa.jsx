@@ -1,3 +1,6 @@
+import { traduzir } from "../i18n/traduzir.js";
+import { useTraducao } from "../i18n/useTraducao.js";
+import { numero as numeroNoLocale } from "../i18n/formatar.js";
 import { alcanceHorizontalDoPulo, FATOR_SALTO_VERTICAL } from "../lib/regras.js";
 import "./PreviaDeMapa.css";
 
@@ -15,22 +18,22 @@ const FATOR_DERIVA_HORIZONTAL = 1.2; // Teto de geometria da variacaoHorizontal 
 
 /** Stud como o streamer lê de relance: no máximo 2 casas, vírgula pt-BR. */
 function numero(valor, casas = 2) {
-  if (!Number.isFinite(valor)) return "—";
-  return Number(valor.toFixed(casas)).toLocaleString("pt-BR", { maximumFractionDigits: casas });
+  if (!Number.isFinite(valor)) return traduzir("common.value.none");
+  return numeroNoLocale(Number(valor.toFixed(casas)), { maximumFractionDigits: casas });
 }
 
 function percentual(fracao) {
-  if (!Number.isFinite(fracao)) return "—";
+  if (!Number.isFinite(fracao)) return traduzir("common.value.none");
   return `${Math.round(fracao * 100)}%`;
 }
 
-const ROTULO_DO_MARCO = { checkpoint_visual: "Checkpoint", topo: "Topo" };
-
 export function PreviaDeMapa({ mapa = null, prontidao = null }) {
+  const { t } = useTraducao();
+
   if (!mapa) {
     return (
       <section className="previa-de-mapa previa-de-mapa-vazia">
-        <p className="secundario">Nenhum mapa selecionado. Gere ou escolha um mapa para ver a prévia.</p>
+        <p className="secundario">{t("panel.mapPreview.emptyState")}</p>
       </section>
     );
   }
@@ -46,9 +49,9 @@ export function PreviaDeMapa({ mapa = null, prontidao = null }) {
   const proporcaoHorizontal = tetoHorizontalEfetivo > 0 ? plataformas.variacaoHorizontal / tetoHorizontalEfetivo : 0;
 
   const cores = [
-    { rotulo: "Primária", hex: mapa.paleta.primaria },
-    { rotulo: "Secundária", hex: mapa.paleta.secundaria },
-    { rotulo: "Destaque", hex: mapa.paleta.destaque },
+    { rotulo: t("panel.mapPreview.colorPrimary"), hex: mapa.paleta.primaria },
+    { rotulo: t("panel.mapPreview.colorSecondary"), hex: mapa.paleta.secundaria },
+    { rotulo: t("panel.mapPreview.colorAccent"), hex: mapa.paleta.destaque },
   ];
 
   const checkpoints = (mapa.marcos ?? [])
@@ -64,23 +67,21 @@ export function PreviaDeMapa({ mapa = null, prontidao = null }) {
   if (!prontidao) {
     blocoDeProntidao = (
       <div className="previa-de-mapa-prontidao previa-de-mapa-prontidao-desconhecida">
-        <span className="secundario">Prontidão ainda não avaliada para este mapa.</span>
+        <span className="secundario">{t("panel.mapPreview.readinessUnknown")}</span>
       </div>
     );
   } else if (prontidao.pode) {
     blocoDeProntidao = (
       <div className="previa-de-mapa-prontidao previa-de-mapa-prontidao-ok">
-        <span className="pastilha pastilha-ok">Pronto para ir ao ar</span>
+        <span className="pastilha pastilha-ok">{t("panel.mapPreview.readinessOk")}</span>
       </div>
     );
   } else {
-    const motivos = prontidao.motivos?.length ? prontidao.motivos : ["Motivo não informado pela ponte."];
+    const motivos = prontidao.motivos?.length ? prontidao.motivos : [t("panel.mapPreview.readinessNoReason")];
     blocoDeProntidao = (
       <div className="previa-de-mapa-prontidao previa-de-mapa-prontidao-bloqueada" role="alert">
-        <span className="pastilha pastilha-atencao">Ainda não pode ir ao ar</span>
-        <p className="previa-de-mapa-prontidao-texto">
-          Este spec é válido, mas não pode ir ao ar enquanto isto não for resolvido:
-        </p>
+        <span className="pastilha pastilha-atencao">{t("panel.mapPreview.readinessBlocked")}</span>
+        <p className="previa-de-mapa-prontidao-texto">{t("panel.mapPreview.readinessIntro")}</p>
         <ul className="previa-de-mapa-motivos">
           {motivos.map((motivo, indice) => (
             <li key={indice}>{motivo}</li>
@@ -110,34 +111,37 @@ export function PreviaDeMapa({ mapa = null, prontidao = null }) {
       </div>
 
       <div className="previa-de-mapa-cenario secundario">
-        <span>Skybox: {mapa.skyboxAssetId}</span>
-        <span>Textura: {plataformas.materialAssetId}</span>
+        <span>{t("panel.mapPreview.skybox", { id: mapa.skyboxAssetId })}</span>
+        <span>{t("panel.mapPreview.texture", { id: plataformas.materialAssetId })}</span>
       </div>
 
       <dl className="previa-de-mapa-stats">
         <div className="previa-de-mapa-stat">
-          <dt>Plataformas</dt>
+          <dt>{t("panel.mapPreview.statPlatforms")}</dt>
           <dd>{mapa.totalPlataformas}</dd>
         </div>
         <div className="previa-de-mapa-stat">
-          <dt>Altura de pulo</dt>
-          <dd>{numero(mapa.jumpHeight)} studs</dd>
+          <dt>{t("panel.mapPreview.statJumpHeight")}</dt>
+          <dd>{t("panel.mapPreview.studs", { n: numero(mapa.jumpHeight) })}</dd>
         </div>
         <div className="previa-de-mapa-stat">
-          <dt>Formato</dt>
+          <dt>{t("panel.mapPreview.statShape")}</dt>
           <dd>{plataformas.formato}</dd>
         </div>
         <div className="previa-de-mapa-stat">
-          <dt>Espaçamento vertical</dt>
-          <dd>{numero(plataformas.espacamentoVertical)} studs</dd>
+          <dt>{t("panel.mapPreview.statVerticalSpacing")}</dt>
+          <dd>{t("panel.mapPreview.studs", { n: numero(plataformas.espacamentoVertical) })}</dd>
         </div>
         <div className="previa-de-mapa-stat">
-          <dt>Variação horizontal</dt>
+          <dt>{t("panel.mapPreview.statHorizontalVariation")}</dt>
           <dd>
-            {numero(plataformas.variacaoHorizontal)} studs
+            {t("panel.mapPreview.studs", { n: numero(plataformas.variacaoHorizontal) })}
             <span className="previa-de-mapa-stat-margem secundario">
               {" "}
-              · até {numero(tetoHorizontalEfetivo)} ({percentual(proporcaoHorizontal)} usado)
+              {t("panel.mapPreview.horizontalCap", {
+                max: numero(tetoHorizontalEfetivo),
+                pct: percentual(proporcaoHorizontal),
+              })}
             </span>
           </dd>
         </div>
@@ -145,9 +149,13 @@ export function PreviaDeMapa({ mapa = null, prontidao = null }) {
 
       <div className="previa-de-mapa-gauge">
         <div className="previa-de-mapa-gauge-cabecalho">
-          <span>Espaçamento vertical usado</span>
+          <span>{t("panel.mapPreview.gaugeTitle")}</span>
           <span className="secundario">
-            {numero(plataformas.espacamentoVertical)} de {numero(tetoVertical)} studs · {percentual(proporcaoVertical)}
+            {t("panel.mapPreview.gaugeSummary", {
+              used: numero(plataformas.espacamentoVertical),
+              max: numero(tetoVertical),
+              pct: percentual(proporcaoVertical),
+            })}
           </span>
         </div>
         <div className="previa-de-mapa-gauge-trilho">
@@ -162,25 +170,25 @@ export function PreviaDeMapa({ mapa = null, prontidao = null }) {
         </div>
         {verticalEstourou ? (
           <p className="previa-de-mapa-gauge-legenda previa-de-mapa-gauge-legenda-erro">
-            Passa do teto do ADR-009 — ver motivo no topo: este mapa não é escalável sem presente.
+            {t("panel.mapPreview.gaugeOverflow")}
           </p>
         ) : (
-          <p className="previa-de-mapa-gauge-legenda secundario">
-            Teto do ADR-009: jumpHeight × 0,7. Quanto mais cheia, mais apertado o salto — sempre dentro do alcance do
-            pulo, sem presente nenhum.
-          </p>
+          <p className="previa-de-mapa-gauge-legenda secundario">{t("panel.mapPreview.gaugeHint")}</p>
         )}
       </div>
 
       {mapa.props?.length > 0 && (
         <div className="previa-de-mapa-props">
-          <h3 className="previa-de-mapa-subtitulo secundario">Props</h3>
+          <h3 className="previa-de-mapa-subtitulo secundario">{t("panel.mapPreview.propsTitle")}</h3>
           <ul className="previa-de-mapa-props-lista">
             {mapa.props.map((prop, indice) => (
               <li key={`${prop.tipo}-${indice}`} className="previa-de-mapa-prop">
                 <span className="previa-de-mapa-prop-tipo">{prop.tipo}</span>
                 <span className="secundario">
-                  {percentual(prop.densidade)} · a cada {prop.aCadaNPlataformas} plataformas
+                  {t("panel.mapPreview.propFrequency", {
+                    pct: percentual(prop.densidade),
+                    n: prop.aCadaNPlataformas,
+                  })}
                 </span>
               </li>
             ))}
@@ -189,14 +197,16 @@ export function PreviaDeMapa({ mapa = null, prontidao = null }) {
       )}
 
       <div className="previa-de-mapa-marcos">
-        <h3 className="previa-de-mapa-subtitulo secundario">Marcos</h3>
+        <h3 className="previa-de-mapa-subtitulo secundario">{t("panel.mapPreview.milestonesTitle")}</h3>
         <p className="previa-de-mapa-marco">
-          <span className="previa-de-mapa-marco-rotulo secundario">{ROTULO_DO_MARCO.checkpoint_visual}s</span>
-          <span>{checkpoints.length > 0 ? checkpoints.join(" · ") : "nenhum"}</span>
+          <span className="previa-de-mapa-marco-rotulo secundario">{t("panel.mapPreview.checkpointsLabel")}</span>
+          <span>{checkpoints.length > 0 ? checkpoints.join(" · ") : t("panel.mapPreview.checkpointsNone")}</span>
         </p>
         <p className="previa-de-mapa-marco">
-          <span className="previa-de-mapa-marco-rotulo secundario">{ROTULO_DO_MARCO.topo}</span>
-          <span>{topo ? `plataforma ${topo.plataforma}` : "não definido"}</span>
+          <span className="previa-de-mapa-marco-rotulo secundario">{t("panel.mapPreview.topLabel")}</span>
+          <span>
+            {topo ? t("panel.mapPreview.topPlatform", { n: topo.plataforma }) : t("panel.mapPreview.topUndefined")}
+          </span>
         </p>
       </div>
     </section>
