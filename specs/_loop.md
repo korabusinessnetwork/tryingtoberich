@@ -2,6 +2,27 @@
 
 Uma seção por rodada, mais recente no topo.
 
+## Rodada 3 — F0-4, o teto do long-poll — 2026-09-09
+- Spec: `specs/f0-4-teto-do-long-poll.md`
+- Resultado da review: **aprovado sem ressalvas** — 12 de 12 critérios, e a
+  review recusou a "limitação aceita" que o spec tinha escrito (túnel pendurado
+  lido como teto para sempre). Fechada com `pareceTetoDoRoblox`.
+- **O item era um bug, não uma medição.** BUG-007 em `memory/bugs.md`: volta
+  ociosa cortada pelo Roblox virava erro, o backoff dobrava até 30s, e o
+  presente seguinte esperava por ele — trinta vezes o orçamento do princípio
+  nº 1, e só com a live quieta.
+- Aprendido: `memory/learnings.md` e `memory/bugs.md`
+- Commit: `9cc91ed` na branch `claude/monta-b1h5fy` — **sem push** (mesma
+  pendência das rodadas 1 e 2)
+- Números: 489 testes verdes (eram 478)
+- **Pendente de decisão:** a medição continua sendo do dono, mas ficou barata —
+  numa live normal o Output do Studio traz UMA vez o teto observado. Se o aviso
+  não aparecer numa live inteira, a resposta é que o Roblox aguenta os 20s.
+- Próximo item recomendado: **`F0-1`, montar o acervo no Roblox** — é o único
+  bloqueador DURO que resta e não tem como ser contornado por código: enquanto
+  os assetId estiverem `pendente-upload`, nenhum mapa vai ao ar e não existe
+  live nenhuma.
+
 ## Rodada 2 — F0-7, a sonda de localhost — 2026-09-09
 - Spec: `specs/f0-7-sonda-de-localhost.md`
 - Resultado da review: **aprovado sem ressalvas** — 13 de 13 critérios, com um
