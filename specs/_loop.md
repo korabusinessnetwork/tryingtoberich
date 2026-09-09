@@ -7,6 +7,23 @@ Uma seção por rodada, mais recente no topo.
 commits do dono que também estavam sem push — a `claude/monta-b1h5fy` remota
 estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
 
+## Rodada 4 — F0-1, o acervo — 2026-09-09
+- Spec: `specs/f0-1-acervo-ja-esta-pronto.md`
+- Resultado da review: **aprovado sem ressalvas** — 8 de 8 critérios, depois de
+  a review derrubar DOIS testes meus (um flake por estado compartilhado, um
+  invariante que o sistema não garante)
+- **O item já estava feito.** 10 skybox e 10 texturas aprovados, 6 faces cada,
+  mapa real com `pode: true`. Estava listado como bloqueador duro, e as rodadas
+  1 a 3 planejaram em cima dele.
+- Aprendido: `memory/learnings.md`; achado em aberto em `memory/decisions.md`
+- Commit: `ef7880e` na branch `claude/camada-de-produto-e-fase-0`
+- Números: 493 testes verdes em duas execuções seguidas
+- Pendente de decisão: o painel pode dessincronizar `assetId` de `faces.ft` num
+  skybox. Não acontece hoje; três saídas registradas em `memory/decisions.md`.
+- Próximo item recomendado: **`F0-2`, rodar dentro do Roblox Studio pela
+  primeira vez** — é o bloqueador duro que sobrou, e é a mesma sessão que
+  responde o F0-7 e o F0-4. Todo o resto da Fase 0 depende dele.
+
 ## Rodada 3 — F0-4, o teto do long-poll — 2026-09-09
 - Spec: `specs/f0-4-teto-do-long-poll.md`
 - Resultado da review: **aprovado sem ressalvas** — 12 de 12 critérios, e a
