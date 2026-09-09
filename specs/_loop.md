@@ -2,6 +2,24 @@
 
 Uma seção por rodada, mais recente no topo.
 
+## Rodada 2 — F0-7, a sonda de localhost — 2026-09-09
+- Spec: `specs/f0-7-sonda-de-localhost.md`
+- Resultado da review: **aprovado sem ressalvas** — 13 de 13 critérios, com um
+  desvio anotado no próprio spec (a rota devolve `{ ok, porta }`, sem `versao`)
+- Aprendido: `memory/learnings.md`
+- Commit: `3fb0191` na branch `claude/monta-b1h5fy` — **sem push** (mesma
+  pendência da rodada 1)
+- Números: 478 testes verdes (eram 465), 55 arquivos Luau no gate (eram 54)
+- **Pendente de decisão — e é o ponto da rodada:** a medição em si exige o
+  Roblox Studio e é do dono. Rode `npm run sondar`, cole o Luau na barra de
+  comandos do Studio, e registre o resultado em `memory/learnings.md` e no item
+  F0-7. **Enquanto isso não acontecer, o ADR-002 continua em aberto e o túnel
+  continua obrigatório.**
+- Próximo item recomendado: **`F0-4`, confirmar o teto de 20s do long-poll** —
+  15 minutos, mesma sessão de Studio do F0-7, e é o teste mais barato da Fase 0
+  em relação ao estrago que evita (long-poll morrendo antes do timeout faz o
+  presente atrasar ou sumir no meio da live).
+
 ## Rodada 1 — i18n por chave (ADR-P03) — 2026-09-09
 - Spec: `specs/i18n-por-chave.md`
 - Resultado da review: **aprovado sem ressalvas**, depois de o próprio review

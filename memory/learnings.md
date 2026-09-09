@@ -266,3 +266,41 @@ Dois testes do painel falharam sem que nada estivesse errado: um cobrava
 `slot ${posicao}` na fonte do modal, outro cravava "28 componentes". Os dois
 estavam certos no dia em que foram escritos. **Teste que casa com string de
 código é dívida com juros na primeira mudança transversal.**
+
+---
+
+## Rodada 2 do ciclo — a sonda do F0-7 (2026-09-09)
+
+### Instrumento antes de medição, quando a medição tem modos de falha parecidos
+F0-7 era "cinco minutos": trocar a URL no Studio e ver se funciona. Mas
+"não funcionou" tinha **quatro causas indistinguíveis** — `HttpService`
+desligado, ponte fora do ar, token errado, e Studio realmente bloqueado. Só a
+última responde a pergunta. Um teste de cinco minutos com quatro modos de falha
+parecidos não custa cinco minutos: custa uma tarde e devolve a resposta errada.
+
+### O 401 é resultado POSITIVO
+O achado que organiza a sonda inteira: **para tomar 401, o pacote precisou
+chegar na ponte.** Um instrumento que trate 401 como falha responde "não" a uma
+pergunta cuja resposta foi "sim" — e tratar 401 como falha é exatamente o que
+alguém escreve sem pensar. Isso também justificou manter a sonda DENTRO de
+`/jogo/*`, com token: uma rota aberta responderia igual e abriria superfície de
+graça. É por estar protegida que ela responde melhor.
+
+### O modo de falha mais caro estava fora do Studio
+Testar contra uma ponte que não está no ar responde "não" a uma pergunta que nem
+chegou a ser feita. Por isso `npm run sondar` confere a ponte **deste lado
+primeiro**, e só então imprime o Luau — com a porta real, nunca chutada. Sondar
+a porta errada responde a pergunta errada e ninguém percebe.
+
+### Gate que não cobre tudo é gate que engana
+`npm run luau` varria só `game/src`. A sonda mora em `game/` porque não é parte
+do place — e ficaria **fora do gate**, que é justamente o lugar onde um erro de
+sintaxe custa a viagem ao Studio que o gate existe para evitar. Passou a varrer
+`game/` inteiro: 54 → 55 arquivos.
+
+### Não fingir que rodei
+A medição exige Studio, e eu não tenho Studio. Isso ficou escrito no topo do
+spec, no commit e no ledger. **Rodada que entrega o instrumento e deixa a
+medição explicitamente pendente é resultado correto**, não entrega pela metade —
+o que seria errado é o relatório sugerir que a pergunta do ADR-002 foi
+respondida.
