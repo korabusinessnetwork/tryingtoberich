@@ -171,7 +171,24 @@ controle correspondente. Isto fecha os dois lados.
       asset gerado por IA está adiado no ADR-004. A tela do acervo anota o
       resultado da moderação, não a substitui.
 
+## Camada de produto (a partir de 2026-09-09)
+
+O `docs/00_VISAO/plano-de-produto.md` abriu a camada de produto sobre os blocos
+acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
+
+- **Fase 0 — provar em você.** A lista fechada de fixes está em
+  [`fase-0-fixes-minimos.md`](./fase-0-fixes-minimos.md). Regra de corte: só
+  entra o que impede rodar uma live inteira sem travar. O Bloco 4 abaixo foi
+  absorvido por ela.
+- **Fase 1 — produto vendável v1.** i18n (ADR-P03) como primeiro commit, depois
+  Supabase (ADR-P02), instalador (ADR-P04), console v1 (ADR-P05) e venda.
+- **Fase 2 — distribuição e recorrência.**
+
+Bloqueia a Fase 1 inteira: a decisão do dono sobre o
+[ADR-P06](../08_DECISOES/adr-p06-uso-comercial-da-captura.md).
+
 ## Bloco 4 — Validação
+*Absorvido pela Fase 0. Mantido aqui porque os itens continuam válidos.*
 - [ ] Medir latência ponta a ponta e registrar em `memory/learnings.md`
 - [ ] Live de teste de 30 minutos sem intervenção
 - [ ] Checklist de segurança de `11_SEGURANCA` inteiro verde

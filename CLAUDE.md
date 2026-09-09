@@ -28,6 +28,9 @@ Regras práticas derivadas:
 - **`docs/`** — visão, arquitetura, design system, regras de negócio, modelagem,
   fluxos, componentes, APIs, ADRs (`08_DECISOES/`), backlog, prompts, segurança.
 - **ADR-001** define a stack vigente. Toda decisão de arquitetura vira ADR.
+- **Série ADR-P** (`08_DECISOES/adr-p*`) é a camada de produto, aberta em
+  2026-09-09 por `docs/00_VISAO/plano-de-produto.md`. Ela não revoga nenhuma
+  decisão de fundação. O **ADR-P06 está Proposto** e bloqueia vender.
 - Schemas dos arquivos JSON: `data/schemas/`.
 - Se doc e código conflitarem, **a documentação prevalece** e deve ser corrigida
   quando estiver errada.
@@ -84,6 +87,11 @@ Detalhes em `memory/restrictions.md`.
 - **Jogo:** Roblox / Luau (Roblox Studio, experiência privada)
 - **Ponte:** Node.js + tiktok-live-connector + Express + Cloudflare Tunnel
 - **Painel:** React + Vite (roda local, `localhost`)
-- **Dados:** arquivos JSON em disco, sem banco (ADR-003)
+- **Dados:** arquivos JSON em disco, sem banco (ADR-003). A partir da Fase 1 do
+  produto, o que é da Kora — conta, licença, telemetria — vai para Supabase em
+  tier gratuito (ADR-P02); o que é do streamer continua em JSON. **Nenhuma
+  chamada ao Supabase no caminho crítico do presente.**
 - **IA:** Google Gemini API (tier gratuito), chamada só pelo Node
-- **Deploy:** nenhum. Tudo local. Só a ponte é exposta via túnel.
+- **Deploy:** nenhum. Tudo local. Só a ponte é exposta via túnel — e o túnel pode
+  sumir se o Studio alcançar `127.0.0.1` (F0-7). O produto é esta mesma
+  topologia, instalada na máquina do cliente (ADR-P04).

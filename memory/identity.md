@@ -13,7 +13,7 @@ as próximas sem reescrita.
   e frequentemente pagos. O streamer não controla quais presentes valem o quê,
   não escolhe as animações, não muda o mapa e não cria modalidade nova.
 - **Como resolvemos:** painel próprio onde o streamer escolhe a modalidade, monta
-  os 6 slots de presente, escolhe a animação de cada slot na biblioteca e gera
+  os slots de presente, escolhe a animação de cada slot na biblioteca e gera
   mapa novo com IA, tudo em infraestrutura gratuita.
 - **Impacto esperado:** live com identidade própria e presente com resposta
   imediata, o que aumenta a taxa de envio de presente por espectador.
@@ -73,10 +73,36 @@ ferramentas prontas que não deixam mudar animação, mapa ou regra /
 
 ## Roadmap
 
-- **Fase 1 (atual) — Escalada:** uma modalidade (subir/descer plataformas), 6 slots,
+- **Fase 1 (atual) — Escalada:** uma modalidade (subir/descer plataformas),
+  6 slots por padrão e até 24,
   20 animações, catálogo de presentes, gerador de mapa por IA, painel local.
 - **Fase 2 — Modalidades:** segunda e terceira modalidade sobre o mesmo motor,
   seletor de modalidade no painel já entregue na Fase 1.
 - **Fase 3 — Multi-streamer:** `streamerId` deixa de ser `"local"`, storage sai
   do JSON para banco, painel ganha auth. Ver ADR-003.
 - **Fase 4 — Produto:** onboarding, planos, mapas compartilhados entre streamers.
+
+### Nota de 2026-09-09 — o roadmap acima foi comprimido
+O `docs/00_VISAO/plano-de-produto.md` puxou as Fases 3 e 4 para dentro de 90
+dias, com meta de US$ 2.000/mês líquido. **Cuidado com a numeração:** o plano de
+produto usa Fase 0/1/2, que NÃO são as fases deste roadmap.
+
+| Roadmap desta identidade | Plano de produto |
+|---|---|
+| Fase 1 (Escalada) | Fase 0 — provar em 5 lives, custo zero |
+| Fases 3 e 4 (multi-streamer, produto) | Fase 1 — produto vendável em 4 semanas |
+| Fase 2 (modalidades) | Fase 2 — junto com recorrência e distribuição |
+
+O que mudou de verdade na identidade:
+
+- **`streamerId` deixa de ser `"local"`** e vira chave de tenant real (ADR-P02).
+- **O valor "custo zero na Fase 1" sobrevive:** o levantamento de 2026-09-09
+  mostrou que EulerStream, Supabase e Lemon Squeezy cobrem a fase inteira em
+  tier gratuito. Custo fixo: US$ 0.
+- **O valor "sem lock-in" fica mais forte, não mais fraco.** Preset, mapa e look
+  continuam sendo arquivo em disco do streamer. Só o que é da Kora — conta,
+  licença, telemetria — vai para o banco.
+- **A persona "streamer sem conhecimento técnico" fica sob pressão.** O ADR-P04
+  entrega o produto como software instalado que roda no Roblox Studio do
+  cliente. Isso é mais que colar uma URL no OBS, e o instalador precisa carregar
+  essa diferença sozinho.
