@@ -376,3 +376,44 @@ do schema. A rota de edição do painel **não garante isso** — grava `assetId
 tocar em `faces`. O teste passaria hoje e quebraria no dia em que o dono usasse a
 tela legitimamente. Removido, e o achado virou decisão pendente. **Antes de
 afirmar um invariante, procurar quem o escreve.**
+
+---
+
+## Rodada 5 do ciclo — a vistoria antes do Studio (2026-09-09)
+
+### Conferir antes de recomendar, agora como hábito
+A rodada 4 aprendeu isso do jeito caro. Aqui foi o primeiro passo: antes de
+propor qualquer coisa para o F0-2, verifiquei Studio instalado, Rojo instalado,
+o `default.project.json` cobrindo todo o `src/`, e **o place montando de
+verdade** — `rojo build` produz 62 instâncias. Não havia bloqueio.
+
+Descobrir isso mudou a rodada inteira: em vez de construir para destravar, ela
+passou a existir para **provar que já estava destravado** e deixar isso repetível.
+
+### O script descartável denuncia comando faltando (de novo)
+Escrevi três descartáveis para saber que não havia bloqueio. É exatamente o
+sintoma que a rodada 4 registrou. Virou `npm run vistoria`, que responde uma
+pergunta que nenhum comando respondia — **"consigo começar a sessão agora?"**.
+`npm run validar` cuida de contrato e dado; a vistoria cuida de AMBIENTE.
+
+E ela não morre com o F0-2: o ADR-P04 nomeia o suporte em máquina alheia como o
+custo dominante do produto. Uma vistoria que **nomeia o que falta, com o comando
+que resolve**, é a semente daquilo.
+
+### Impedimento e aviso não são a mesma coisa, e a diferença tem que chegar no exit code
+Ponte fora do ar se resolve sem sair da cadeira; Rojo faltando, não. Tratar os
+dois igual faria a vistoria mandar parar quando bastava um comando — e faria
+`npm run vistoria` falhar numa esteira que nunca vai ter ponte. A separação só
+vale se ela chega até o código de saída, e por isso virou teste.
+
+Eu tinha classificado a ponte como impedimento no primeiro rascunho, **contra o
+que o meu próprio spec havia decidido**. A review pegou.
+
+### Assert que persegue palavra, não comportamento — terceira vez
+"A vistoria não reimplementa a busca do Studio" virou `!/LOCALAPPDATA/`, e
+quebrou porque a palavra aparece numa MENSAGEM de erro — que é justamente onde
+ela deve aparecer. O assert certo persegue a reconstrução do caminho
+(`"Roblox", "Versions"`), não a menção.
+
+Padrão que já custou três rodadas: **quando um teste afirma "X não acontece",
+escrever o que X é em código, não a palavra que X usa.**

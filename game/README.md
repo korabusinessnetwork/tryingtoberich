@@ -6,6 +6,17 @@ sabe o que é presente nem quanto vale. Ver ADR-007.
 
 Dono exclusivo deste diretório. Ver `docs/01_ARQUITETURA`.
 
+## Antes de tudo: a vistoria
+
+```bash
+npm run vistoria
+```
+
+Confere Studio, Rojo, se o place **monta de verdade**, se a ponte responde e se
+o acervo está pronto — e nomeia o que falta, com o comando que resolve. O
+roteiro completo da primeira sessão está em
+`docs/09_BACKLOG/roteiro-da-sessao-no-studio.md`.
+
 ## Colocar no Studio
 
 O projeto usa [Rojo](https://rojo.space) para sincronizar os arquivos com o
@@ -58,7 +69,11 @@ leva o `BRIDGE_TOKEN` dentro (11_SEGURANCA).
 3. **Teste se o túnel é necessário.** Se o Studio alcançar
    `http://127.0.0.1:8787`, o túnel é opcional — e some com ele a única
    exposição do sistema à internet e um terço do orçamento de latência. Ver a
-   questão em aberto no ADR-002. Vale cinco minutos antes de configurar túnel.
+   questão em aberto no ADR-002.
+
+   Não faça isso à mão: `npm run sondar` confere a ponte deste lado primeiro e
+   imprime a sonda pronta para colar na barra de comandos do Studio. Ela separa
+   as quatro causas que se parecem, e sabe que **um 401 é resposta positiva**.
 
 ## Estrutura
 
@@ -67,13 +82,15 @@ src/shared/     contratos que os dois lados compartilham
   tipos.lua              validação do que vem da ponte + limites do tabuleiro
   eventos.lua            os RemoteEvent servidor ↔ cliente, num lugar só
   configuracao.lua       lê URL e token do ServerStorage, nunca de código
-  efeitos.lua            caixa de ferramentas das 20 animações
+  efeitos.lua            caixa de ferramentas das animações
   tokens.lua             GERADO de data/tokens.json
   indiceAnimacoes.lua    GERADO da tabela de biblioteca-animacoes.md
+  textos.lua             GERADO de data/i18n (ADR-P03)
 
 src/server/     o jogo de verdade
-src/client/     HUD, câmera e vestiário
-src/animacoes/  20 ModuleScripts, um por animação
+src/client/     barra da torre, câmera, flash, vestiário e o painel de afinar
+                (o HUD do espectador mora no overlay do OBS desde o ADR-015)
+src/animacoes/  um ModuleScript por animação
 ```
 
 Os dois arquivos `GERADO` saem de `npm run gerar`, na raiz do repositório.
@@ -106,7 +123,7 @@ npm run luau
 Sem isso, erro de sintaxe só aparece quando o Studio carrega o lugar — o que
 custa uma viagem ao Studio por arquivo. `--!strict` no topo é comentário e fica.
 
-## Adicionar a 21ª animação
+## Adicionar mais uma animação
 
 1. Criar o ModuleScript em `src/animacoes/`, com a ficha de metadados do
    contrato em `docs/03_REGRAS_DE_NEGOCIO/biblioteca-animacoes.md`.

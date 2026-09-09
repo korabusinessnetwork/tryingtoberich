@@ -59,6 +59,18 @@ celular. **Todo o Bloco 2 e o 3b são, hoje, código que nunca executou.**
 testador do painel e olhar.
 **Estimativa:** meio dia, e é aqui que vão aparecer os bugs reais da Fase 0.
 
+**Verificado em 2026-09-09** (rodada 5) que nada impede a sessão: Studio e Rojo
+instalados, e o place **monta** — `rojo build` produz 62 instâncias. Antes de
+sentar:
+
+```bash
+npm run vistoria
+```
+
+Ela confere ambiente, place, ponte e acervo, e nomeia o que falta com o comando
+que resolve. E o **roteiro** resolve F0-2, F0-7 e F0-4 numa sentada só:
+[`roteiro-da-sessao-no-studio.md`](./roteiro-da-sessao-no-studio.md).
+
 ### F0-3 · Subir painel e ponte juntos, no navegador
 **Por que bloqueia:** a camada de serviços do painel é testada com `fetch`
 substituído. **Os dois processos nunca se falaram de verdade.** Se o contrato
