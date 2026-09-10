@@ -90,3 +90,31 @@ sempre (ADR-P05).
 `PUT /api/idioma` — **não** um campo do PUT genérico de configuração, porque a
 gravação é parcial por campo e um PUT genérico faria trocar de idioma apagar a
 conta da live.
+
+---
+
+## Teste que abre sessão apaga o arquivo (desde 2026-09-09)
+
+`encerrarSessao()` **grava** em `data/sessoes/`, que é o histórico de lives que
+o painel mostra ao dono na página Histórico. Todo teste que abre uma sessão de
+verdade — e vários abrem, porque é assim que se exercita o start — precisa
+apagar o arquivo que ela deixou:
+
+```js
+const resumo = await nucleo.encerrarSessao();
+if (resumo?.sessaoId) await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));
+```
+
+Vale para `afterEach` também: fechar a sessão por segurança grava do mesmo jeito.
+
+**Por que a regra existe:** três vazamentos ao mesmo tempo — a maratona, o
+`afterEach` da correção do flake, e um anterior a eles em
+`painel-novo.test.mjs`. Resultado: **um arquivo por `npm test`**, e 188 sessões
+falsas acumuladas até 2026-09-10, contra 15 reais. O painel mostrava tudo
+misturado, e distinguir exigia abrir os JSON um a um.
+
+**Como reconhecer artefato de teste**, se acontecer de novo: sessão de 0
+segundos, 1 presente e `plataformaMaxima: 0` é o teste do painel; `presetId`
+começando com `teste-` é teste por definição. **Sessão real tem a torre
+andando** — foi por `plataformaMaxima > 0` que as 15 verdadeiras foram
+preservadas.
