@@ -1,0 +1,140 @@
+/**
+ * Como o console escreve número, data e dinheiro na tela.
+ *
+ * **Sem i18n, e nunca com i18n** (ADR-P05). O console tem um usuário e ele é
+ * brasileiro: `pt-BR` está cravado aqui de propósito, e cada string traduzida
+ * nesta superfície seria trabalho gasto em plateia de uma pessoa. Isto não é
+ * um `formatar.js` do painel com o idioma esquecido, é a decisão.
+ *
+ * Funções puras, todas. É o que permite testar a regra sem montar tela.
+ */
+
+/** O idioma da SUPERFÍCIE, não o do assinante. O do assinante é dado da ficha. */
+const LOCAL = "pt-BR";
+
+const VAZIO = "—";
+
+/** Dia e hora curtos: a tela compara linhas, e ano de quatro dígitos só ocupa. */
+export function dataHora(iso) {
+  if (!iso) return VAZIO;
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return VAZIO;
+  return new Intl.DateTimeFormat(LOCAL, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(data);
+}
+
+export function data(iso) {
+  if (!iso) return VAZIO;
+  const valor = new Date(iso);
+  if (Number.isNaN(valor.getTime())) return VAZIO;
+  return new Intl.DateTimeFormat(LOCAL, { day: "2-digit", month: "2-digit", year: "numeric" }).format(valor);
+}
+
+/**
+ * "há 3 dias", "há 2 h", "agora".
+ *
+ * A ficha pergunta "esse cliente está vivo?", e a resposta a essa pergunta é a
+ * DISTÂNCIA, não a data. A data absoluta continua ao lado, porque ela é a que
+ * se cola num e-mail de suporte.
+ */
+export function distancia(iso, agora = new Date()) {
+  if (!iso) return VAZIO;
+  const valor = new Date(iso);
+  if (Number.isNaN(valor.getTime())) return VAZIO;
+
+  const segundos = Math.round((agora.getTime() - valor.getTime()) / 1000);
+  const futuro = segundos < 0;
+  const absoluto = Math.abs(segundos);
+
+  if (absoluto < 60) return futuro ? "em instantes" : "agora";
+
+  const escalas = [
+    { limite: 3600, divisor: 60, unidade: "min" },
+    { limite: 86_400, divisor: 3600, unidade: "h" },
+    { limite: 2_592_000, divisor: 86_400, unidade: "d" },
+    { limite: Infinity, divisor: 2_592_000, unidade: "mês" },
+  ];
+  const escala = escalas.find((e) => absoluto < e.limite);
+  const quanto = Math.floor(absoluto / escala.divisor);
+  const unidade = escala.unidade === "mês" && quanto !== 1 ? "meses" : escala.unidade;
+
+  return futuro ? `em ${quanto} ${unidade}` : `há ${quanto} ${unidade}`;
+}
+
+/**
+ * Dinheiro. **Entra INTEIRO em centavos e a moeda vem ao lado.**
+ *
+ * Nunca ponto flutuante em nenhum ponto do caminho: o banco guarda centavo
+ * inteiro, a camada de dados soma centavo inteiro, e a divisão por 100 acontece
+ * aqui, no último instante antes de virar texto. Centavo em `float` é como
+ * centavo some sem ninguém ver.
+ */
+export function dinheiro(centavos, moeda = "USD") {
+  const inteiro = Number.isFinite(centavos) ? Math.round(centavos) : 0;
+  return new Intl.NumberFormat(LOCAL, {
+    style: "currency",
+    currency: moeda,
+    minimumFractionDigits: 2,
+  }).format(inteiro / 100);
+}
+
+export const numero = (valor) =>
+  Number.isFinite(valor) ? new Intl.NumberFormat(LOCAL).format(valor) : VAZIO;
+
+/** Campo ausente escrito de um jeito só na tela inteira. */
+export const ouVazio = (valor) => {
+  if (valor === null || valor === undefined) return VAZIO;
+  const texto = String(valor).trim();
+  return texto === "" ? VAZIO : texto;
+};
+
+/** O @ da TikTok é guardado sem arroba no banco, e sempre mostrado com ela. */
+export const arroba = (usuario) => (usuario ? `@${usuario}` : VAZIO);
+
+/** Como o console chama cada estado de licença, e a cor que ele merece. */
+export const ESTADO_DA_LICENCA = {
+  ativa: { texto: "Ativa", pastilha: "pastilha-ok" },
+  expirada: { texto: "Expirada", pastilha: "pastilha-atencao" },
+  cancelada: { texto: "Cancelada", pastilha: "pastilha-erro" },
+};
+
+/**
+ * Sem licença não é erro: é quem comprou e ainda não instalou. Pintar isso de
+ * vermelho faria o operador ligar para um cliente que não tem problema nenhum.
+ */
+export const SEM_LICENCA = { texto: "Sem licença", pastilha: "pastilha-neutra" };
+
+export const estadoDaLicenca = (estado) => ESTADO_DA_LICENCA[estado] ?? SEM_LICENCA;
+
+/** O idioma do PERFIL do assinante (ADR-P03), que não é o idioma do console. */
+export const NOME_DO_IDIOMA = { pt: "Português", es: "Espanhol", en: "Inglês" };
+
+export const idioma = (codigo) => NOME_DO_IDIOMA[codigo] ?? VAZIO;
+
+/**
+ * O que a tela diz quando a camada de dados falhou.
+ *
+ * Existe como mapa porque o motivo é do contrato e a frase é da tela: o
+ * operador precisa saber se o problema é dele (subir o console de novo) ou da
+ * Kora (esperar), e `motivo` cru não responde isso.
+ */
+export const MENSAGEM_DE_FALHA = {
+  console_offline: "O console não está no ar. Rode `npm run console` de novo.",
+  sem_configuracao: "Sem SUPABASE_URL ou sem a chave de serviço no .env.",
+  rede: "Não deu para falar com a base da Kora.",
+  timeout: "A base da Kora demorou demais para responder.",
+  http: "A base da Kora recusou a consulta.",
+  corpo_ilegivel: "A base da Kora respondeu algo que o console não entendeu.",
+  nao_encontrado: "Não existe assinante com esse identificador.",
+  pedido_invalido: "O console montou um pedido que a base recusou.",
+};
+
+export const mensagemDeFalha = (motivo) =>
+  MENSAGEM_DE_FALHA[motivo] ?? "Não deu para carregar. Veja o terminal do console.";
+
+export { VAZIO };

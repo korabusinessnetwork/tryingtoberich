@@ -1,0 +1,24 @@
+/* CampoDeBusca. Largura inteira da coluna: é a primeira coisa que o operador
+   toca ao abrir a tela para atender alguém. */
+
+.busca {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: var(--borda);
+}
+
+.busca-campo {
+  width: 100%;
+  background: var(--painel-fundo);
+}
+
+.busca-contagem {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  /* Altura reservada: a linha troca entre "Procurando…" e a contagem, e sem
+     isto a lista inteira pula dois pixels a cada tecla. */
+  min-height: 14px;
+}

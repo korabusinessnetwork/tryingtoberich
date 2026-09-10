@@ -1,0 +1,42 @@
+/* CabecalhoDoConsole. Nenhuma cor literal: tudo sai de token. */
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco);
+  padding: 10px 16px;
+  background: var(--painel-superficie);
+  border-bottom: var(--borda);
+}
+
+.cabecalho-identidade {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  /* Empurra pastilha e botão para a direita sem `margin-left: auto` em cada um. */
+  flex: 1 1 auto;
+}
+
+.cabecalho-titulo {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cabecalho-subtitulo {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* A pastilha da fonte não encolhe nunca. Ela é o aviso de que o dado da tela é
+   inventado, e um aviso cortado pela metade não avisa. */
+.cabecalho-fonte {
+  flex: 0 0 auto;
+}
+
+.cabecalho-atualizar {
+  flex: 0 0 auto;
+}

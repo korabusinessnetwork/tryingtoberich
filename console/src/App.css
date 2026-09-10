@@ -1,0 +1,32 @@
+/* App do console. A casca: cabeçalho fixo, abas, corpo que rola por dentro.
+
+   A página inteira NÃO rola. Quem rola é a lista, e depois a ficha, cada uma
+   por dentro: é o que mantém a busca e as abas sempre à vista enquanto o
+   operador procura alguém no fim de uma lista longa. */
+
+.console {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+
+.console-corpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--espaco);
+  overflow: hidden;
+}
+
+/* Lista à esquerda com largura fixa, ficha à direita com o que sobrar.
+
+   Fixa, e não fração: a lista precisa caber o @ e o e-mail sem quebrar, e uma
+   coluna que cresce com a janela só espalharia o mesmo texto. Quem ganha a tela
+   grande é a ficha, que é onde o operador lê. */
+.console-duas-colunas {
+  display: grid;
+  grid-template-columns: var(--largura-da-lista) minmax(0, 1fr);
+  gap: var(--espaco);
+  height: 100%;
+  min-height: 0;
+}

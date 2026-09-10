@@ -1,0 +1,49 @@
+/* NavegacaoDoConsole. Abas horizontais, densas, sem ícone.
+
+   Sem ícone de propósito: são quatro entradas de texto curto e um ícone só
+   ocuparia a largura que o rótulo usa para ser inequívoco. */
+
+.navegacao {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  background: var(--painel-superficie);
+  border-bottom: var(--borda);
+}
+
+.navegacao-aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  min-height: var(--alvo-minimo);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  /* A aba ativa é marcada por uma barra embaixo, não por fundo. Barra é a
+     mesma forma que a borda inferior da faixa, e o olho segue a linha. */
+  border-bottom: 2px solid transparent;
+  color: var(--painel-texto-secundario);
+  font-size: 13px;
+}
+
+.navegacao-aba:hover {
+  color: var(--painel-texto-primario);
+}
+
+.navegacao-aba-ativa {
+  color: var(--painel-texto-primario);
+  border-bottom-color: var(--painel-texto-primario);
+  font-weight: 600;
+}
+
+.navegacao-marca {
+  padding: 1px 5px;
+  border: var(--borda);
+  border-radius: var(--raio);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--painel-texto-secundario);
+}

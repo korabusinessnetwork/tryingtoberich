@@ -1,0 +1,39 @@
+/* PaginaDaOnda3. Bloco de texto centrado, com largura de leitura.
+
+   Sem esqueleto de tabela e sem gráfico cinza de propósito: esqueleto de tela é
+   indistinguível de tela que carregou e não achou nada. */
+
+.onda3 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: start;
+  max-width: 64ch;
+  padding: 20px 22px;
+  border-style: dashed;
+}
+
+.onda3-titulo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.onda3-resumo,
+.onda3-porque,
+.onda3-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.onda3-porque,
+.onda3-nota {
+  font-size: 12px;
+}
+
+.onda3-marca {
+  align-self: flex-start;
+  margin: 4px 0;
+}
