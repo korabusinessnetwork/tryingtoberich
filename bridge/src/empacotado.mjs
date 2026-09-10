@@ -22,10 +22,10 @@
 
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { EMPACOTADO, RAIZ, embutido, indiceEmbutido } from "./empacotamento.mjs";
+import { abrirPainel } from "./janela.mjs";
 import { escreverBinarioAtomico, existe, lerBinario } from "./repos/arquivo.mjs";
 import { principal } from "./index.mjs";
 
@@ -91,22 +91,6 @@ async function garantirEnv() {
   return true;
 }
 
-/** Abre o navegador. Falhar aqui não derruba nada: a URL fica escrita na tela. */
-function abrirNavegador(url) {
-  const comando =
-    process.platform === "win32"
-      ? { exe: "cmd", args: ["/c", "start", "", url] }
-      : { exe: process.platform === "darwin" ? "open" : "xdg-open", args: [url] };
-
-  try {
-    const processo = spawn(comando.exe, comando.args, { stdio: "ignore", detached: true });
-    processo.on("error", () => {});
-    processo.unref();
-  } catch {
-    /* a URL já está impressa */
-  }
-}
-
 /**
  * Segura a janela aberta.
  *
@@ -142,7 +126,13 @@ async function arrancar() {
   const url = `http://${subiu.config.host}:${subiu.config.portaPainel}/`;
   console.log(`\nPainel: ${url}`);
   console.log("Deixe esta janela aberta enquanto estiver ao vivo. Fechar aqui desliga o jogo.");
-  abrirNavegador(url);
+
+  // O perfil da janela mora ao lado do exe: é desta instalação, e vai junto
+  // quando a pasta for copiada para um pendrive.
+  const como = await abrirPainel(url, { perfil: path.join(RAIZ, "janela") });
+  if (como === "navegador") {
+    console.log("(sem Chrome, Edge ou Brave instalado: abri no navegador padrão, com barra de endereço)");
+  }
   return true;
 }
 

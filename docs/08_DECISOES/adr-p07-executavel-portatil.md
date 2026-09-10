@@ -36,12 +36,13 @@ muda é a embalagem, não o produto.** O instalador continua sendo o destino
                                KoraStreamGames.exe   94 MB
                                LEIA-ME.txt
 
-O cliente copia a pasta para onde quiser, dá duplo clique, e o painel abre no
-navegador. O primeiro arranque escreve, ao lado do exe:
+O cliente copia a pasta para onde quiser, dá duplo clique, e o painel abre numa
+janela de aplicativo. O primeiro arranque escreve, ao lado do exe:
 
     .env      config da instalação, com um BRIDGE_TOKEN sorteado na hora
     data/     o que é do streamer: presets, acervo, histórico
     game/     a fonte que o Rojo monta dentro do Studio
+    janela/   perfil da janela do painel; descartável
 
 ### Como é feito, com o que o Node já traz
 
@@ -73,6 +74,36 @@ O painel é o único programa que **não** é extraído: ele é servido de dentr
 exe, na mesma porta da `/api`. Extrair criaria uma cópia editável que envelhece
 sozinha; servindo de dentro, painel e ponte não têm como dessincronizar — e de
 quebra some o CORS, porque painel e API passam a ser a mesma origem.
+
+### O painel abre como aplicativo, não como aba
+
+Abrir o navegador padrão numa aba entrega o produto com barra de endereço,
+favoritos, as outras vinte abas do streamer e um `127.0.0.1:8788` no topo — tudo
+dizendo "isto é uma página", quando o que a pessoa comprou foi um programa.
+
+**A janela é aberta com `--app=URL` num Chromium que já esteja instalado**
+(Chrome, Edge ou Brave, nessa ordem — `bridge/src/janela.mjs`). É o mesmo
+mecanismo dos "aplicativos web" que o próprio Chrome instala: janela sem barra
+nenhuma, ícone próprio na barra de tarefas, redimensionável, fechável sem
+desligar a ponte.
+
+Junto vai `--user-data-dir=janela/`, ao lado do exe. É o que separa a janela do
+navegador do streamer: perfil próprio, ícone que não fica agrupado com as abas
+dele, e o idioma escolhido no painel guardado **com o produto**, não misturado
+ao histórico pessoal. A pasta é descartável — apagar só perde o tamanho da
+janela.
+
+Sem Chromium nenhum, cai no navegador padrão e diz isso na tela. Feio, mas o
+streamer nunca fica sem painel.
+
+O mesmo caminho vale para o `npm start --abrir` do atalho da área de trabalho:
+o atalho não pode abrir uma coisa e o exe outra.
+
+**O que isto não resolve:** a janela preta do console continua aparecendo — ela
+é o motor, e é onde a mensagem de erro aparece quando algo não sobe. Escondê-la
+exige virar o executável para o subsistema GUI, e aí uma falha de arranque vira
+"clico e não acontece nada". Fica para quando houver um log em arquivo para onde
+mandar o erro.
 
 ### Roblox Studio e Rojo continuam sendo instalação separada
 
@@ -145,4 +176,5 @@ cliente clica passa a ser um arquivo de texto que abre um terminal preto. O
 produto é vendido; a porta de entrada precisa ser um exe.
 
 **Electron.** Resolveria a janela, mas troca 94 MB por 200 MB e traz um Chromium
-inteiro para exibir uma tela que o navegador do cliente já exibe.
+inteiro para exibir uma tela que o navegador do cliente já exibe — e o `--app`
+do Chromium instalado dá a mesma janela por zero byte.

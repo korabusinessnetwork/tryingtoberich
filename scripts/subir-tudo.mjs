@@ -25,6 +25,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import { abrirPainel } from "../bridge/src/janela.mjs";
 import { RAIZ } from "../bridge/src/repos/arquivo.mjs";
 
 const executar = promisify(execFile);
@@ -125,22 +126,6 @@ function matarArvore(processo) {
   }
 }
 
-/**
- * Abre a URL no navegador padrão.
- *
- * `cmd /c start` e não `explorer`: o explorer devolve código de saída não-zero
- * mesmo quando deu certo, e isso viraria erro falso no log.
- */
-function abrirNavegador(url) {
-  const comando = process.platform === "win32"
-    ? { exe: "cmd", args: ["/c", "start", "", url] }
-    : { exe: process.platform === "darwin" ? "open" : "xdg-open", args: [url] };
-
-  const processo = spawn(comando.exe, comando.args, { stdio: "ignore", detached: true });
-  processo.on("error", () => console.log(`[kora] não consegui abrir o navegador. Abra à mão: ${url}`));
-  processo.unref();
-}
-
 function encerrar(codigo) {
   if (encerrando) return;
   encerrando = true;
@@ -218,7 +203,9 @@ async function principal() {
     if (!url) return;
     jaAbriu = true;
     console.log(`[kora] abrindo ${url}`);
-    abrirNavegador(url);
+    // Mesma janela de aplicativo do executável portátil (ADR-P07): o atalho da
+    // área de trabalho não pode abrir uma coisa e o exe outra.
+    abrirPainel(url, { perfil: path.join(RAIZ, "janela") });
   });
 }
 

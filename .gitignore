@@ -6,6 +6,10 @@ dist/
 # do executavel. Sao subprodutos do build, refeitos do zero a cada vez.
 build/
 
+# Perfil do navegador que abre o painel como aplicativo (ADR-P07). E do
+# navegador mesmo: cache, cookie e preferencia de janela. Nada de codigo.
+janela/
+
 # Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
 data/sessoes/*
 !data/sessoes/.gitkeep.md

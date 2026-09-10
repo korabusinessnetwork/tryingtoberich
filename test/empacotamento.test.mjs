@@ -21,6 +21,13 @@ import { RAIZ } from "../bridge/src/repos/arquivo.mjs";
 import { EMPACOTADO, embutido, indiceEmbutido } from "../bridge/src/empacotamento.mjs";
 import { eDoPrograma, montarEnv, semear } from "../bridge/src/empacotado.mjs";
 import { cacheDoArquivo, resolverChave, tipoDoArquivo } from "../bridge/src/http/painel-embutido.mjs";
+import {
+  abrirPainel,
+  acharNavegador,
+  argumentosDaJanela,
+  candidatosDeNavegador,
+  comandoDoNavegadorPadrao,
+} from "../bridge/src/janela.mjs";
 import { listarSemente, removerAssinatura } from "../scripts/empacotar.mjs";
 
 const temporario = () => mkdtemp(path.join(os.tmpdir(), "kora-portatil-"));
@@ -195,6 +202,73 @@ test("a semente não leva lixo de teste para o cliente", async () => {
   // versionado sem querer. Ele ia junto no exe e aparecia na lista do cliente.
   const lista = await listarSemente();
   assert.ok(!lista.includes("data/presets/new.json"));
+});
+
+test("a janela do painel é aplicativo, não aba", () => {
+  // `--app` é o que tira barra de endereço, favoritos e as outras vinte abas do
+  // streamer da frente do produto. Sem ele o cliente vê um site em
+  // `127.0.0.1`, que é exatamente o que ele NÃO comprou.
+  const args = argumentosDaJanela("http://127.0.0.1:8788/", "C:/kora/janela");
+
+  assert.ok(args.includes("--app=http://127.0.0.1:8788/"), "sem --app é aba comum");
+  assert.ok(args.includes("--user-data-dir=C:/kora/janela"), "perfil próprio: ícone próprio na barra de tarefas");
+  assert.ok(args.includes("--no-first-run"), "senão a boas-vindas do navegador abre na frente do painel");
+  assert.ok(!args.some((a) => a.startsWith("--disable-web-security")), "nada de afrouxar o navegador do cliente");
+});
+
+test("procura Chrome, Edge e Brave — nessa ordem, e nos três lugares onde eles se instalam", () => {
+  const env = { ProgramFiles: "C:/PF", "ProgramFiles(x86)": "C:/PF86", LOCALAPPDATA: "C:/LA" };
+  const lista = candidatosDeNavegador("win32", env);
+
+  const nomes = lista.map((c) => path.basename(c));
+  assert.equal(nomes[0], "chrome.exe", "Chrome primeiro: é o que a maioria já usa");
+  assert.ok(nomes.includes("msedge.exe"), "Edge: é o único que está SEMPRE no Windows");
+  assert.ok(nomes.indexOf("chrome.exe") < nomes.indexOf("msedge.exe"), "Chrome antes do Edge");
+  assert.equal(lista.length, 9, "três navegadores × três pastas de instalação");
+});
+
+test("fora do Windows a busca não devolve caminho de Windows", () => {
+  for (const plataforma of ["darwin", "linux"]) {
+    for (const caminho of candidatosDeNavegador(plataforma, {})) {
+      assert.ok(!caminho.includes(".exe"), `${plataforma}: ${caminho}`);
+    }
+  }
+});
+
+test("com Chromium, o que é executado é a janela de aplicativo", async () => {
+  const executados = [];
+  const como = await abrirPainel("http://x/", {
+    perfil: "C:/kora/janela",
+    navegador: "C:/chrome.exe",
+    disparar: (exe, args) => (executados.push([exe, args]), true),
+  });
+
+  assert.equal(como, "aplicativo");
+  assert.equal(executados.length, 1, "uma janela, não duas");
+  assert.equal(executados[0][0], "C:/chrome.exe");
+  assert.ok(executados[0][1].includes("--app=http://x/"));
+});
+
+test("sem Chromium nenhum, cai no navegador padrão em vez de deixar o streamer sem tela", async () => {
+  const executados = [];
+  const como = await abrirPainel("http://x/", {
+    perfil: "C:/kora/janela",
+    navegador: false,
+    disparar: (exe, args) => (executados.push([exe, args]), true),
+  });
+
+  assert.equal(como, "navegador");
+  assert.deepEqual(executados[0], ["cmd", ["/c", "start", "", "http://x/"]]);
+});
+
+test("o navegador padrão do Windows passa o título vazio antes da URL", () => {
+  // Sem o "" o `start` trata a URL como título da janela e não abre nada.
+  assert.deepEqual(comandoDoNavegadorPadrao("http://x/", "win32").args, ["/c", "start", "", "http://x/"]);
+  assert.deepEqual(comandoDoNavegadorPadrao("http://x/", "darwin"), { exe: "open", args: ["http://x/"] });
+});
+
+test("achar navegador devolve null quando nenhum candidato existe", async () => {
+  assert.equal(await acharNavegador(["C:/nao/existe/chrome.exe"]), null);
 });
 
 /** Um PE mínimo: só o suficiente para a tabela de certificados existir. */

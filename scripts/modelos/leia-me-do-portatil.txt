@@ -18,8 +18,12 @@ COMEÇANDO
 2. Uma janela preta abre e fica aberta. É o motor. NÃO FECHE enquanto
    estiver ao vivo — fechar ali desliga o jogo.
 
-3. O painel abre sozinho no navegador. Se não abrir, o endereço está
-   escrito na janela preta: http://127.0.0.1:8788
+3. O painel abre numa JANELA PRÓPRIA, com ícone na barra de tarefas e sem
+   barra de endereço. Ela usa o Chrome (ou o Edge) que já está na máquina,
+   só que em modo aplicativo — não é uma aba, e fechá-la não desliga nada.
+
+   Se ela não abrir, o endereço está escrito na janela preta:
+   http://127.0.0.1:8788
 
 4. No painel, informe o @ da sua conta da TikTok e monte o seu preset.
 
@@ -55,6 +59,8 @@ O QUE APARECE NA PASTA DEPOIS DO PRIMEIRO USO
             não copie para outra máquina.
   data/     tudo que é seu — presets, acervo, histórico das lives.
   game/     a fonte do jogo, que o Rojo monta dentro do Studio.
+  janela/   a janela do painel guarda o tamanho e o idioma aqui.
+            Pode apagar: nasce de novo.
 
 FAZER BACKUP = copiar a pasta data/. É só isso.
 
