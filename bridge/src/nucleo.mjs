@@ -139,6 +139,8 @@ export class Nucleo {
         log.info("placar_por_presente", { efeito: comando.tipo });
       },
       aoDescartar: (d) => log.info("presente_descartado", { slot: d.slot, motivo: d.motivo }),
+      // O que a plateia mandou por slot, antes de o combate juntar (ADR-012).
+      aoCasar: (casado) => this.#sessao?.registrarCasado(casado),
     });
   }
 

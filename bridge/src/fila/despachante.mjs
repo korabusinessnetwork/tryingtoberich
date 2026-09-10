@@ -51,6 +51,7 @@ export class Despachante {
     aoDescartar = semAcao,
     aoNaoMapeado = semAcao,
     aoComando = semAcao,
+    aoCasar = semAcao,
     combateMaxMs = REGRAS.COMBATE_MAX_MS,
   } = {}) {
     this.combateMaxMs = combateMaxMs;
@@ -60,6 +61,7 @@ export class Despachante {
     this.aoDescartar = aoDescartar;
     this.aoNaoMapeado = aoNaoMapeado;
     this.aoComando = aoComando;
+    this.aoCasar = aoCasar;
   }
 
   /**
@@ -181,6 +183,21 @@ export class Despachante {
       this.#naoMapeados.set(chave, atualizado);
       this.aoNaoMapeado({ presenteNome: chave, ...atualizado });
       return { tipo: "nao_mapeado", presenteNome: chave };
+    }
+
+    //[[ Casou com um slot. Avisa ANTES de cooldown e de combate.
+    //
+    // O resumo desenha "Presentes por slot" como gráfico de barras — o
+    // streamer olha ali para decidir quais presentes ficam nos 6 slots. Contar
+    // no DESPACHO distorcia a comparação, e não de forma uniforme: presente
+    // popular chega em rajada, coalesce mais (ADR-012), e a barra dele encolhe
+    // mais que a dos outros. O gráfico chegava a REORDENAR, e o streamer podia
+    // tirar justamente o presente que a plateia mais manda.
+    //
+    // Presente da tabela de movimento (ADR-016) não tem slot e fica fora: o
+    // gráfico é sobre os slots escolhidos.
+    if (disparo.slot != null) {
+      this.aoCasar({ slot: disparo.slot, repeticoes: disparo.repeticoes, presenteId: disparo.presenteId });
     }
 
     const liberadoEm = this.#cooldowns.get(disparo.slot) ?? 0;

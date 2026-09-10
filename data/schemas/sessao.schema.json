@@ -196,7 +196,7 @@
           "description": "Quantas ANIMAÇÕES o jogo tocou. NÃO é quantos presentes chegaram: presente que perde combate (ADR-012), que cai em cooldown ou que coalesce com outro vira um despacho só. Para julgar o portão da Fase 0 — 'os presentes aumentaram?' — use presentesRecebidos."
         },
         "presentesPorSlot": {
-          "description": "Contagem por posição de slot, 1 a 24. A chave é texto porque é chave de objeto JSON; o padrão é o mesmo teto do preset, e mexer num sem mexer no outro quebra a gravação da sessão no Stop.",
+          "description": "Quantos presentes CHEGARAM para cada slot, contando repetição de combo (R4) — não quantas animações tocaram. O painel desenha isto como barra comparativa e o streamer decide por ali quais presentes ficam nos 6 slots: contar despacho encolheria mais a barra do presente popular, que é o que mais coalesce no combate (ADR-012), e podia inverter a ordem do gráfico. A chave é texto porque é chave de objeto JSON. Presente da tabela de movimento (ADR-016) não tem slot e fica de fora.",
           "type": "object",
           "additionalProperties": false,
           "patternProperties": {

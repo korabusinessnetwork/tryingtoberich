@@ -587,3 +587,18 @@ animações**. Nove vezes de diferença, na linha que decide o projeto.
 live sem o jogo — e ela não precisa do Studio: a ponte conecta na live e conta
 mesmo sem Roblox do outro lado. Verificado. Estava faltando no roteiro, o que
 deixaria o portão sem base de comparação justamente no dia de julgá-lo.
+
+### O mesmo engano estava no gráfico, e ali ele REORDENAVA
+`presentesPorSlot` também contava despacho. E o painel desenha isso como
+**barra comparativa**, que o streamer usa para decidir quais presentes ficam nos
+6 slots.
+
+A distorção não era uniforme: presente popular chega em rajada, coalesce mais no
+combate (ADR-012), e a barra dele encolhe **mais que a dos outros**. O gráfico
+chegava a inverter a ordem — dez presentes num slot podiam aparecer como uma
+barra menor que três em outro. A decisão errada colada nisso: **tirar dos slots
+justamente o presente que a plateia mais manda.**
+
+Contar no casamento, e não no despacho, custou um callback (`aoCasar`) e umas 15
+linhas. O que custou de verdade foi perguntar de novo: **"que decisão alguém
+toma olhando este número?"** — e não só "o que este número é".

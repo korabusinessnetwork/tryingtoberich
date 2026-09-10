@@ -63,13 +63,25 @@ export function reduzirAoResumo(sessao, encerradaEm) {
   const eventos = sessao.eventos ?? [];
   const comLatencia = eventos.filter((e) => typeof e.latenciaMs === "number");
 
-  const presentesPorSlot = {};
-  for (const evento of eventos) {
-    // Presente da tabela de movimento (ADR-016) não ocupa slot: conta no total
-    // e fica fora deste mapa, que é sobre os 6 escolhidos. Sem esta linha ele
-    // viraria a chave "null", que o schema do resumo recusa.
-    if (evento.slot == null) continue;
-    presentesPorSlot[evento.slot] = (presentesPorSlot[evento.slot] ?? 0) + 1;
+  //[[ Presentes CHEGADOS por slot, não animações tocadas.
+  //
+  // O painel desenha isto como gráfico de barras comparativo, e o streamer
+  // decide por ali quais presentes ficam nos 6 slots. Contar despacho
+  // distorcia a comparação de forma DESIGUAL — presente popular chega em
+  // rajada, coalesce mais (ADR-012), e a barra dele encolhia mais que a dos
+  // outros, a ponto de reordenar o gráfico.
+  //
+  // A reserva pelos eventos existe para sessão que ficou em memória de antes
+  // desta mudança: melhor o número antigo que nenhum. ]]
+  let presentesPorSlot = { ...(sessao.recebidosPorSlot ?? {}) };
+  if (Object.keys(presentesPorSlot).length === 0) {
+    for (const evento of eventos) {
+      // Presente da tabela de movimento (ADR-016) não ocupa slot: conta no
+      // total e fica fora deste mapa, que é sobre os slots escolhidos. Sem
+      // esta linha ele viraria a chave "null", que o schema recusa.
+      if (evento.slot == null) continue;
+      presentesPorSlot[evento.slot] = (presentesPorSlot[evento.slot] ?? 0) + 1;
+    }
   }
 
   const duracaoSegundos = Math.max(
@@ -83,7 +95,7 @@ export function reduzirAoResumo(sessao, encerradaEm) {
   // `presentesRecebidos` e `moedasRecebidas` vazarem no spread faria o arquivo
   // inteiro ser recusado na gravação — exatamente o BUG-001, em que dois campos
   // novos derrubavam o payload todo e a rota respondia sucesso mesmo assim. ]]
-  const { plataformaReferencia, presentesRecebidos, moedasRecebidas, ...semPosicaoCorrente } = sessao;
+  const { plataformaReferencia, presentesRecebidos, moedasRecebidas, recebidosPorSlot, ...semPosicaoCorrente } = sessao;
   return {
     ...semPosicaoCorrente,
     encerradaEm,

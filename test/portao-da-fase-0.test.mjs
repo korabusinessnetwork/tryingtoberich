@@ -114,3 +114,61 @@ test("o schema DIZ que totalPresentes não é o número do portão", async () =>
   assert.match(resumo.totalPresentes.description, /presentesRecebidos/, "e para onde mandar quem quer o outro");
   assert.match(resumo.presentesRecebidos.description, /portão da Fase 0/i, "e o outro diz para que serve");
 });
+
+// ------------------------------------------- o gráfico "Presentes por slot"
+
+test("o gráfico por slot conta o que CHEGOU, não o que animou", () => {
+  const sessao = novaSessao();
+
+  // O slot 1 é o popular: dez presentes chegam, e o combate junta quase tudo.
+  for (let i = 0; i < 10; i += 1) sessao.registrarCasado({ slot: 1, repeticoes: 1 });
+  // O slot 2 é o tranquilo: três presentes, cada um com o boneco livre.
+  for (let i = 0; i < 3; i += 1) sessao.registrarCasado({ slot: 2, repeticoes: 1 });
+
+  // Só um despacho do slot 1 (nove coalesceram) e três do slot 2.
+  sessao.registrarDisparo({ emitidoEm: Date.now(), slot: 1, presenteId: "a", repeticoes: 1, delta: 20, animacaoId: "x" });
+  for (let i = 0; i < 3; i += 1) {
+    sessao.registrarDisparo({ emitidoEm: Date.now(), slot: 2, presenteId: "b", repeticoes: 1, delta: 10, animacaoId: "y" });
+  }
+
+  const { resumo } = reduzirAoResumo(sessao.instantaneo, new Date().toISOString());
+
+  assert.equal(resumo.presentesPorSlot["1"], 10, "o slot popular mostra os dez que chegaram");
+  assert.equal(resumo.presentesPorSlot["2"], 3);
+
+  // O ponto: por DESPACHO o gráfico se inverteria — slot 1 com 1 barra e slot 2
+  // com 3 —, e o streamer tiraria dos slots justamente o presente mais mandado.
+  assert.ok(
+    resumo.presentesPorSlot["1"] > resumo.presentesPorSlot["2"],
+    "a ordem do gráfico tem que refletir a plateia, não a coalescência",
+  );
+});
+
+test("combo conta as repetições que ele é, também por slot", () => {
+  const sessao = novaSessao();
+  sessao.registrarCasado({ slot: 3, repeticoes: 6 });
+
+  const { resumo } = reduzirAoResumo(sessao.instantaneo, new Date().toISOString());
+  assert.equal(resumo.presentesPorSlot["3"], 6, "seis presentes, não um combo");
+});
+
+test("presente da tabela de movimento não entra no gráfico dos slots", () => {
+  // ADR-016: ele move a torre mas não ocupa slot. Entrar aqui viraria a chave
+  // "null", que o schema recusa, e sujaria a comparação entre os slots.
+  const sessao = novaSessao();
+  sessao.registrarCasado({ slot: null, repeticoes: 1 });
+  sessao.registrarCasado({ slot: 2, repeticoes: 1 });
+
+  const { resumo } = reduzirAoResumo(sessao.instantaneo, new Date().toISOString());
+  assert.deepEqual(Object.keys(resumo.presentesPorSlot), ["2"]);
+});
+
+test("o contador por slot não vaza para a raiz da sessão gravada", async () => {
+  const { validar } = await criarValidador();
+  const sessao = novaSessao();
+  sessao.registrarCasado({ slot: 1, repeticoes: 2 });
+
+  const reduzida = reduzirAoResumo(sessao.instantaneo, new Date().toISOString());
+  assert.equal(reduzida.recebidosPorSlot, undefined, "a raiz é additionalProperties: false");
+  assert.deepEqual(validar("sessao", reduzida), []);
+});

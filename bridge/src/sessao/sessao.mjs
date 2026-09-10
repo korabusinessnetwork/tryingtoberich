@@ -44,6 +44,9 @@ export class Sessao {
       // quando mais presente chega junto, e é quando mais coalesce. ]]
       presentesRecebidos: 0,
       moedasRecebidas: 0,
+      // Presentes CHEGADOS por slot, para o gráfico do resumo comparar o que a
+      // plateia manda — não o que o jogo conseguiu animar.
+      recebidosPorSlot: {},
     };
   }
 
@@ -53,7 +56,12 @@ export class Sessao {
 
   /** Cópia rasa, para o painel e para o teste sem deixar ninguém mexer no estado. */
   get instantaneo() {
-    return { ...this.#sessao, naoMapeados: [...this.#sessao.naoMapeados], eventos: [...this.#sessao.eventos] };
+    return {
+      ...this.#sessao,
+      naoMapeados: [...this.#sessao.naoMapeados],
+      eventos: [...this.#sessao.eventos],
+      recebidosPorSlot: { ...this.#sessao.recebidosPorSlot },
+    };
   }
 
   /**
@@ -107,6 +115,20 @@ export class Sessao {
     const vezes = Number.isFinite(repeticoes) && repeticoes > 0 ? Math.floor(repeticoes) : 1;
     this.#sessao.presentesRecebidos += vezes;
     if (Number.isFinite(moedas) && moedas > 0) this.#sessao.moedasRecebidas += Math.floor(moedas) * vezes;
+  }
+
+  /**
+   * Um presente casou com um slot, antes de cooldown e de combate.
+   *
+   * Separado de `registrarDisparo` porque as perguntas são outras: aquele
+   * responde "o que o jogo tocou", este responde "o que a plateia mandou neste
+   * slot". Rajada conta as N repetições que ela é (R4).
+   */
+  registrarCasado({ slot, repeticoes } = {}) {
+    if (slot == null) return;
+    const vezes = Number.isFinite(repeticoes) && repeticoes > 0 ? Math.floor(repeticoes) : 1;
+    const chave = String(slot);
+    this.#sessao.recebidosPorSlot[chave] = (this.#sessao.recebidosPorSlot[chave] ?? 0) + vezes;
   }
 
   /** F2.4 — o que o streamer está deixando na mesa. Só contagem, sem doador. */
