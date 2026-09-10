@@ -17,3 +17,6 @@
 2026-09-10 · maratona · medido que a camada da Kora nao entrou no caminho critico: p95 de 2ms num orcamento de 1000ms
 2026-09-10 · conferencia · varri os 16 ADRs de fundacao contra o codigo. Todos tem implementacao, e o ADR-009 e o unico cuja garantia nao esta em codigo e sim no validador de contratos, que recusa mapa nao jogavel sem presente. A afirmacao que eu tinha escrito em TAREFAS ("001 a 016 ja estao feitos") se confirma, e agora foi checada em vez de assumida.
 
+
+- 2026-09-10T17:21:52.716Z hook: liberou a parada após 3 bloqueios sem progresso
+2026-09-10 · C05 a C08 e M03 · console v1 completo e integrado; exercitado contra o Postgres de verdade, incluindo a busca e a troca de plano · 764 testes verdes

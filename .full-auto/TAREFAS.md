@@ -25,10 +25,10 @@ três dívidas conhecidas do ADR-P03.
 - [x] C02 Camada de dados do console | trilha: console | depende: M01 | pronto quando: lê do Supabase por REST com a chave de serviço vinda do `.env`, e o adaptador FALSO está ativo por padrão, com dado de exemplo realista
 - [x] C03 Item 1, lista de assinantes | trilha: console | depende: C01, C02 | pronto quando: a lista abre e a busca por usuário da TikTok, e-mail ou licença filtra
 - [x] C04 Item 2, ficha individual | trilha: console | depende: C03 | pronto quando: a ficha mostra status, plano, início, última conexão, modalidades, idioma e versão instalada
-- [ ] C05 Item 5, logs de evento e de ação administrativa | trilha: console | depende: C01, C02 | pronto quando: a tela lista os dois, o log administrativo é imutável no banco, e há teste provando que ele não aceita update nem delete
-- [ ] C06 Item 6, saúde de conexão | trilha: console | depende: C01, C02 | pronto quando: mostra quantos clientes conectados agora e quantas quedas em 24h, alimentado pela telemetria que a ponte já manda
-- [ ] C07 Item 3, edição de plano | trilha: console | depende: C04 | pronto quando: a ação escreve pelo adaptador da Lemon Squeezy (falso por padrão) e registra no log administrativo
-- [ ] C08 Item 4, faturamento | trilha: console | depende: C02 | pronto quando: MRR, vendas do mês e cancelamentos aparecem, lidos do espelho que o webhook alimenta, com o webhook pronto e documentado
+- [x] C05 Item 5, logs de evento e de ação administrativa | trilha: console | depende: C01, C02 | pronto quando: a tela lista os dois, o log administrativo é imutável no banco, e há teste provando que ele não aceita update nem delete
+- [x] C06 Item 6, saúde de conexão | trilha: console | depende: C01, C02 | pronto quando: mostra quantos clientes conectados agora e quantas quedas em 24h, alimentado pela telemetria que a ponte já manda
+- [x] C07 Item 3, edição de plano | trilha: console | depende: C04 | pronto quando: a ação escreve pelo adaptador da Lemon Squeezy (falso por padrão) e registra no log administrativo
+- [x] C08 Item 4, faturamento | trilha: console | depende: C02 | pronto quando: MRR, vendas do mês e cancelamentos aparecem, lidos do espelho que o webhook alimenta, com o webhook pronto e documentado
 
 ## Fase 2: o que falta do produto
 
@@ -39,7 +39,7 @@ três dívidas conhecidas do ADR-P03.
 
 ## Fase 3: integração e fechamento (maestro)
 
-- [ ] M03 Integração das ondas | trilha: base | depende: todas | pronto quando: as branches das frentes estão integradas, `npm test`, `npm run validar` e `npm run luau` verdes
+- [x] M03 Integração das ondas | trilha: base | depende: todas | pronto quando: as branches das frentes estão integradas, `npm test`, `npm run validar` e `npm run luau` verdes
 - [ ] M04 Verificação final de verdade | trilha: base | depende: M03 | pronto quando: o executável é montado, aberto, e eu passo pelo fluxo principal na tela, mais o console aberto no navegador
 - [ ] M05 Relatório final | trilha: base | depende: M04 | pronto quando: `.full-auto/RELATORIO-FINAL.md` escrito e `ESTADO.md` em `CONCLUIDO`
 

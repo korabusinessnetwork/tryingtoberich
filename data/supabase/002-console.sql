@@ -215,6 +215,7 @@ select
   a.usuario_tiktok,
   a.nome,
   a.idioma,
+  a.lemon_customer_id,
   a.criado_em,
   l.chave                          as licenca,
   l.estado                         as licenca_estado,
