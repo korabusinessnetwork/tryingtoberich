@@ -24,6 +24,9 @@ no código. Use `adr-000-template.md` para criar a próxima.
 
 ## Série P — camada de produto
 
+**A série está fechada: os oito estão aceitos.** O P06 era o último em aberto e
+foi decidido em 2026-09-10.
+
 Decisões sobre transformar a fundação acima em algo que outro streamer compra e
 usa sozinho. Abertas pelo `docs/00_VISAO/plano-de-produto.md` em 2026-09-09. A
 série numérica continua valendo inteira: nenhuma decisão da série P revoga uma
@@ -36,6 +39,6 @@ decisão de fundação.
 | [P03](./adr-p03-i18n-por-chave.md) | i18n por chave em PT/ES/EN, funil só em inglês na Fase 1 | Aceito |
 | [P04](./adr-p04-distribuicao-em-roblox.md) | Distribuição: o cliente roda no Roblox Studio dele | Aceito |
 | [P05](./adr-p05-console-do-operador.md) | Console do operador: a fronteira do v1, congelada em 6 itens | Aceito |
-| [P06](./adr-p06-uso-comercial-da-captura.md) | Uso comercial da captura não oficial (estende ADR-006) | **Proposto — aguarda o dono** |
+| [P06](./adr-p06-uso-comercial-da-captura.md) | Uso comercial da captura não oficial (estende ADR-006) | Aceito, com cinco mitigações obrigatórias |
 | [P07](./adr-p07-executavel-portatil.md) | Um programa de verdade (Electron), portátil primeiro; o instalador do P04 vem depois | Aceito |
 | [P08](./adr-p08-carencia-de-licenca.md) | Carência de 14 dias: licença ativa que não pôde ser reconfirmada continua valendo | Aceito |

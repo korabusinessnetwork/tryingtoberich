@@ -1,11 +1,16 @@
 # ADR-P06 — Uso comercial da captura não oficial: o que a API gerenciada resolve e o que não resolve
 
-**Status**: **Proposto — aguarda decisão do dono** · **Data**: 2026-09-09
-**Estende**: ADR-006 · **Relacionado**: ADR-P01, ADR-P04
+**Status**: **Aceito** · **Proposto em**: 2026-09-09 · **Decidido em**: 2026-09-10
+**Decisor**: Matheus Bonato · **Estende**: ADR-006 · **Relacionado**: ADR-P01, ADR-P04
 
-> Este é o único ADR da série P que não está aceito. Ele descreve o risco que
-> pode encerrar o produto no mês 3, e a decisão de assumi-lo é do dono, não
-> minha. Está escrito para ser lido **antes** da primeira venda, não depois.
+> **Decisão do dono, 2026-09-10: aceito, com as cinco mitigações obrigatórias.**
+>
+> Este ADR era o único da série P sem decisão, e o que podia encerrar o produto
+> no mês 3. Ele foi escrito para ser lido **antes** da primeira venda, e foi.
+>
+> O que a decisão libera: montar a cobrança e o funil. O que ela obriga: as
+> cinco mitigações abaixo, que deixam de ser recomendação e passam a ser
+> requisito. O estado de cada uma está na seção "Onde cada mitigação está".
 
 ---
 
@@ -69,6 +74,21 @@ linha sem citá-la. **Este ADR é a reavaliação formal que o ADR-006 exigiu.**
 - Entra **uma dependência a mais**: a própria EulerStream é um terceiro cujo
   acesso também pode ser cortado. A cadeia fica Kora → EulerStream → TikTok, e a
   Kora não controla nenhum dos dois elos finais.
+
+---
+
+## Onde cada mitigação está (2026-09-10)
+
+| | Mitigação | Estado |
+|---|---|---|
+| 1 | Interface de captura isolada em `bridge/src/tiktok/` | **Feita**, e já era assim. Passa a ser requisito, com teste guardando a fronteira |
+| 2 | Nunca anunciar como integração oficial | **Regra**, sem código. Vale para landing, e-mail e loja |
+| 3 | Termo de uso do cliente | **A escrever**, e vai junto no pacote |
+| 4 | Alarme de saúde de conexão no console | **Feita** (ADR-P05, item 6) |
+| 5 | Política de quebra escrita antes de acontecer | **A escrever** |
+
+As duas que faltam são texto, não código, e o ADR é explícito sobre o custo de
+pulá-las: **é a nº 3 e a nº 5 que transformam uma quebra técnica em chargeback.**
 
 ---
 

@@ -157,12 +157,28 @@ dos cinco erros eram argumentos a favor de jogar fora o trabalho existente.**
     primeira execução e o `LEIA-ME.txt` explica o caminho. Reavaliar quando o
     cliente deixar de ser conhecido.
 
+## Resolvida em 2026-09-10 — o risco de vender a captura não oficial
+
+- **ADR-P06 aceito, com as cinco mitigações obrigatórias.** Era o único da série
+  P sem decisão, e o que podia encerrar o produto no mês 3. Foi lido antes da
+  primeira venda, que é para o que ele foi escrito.
+  - **O que a decisão reconhece:** a API gerenciada resolve a quebra TÉCNICA e
+    não resolve os TERMOS. A EulerStream é o mesmo acesso não oficial com um
+    intermediário, e intermediário não confere licença. Não existe terceira via
+    em que o risco desaparece; a alternativa honesta era não vender.
+  - **O que pesou a favor:** o ADR-P04 tirou a Kora do meio da conexão. Quem
+    conecta é o software na máquina do cliente, com a conta dele, na live dele.
+    Vender ferramenta é diferente de prestar serviço de coleta.
+  - **As cinco mitigações deixam de ser recomendação e viram requisito.** A nº 1
+    (captura isolada num diretório) e a nº 4 (alarme de saúde) já estão feitas. A
+    nº 2 é regra de comunicação. **Faltam a nº 3, o termo de uso, e a nº 5, a
+    política de quebra**, e o ADR é explícito: são essas duas que transformam
+    uma quebra técnica em chargeback.
+  - **Gatilho de reavaliação, com o produto pausado:** qualquer comunicação da
+    TikTok, a EulerStream perder o acesso, ou a candidatura oficial ser aceita.
+
 ## Decisões pendentes
 
-- **ADR-P06: aceitar ou não o risco de uso comercial da captura não oficial.**
-  Está escrito, Proposto, aguardando o dono. É o único da série P sem decisão, e
-  é o que pode encerrar o produto no mês 3. O ADR-006 já avisava disso em
-  2026-09-01. **Ler antes de vender qualquer coisa.**
 - **O que fazer com o Estúdio de Overlay não commitado.** Está na árvore, os
   testes passam com ele, e ele não é bloqueador da Fase 0. Terminar e commitar,
   ou guardar num branch — mas decidir antes de rodar no Studio, para não

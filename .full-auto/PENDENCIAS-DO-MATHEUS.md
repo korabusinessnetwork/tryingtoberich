@@ -14,21 +14,16 @@ depois de pronto.
 
 ---
 
-## P01 Decidir o ADR-P06 [prioridade: alta]
+## ~~P01 Decidir o ADR-P06~~ FEITA
 
-- **Por quê:** é o único ADR da série P que não está aceito, e ele **bloqueia
-  faturar**. Não bloqueia construir, mas decide se vale ligar a cobrança.
-- **Contorno atual:** o console está sendo construído com os quatro itens que
-  valem de qualquer jeito (assinantes, ficha, logs, saúde). Os dois de dinheiro
-  (plano e faturamento) ficam atrás de um adaptador falso.
-- **Passo a passo:**
-  1. Ler `docs/08_DECISOES/adr-p06-uso-comercial-da-captura.md`, 20 minutos.
-  2. Decidir se aceita o risco de vender um produto que depende de captura não
-     oficial da TikTok.
-- **Onde colar o resultado:** me diga aceito ou recusado e por quê, eu registro
-  no ADR e no `memory/decisions.md`.
-- **Como confirmar que funcionou:** o ADR sai de "Proposto" e a Fase 1 deixa de
-  ter bloqueio de negócio.
+**Aceito, com as cinco mitigações**, em 2026-09-10. A série P fechou: os oito
+ADRs de produto estão aceitos.
+
+Registrado no ADR e em `memory/decisions.md`. O que isso libera é montar a
+cobrança e o funil. O que obriga são as cinco mitigações, e **duas delas são
+minhas e ainda não existem**: o termo de uso do cliente e a política de quebra.
+Estou escrevendo as duas, e o próprio ADR diz por quê: são elas que transformam
+uma quebra técnica em chargeback.
 
 ## P02 A sessão no Roblox Studio [prioridade: alta]
 
