@@ -16,6 +16,10 @@ build/
 .full-auto/vigia.log
 .full-auto/.vigia.lock
 
+# Contador do proprio Stop hook. E estado de execucao desta maquina, muda a
+# cada turno, e entrava em todo commit como ruido.
+.full-auto/.hook-state.json
+
 # Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
 data/sessoes/*
 !data/sessoes/.gitkeep.md
