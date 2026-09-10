@@ -9,10 +9,15 @@ status: EXECUTANDO
 - **Branch:** `claude/camada-de-produto-e-fase-0` (ver D01, não é `full-auto/<slug>`)
 - **Início:** 2026-09-10
 - **Fase atual:** Fase 2, onda 2 integrada; onda 3 a despachar
-- **Tarefa atual:** nenhuma, montando a onda 3 (C05 a C08 no console)
-- **Próximo passo:** despachar a onda 3, uma frente só desta vez, com C05 a C08
-  no console (logs, saúde de conexão, edição de plano e faturamento). O resto
-  das trilhas já fechou.
+- **Tarefa atual:** C05 a C08, na frente `console` da onda 3, em worktree própria
+- **Próximo passo:** esperar a frente `console` da onda 3 fechar, integrar a
+  branch dela com verificação completa, e então M03, M04 e M05.
+
+  **Todo o trabalho de maestro que não colide com ela já foi feito**, e está
+  commitado: os 26 erros traduzidos, o webhook do faturamento, os aprendizados
+  em `memory/learnings.md`, a higiene do backlog, o ledger em `specs/_loop.md`,
+  a nota de implementação do ADR-P04 e o `CLAUDE.md` dizendo quatro processos em
+  vez de três. O que resta depende da frente.
 - **Progresso:** 9 de 17 tarefas concluídas
 
 ## O que já estava pronto antes desta execução

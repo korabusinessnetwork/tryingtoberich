@@ -42,8 +42,11 @@ Regras práticas derivadas:
 
 1. **Planejar TUDO antes de executar.** Escopo fechado, sem retrabalho.
 2. Builds multi-parte usam fan-out paralelo com **dono exclusivo por diretório**.
-   Os três processos (`game/`, `bridge/`, `panel/`) são donos independentes e
-   dois agentes nunca tocam o mesmo arquivo.
+   Os quatro processos (`game/`, `bridge/`, `panel/`, `console/`) são donos
+   independentes e dois agentes nunca tocam o mesmo arquivo. Arquivo
+   compartilhado (`package.json`, lockfile, `data/schemas/`, `data/supabase/`,
+   `.env.example`, `docs/`) é só de quem orquestra: a frente pede a mudança no
+   relatório dela.
 3. **Sintetizar e VALIDAR no fim.** Revisar cada entrega, rodar teste e build.
 4. Tarefa de peça única não ganha fan-out.
 
@@ -87,11 +90,18 @@ Detalhes em `memory/restrictions.md`.
 - **Jogo:** Roblox / Luau (Roblox Studio, experiência privada)
 - **Ponte:** Node.js + tiktok-live-connector + Express + Cloudflare Tunnel
 - **Painel:** React + Vite (roda local, `localhost`)
+- **Console do operador:** React + Vite, **português apenas e nunca traduz**
+  (ADR-P05). É superfície da Kora, não do cliente, e a chave de serviço que ele
+  usa **nunca** chega ao navegador: ela ignora o RLS.
 - **Dados:** arquivos JSON em disco, sem banco (ADR-003). A partir da Fase 1 do
   produto, o que é da Kora — conta, licença, telemetria — vai para Supabase em
   tier gratuito (ADR-P02); o que é do streamer continua em JSON. **Nenhuma
   chamada ao Supabase no caminho crítico do presente.**
 - **IA:** Google Gemini API (tier gratuito), chamada só pelo Node
+- **Empacotamento:** Electron, nas duas formas do mesmo build, portátil e
+  instalador (ADR-P07). `npm run empacotar`. O dado do streamer mora **ao lado
+  do exe** no portátil e **no perfil do usuário** na versão instalada, nunca na
+  pasta de instalação, que o desinstalador apaga.
 - **Deploy:** nenhum. Tudo local. Só a ponte é exposta via túnel — e o túnel pode
   sumir se o Studio alcançar `127.0.0.1` (F0-7). O produto é esta mesma
   topologia, instalada na máquina do cliente (ADR-P04).
