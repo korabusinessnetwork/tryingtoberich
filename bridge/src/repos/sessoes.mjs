@@ -77,14 +77,24 @@ export function reduzirAoResumo(sessao, encerradaEm) {
     Math.round((Date.parse(encerradaEm) - Date.parse(sessao.iniciadaEm)) / 1000),
   );
 
-  const { plataformaReferencia, ...semPosicaoCorrente } = sessao;
+  //[[ Os contadores saem da RAIZ e vão só para o resumo.
+  //
+  // O schema da sessão é `additionalProperties: false`. Deixar
+  // `presentesRecebidos` e `moedasRecebidas` vazarem no spread faria o arquivo
+  // inteiro ser recusado na gravação — exatamente o BUG-001, em que dois campos
+  // novos derrubavam o payload todo e a rota respondia sucesso mesmo assim. ]]
+  const { plataformaReferencia, presentesRecebidos, moedasRecebidas, ...semPosicaoCorrente } = sessao;
   return {
     ...semPosicaoCorrente,
     encerradaEm,
     eventos: [],
     resumo: {
       plataformaMaxima: sessao.plataformaMaxima ?? 0,
+      // ANIMAÇÕES tocadas. Ver a descrição no schema: não é o número do portão.
       totalPresentes: eventos.length,
+      // PRESENTES chegados. É este que responde "os presentes aumentaram?".
+      presentesRecebidos: presentesRecebidos ?? 0,
+      moedasRecebidas: moedasRecebidas ?? 0,
       presentesPorSlot,
       latenciaMediaMs: comLatencia.length
         ? Math.round(comLatencia.reduce((soma, e) => soma + e.latenciaMs, 0) / comLatencia.length)

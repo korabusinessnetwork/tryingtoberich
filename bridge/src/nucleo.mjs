@@ -213,6 +213,10 @@ export class Nucleo {
 
   /** Síncrono e sem disco. Etapas 2 e 3 do caminho crítico de `docs/01_ARQUITETURA`. */
   #aoEventoDaLive(evento) {
+    // Conta ANTES de despachar: o portão da Fase 0 pergunta quanto a plateia
+    // mandou, não quanto o jogo conseguiu animar. Incremento em memória, sem
+    // disco — o caminho quente continua quente.
+    this.#sessao?.registrarRecebido(evento);
     this.#despachante.receber(evento);
   }
 

@@ -73,6 +73,16 @@
   color: var(--painel-texto-secundario);
 }
 
+/* A nota embaixo do número. Existe porque dois números parecidos lado a lado —
+   presentes recebidos e animações tocadas — são confundíveis, e confundir os
+   dois é julgar o portão da Fase 0 pelo número errado. */
+.resumo-nota {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--painel-texto-secundario);
+}
+
 .resumo-valor {
   margin: 2px 0 0;
   font-size: 24px;

@@ -535,3 +535,39 @@ na correção do flake **também** gravava, porque `encerrarSessao` persiste.
 E ao medir, apareceu um vazamento anterior a mim: `painel-novo.test.mjs` abria
 uma sessão de verdade e a deixava lá. **Um arquivo por `npm test`**, com cerca
 de 200 acumulados. Os três consertados; medido em duas suítes seguidas: zero.
+
+---
+
+## O número que julgava o portão da Fase 0 estava errado (2026-09-09)
+
+### `totalPresentes` nunca contou presentes
+Ele conta **animações despachadas**. `registrarDisparo` só é chamado quando um
+evento sai para o jogo — então presente que perde combate (ADR-012), que cai em
+cooldown ou que coalesce com outro **não entrava na conta**.
+
+A maratona já tinha medido a escala sem que eu percebesse o significado: 228
+presentes chegando viraram 66 eventos. **Subcontagem de 3,5x.**
+
+### Por que isso era grave, e não só impreciso
+O plano de produto tem um portão só, e ele decide se o projeto continua:
+
+> "Os presentes aumentam de forma visível nas lives com o jogo. Se não
+> aumentarem, o produto não tem argumento. Para e reavalia."
+
+O dono ia julgar isso pelo resumo da sessão — e o número lá **erra mais
+justamente quando o jogo funciona melhor**. Momento de hype é quando mais
+presente chega junto, e é quando mais coalesce. A live em que a plateia mais
+mandou seria a que mostraria o menor número.
+
+Verificado ponta a ponta com o cenário de rajada: **8 presentes recebidos, 5
+animações tocadas**.
+
+### A lição, que é maior que este campo
+**Métrica que decide alguma coisa precisa ser lida uma vez em voz alta, com a
+pergunta que ela responde do lado.** "totalPresentes" parecia óbvio. Só ao
+escrever "os presentes aumentaram?" ao lado dele é que a diferença apareceu — e
+ela estava no código desde o Bloco 1.
+
+Ninguém errou ao escrever `totalPresentes`: ele conta o que diz, para quem sabe
+que "presente" ali significa "disparo". O erro seria de leitura, no dia mais
+caro. Agora o schema diz em texto o que cada um é, e um teste garante que diz.

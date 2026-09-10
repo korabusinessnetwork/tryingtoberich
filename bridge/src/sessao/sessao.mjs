@@ -31,6 +31,19 @@ export class Sessao {
       quedasNaturais: 0,
       naoMapeados: [],
       eventos: [],
+      //[[ O número do PORTÃO da Fase 0, e não o mesmo que `eventos.length`.
+      //
+      // `eventos` guarda ANIMAÇÃO DESPACHADA. Presente que perde combate
+      // (ADR-012), que cai em cooldown ou que coalesce com outro vira um
+      // despacho só — e a maratona mediu a escala disso: 228 presentes
+      // chegando viraram 66 eventos, uma subcontagem de 3,5x.
+      //
+      // Isso importa porque o portão da Fase 0 é "os presentes aumentaram de
+      // forma visível?". Julgá-lo por `totalPresentes` erraria MAIS
+      // justamente quando o jogo está funcionando melhor: momento de hype é
+      // quando mais presente chega junto, e é quando mais coalesce. ]]
+      presentesRecebidos: 0,
+      moedasRecebidas: 0,
     };
   }
 
@@ -78,6 +91,22 @@ export class Sessao {
    */
   trocarPreset(presetId) {
     this.#sessao.presetId = presetId;
+  }
+
+  /**
+   * Um presente chegou da live, antes de qualquer regra.
+   *
+   * Contado ANTES de casar com slot, de brigar no combate ou de bater em
+   * cooldown — porque a pergunta do portão é sobre a PLATEIA, não sobre o que o
+   * jogo conseguiu animar. Presente não mapeado conta aqui também: ele foi
+   * enviado, e é isso que o portão mede.
+   *
+   * Caminho quente: é incremento em memória, sem disco e sem alocação.
+   */
+  registrarRecebido({ moedas, repeticoes } = {}) {
+    const vezes = Number.isFinite(repeticoes) && repeticoes > 0 ? Math.floor(repeticoes) : 1;
+    this.#sessao.presentesRecebidos += vezes;
+    if (Number.isFinite(moedas) && moedas > 0) this.#sessao.moedasRecebidas += Math.floor(moedas) * vezes;
   }
 
   /** F2.4 — o que o streamer está deixando na mesa. Só contagem, sem doador. */

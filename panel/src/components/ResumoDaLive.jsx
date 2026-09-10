@@ -113,9 +113,21 @@ export function ResumoDaLive({ sessao, titulo, aoFechar }) {
       )}
 
       <div className="resumo-numeros">
+        {/* O do PORTÃO primeiro, porque é o que decide a Fase 0. Ele não
+            existe em sessão gravada antes de 2026-09-10, e aí some em vez de
+            mostrar zero — zero seria mentira sobre uma live que teve presente. */}
+        {Number.isFinite(resumo.presentesRecebidos) && (
+          <article className="resumo-numero">
+            <h3 className="resumo-rotulo">{t("panel.liveSummary.giftsReceived")}</h3>
+            <p className="resumo-valor">{resumo.presentesRecebidos}</p>
+            <p className="resumo-nota">{t("panel.liveSummary.giftsReceivedHint")}</p>
+          </article>
+        )}
+
         <article className="resumo-numero">
           <h3 className="resumo-rotulo">{t("panel.liveSummary.gifts")}</h3>
           <p className="resumo-valor">{resumo.totalPresentes ?? 0}</p>
+          <p className="resumo-nota">{t("panel.liveSummary.animationsHint")}</p>
         </article>
 
         <article className="resumo-numero">
