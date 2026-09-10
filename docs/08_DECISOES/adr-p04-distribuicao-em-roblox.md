@@ -27,6 +27,24 @@ dele" não é o problema — é a decisão.
 
 ---
 
+## Nota de implementação (2026-09-10)
+
+A frase "entregue por instalador e mantido por atualizador automático" saiu do
+papel. O mesmo build produz as duas formas, e o ADR-P07 conta o caminho até
+aqui, incluindo as duas tentativas descartadas.
+
+Uma coisa que este ADR não previa e que só apareceu construindo: **as duas
+formas não podem guardar o dado do streamer no mesmo lugar.** No portátil é a
+pasta do executável; no instalador, essa pasta é somente leitura numa instalação
+por máquina e é apagada pelo desinstalador em qualquer uma. Na versão instalada
+o dado vai para o perfil do usuário, e quem migra do portátil não perde nada.
+
+A licença que este ADR manda checar na ponte, e nunca no Luau que o cliente pode
+editar, está construída e **desligada**: nenhuma funcionalidade consulta o
+veredito ainda, porque travar depende do ADR-P06.
+
+---
+
 ## Decisão
 
 **O cliente roda o jogo no Roblox Studio dele, na máquina dele, com a ponte e o

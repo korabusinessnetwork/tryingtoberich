@@ -7,6 +7,47 @@ Uma seção por rodada, mais recente no topo.
 commits do dono que também estavam sem push — a `claude/monta-b1h5fy` remota
 estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
 
+## Fase 1 em modo Full Automático — 2026-09-10
+
+Não é uma rodada do ciclo: é a skill `full-automatico` do dono conduzindo, com
+o estado em `.full-auto/` e as tarefas em ondas paralelas. O `/ciclo` não estava
+invocável nesta máquina, então o ciclo foi feito à mão (especificar, construir,
+revisar contra o critério, corrigir até passar), como a própria skill manda.
+
+- **Onda 1** (antes da skill assumir), duas frentes por diretório: a camada da
+  Kora na ponte (licença com carência de 14 dias, ADR-P08, telemetria, saúde de
+  conexão, SQL com RLS) e a aba de licença no painel, mais o conserto dos seis
+  slots vermelhos da instalação limpa. Commit `c0ade35`.
+- **Onda 2**, duas frentes em git worktree própria: o console do operador
+  (ADR-P05, itens 1 e 2) e o instalador com atualização automática (ADR-P04).
+  Commits `fa65e1d` e `ad6c92e`.
+- **Do maestro, entre as ondas:** os 26 erros que carregavam valor na frase
+  passaram a falar os três idiomas (`e45f487`, última dívida do ADR-P03), e o
+  webhook do faturamento foi escrito e testado antes de a conta existir
+  (`cd4c536`).
+- **Onda 3**, uma frente: o resto do console (logs, saúde, plano, faturamento).
+
+**O Supabase saiu do papel.** O dono criou o projeto e passou o token do CLI, e
+as duas migrations foram aplicadas. Verificar contra o banco de verdade, e não
+contra o próprio SQL, achou um buraco que ninguém tinha visto escrevendo:
+`truncate` não passa por trigger de linha.
+
+**Dois defeitos achados abrindo a tela, nenhum deles por teste:**
+1. Chave digitada errada tirava a licença da tela até reiniciar. A proteção
+   existia no arquivo e não existia para a pessoa.
+2. O log administrativo podia ser apagado inteiro por `truncate`.
+
+**Um susto que não era defeito:** a licença voltou `indeterminada` com o banco
+de pé, e cheguei a tratar como falha da ponte. Era corrida minha, a linha ainda
+não existia quando perguntei. Conferir antes de acusar continua valendo, e é a
+terceira vez que isso aparece neste ledger.
+
+- Números: 715 testes verdes ao fim da onda 2 (eram 510 na rodada anterior)
+- Pendências do dono: `.full-auto/PENDENCIAS-DO-MATHEUS.md`, dez itens, com o
+  ADR-P06 e a sessão no Studio no topo
+- Registrado e não executado: a refatoração do layout do painel, pedida pelo
+  dono, em `docs/09_BACKLOG/refatoracao-do-layout.md`
+
 ## Continuação da rodada 6 — a suíte e os erros da ponte — 2026-09-09
 - Sem spec próprio: fechou a pendência da rodada 6 e o item que a rodada 1
   registrou como próximo.
