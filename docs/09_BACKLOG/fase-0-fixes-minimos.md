@@ -149,6 +149,23 @@ só apareceu quando alguém insistiu.
 olhando o log da ponte.
 **Estimativa:** 30 minutos de relógio, e é o ensaio geral.
 
+**A metade da PONTE está feita** (2026-09-09), e ela não precisava do Studio:
+
+```bash
+npm run maratona -- --minutos=30
+```
+
+O script faz o papel do jogo — long-poll em laço, estado a cada 2s — e mede.
+Rodado a 24 e a 120 presentes/min: **sem 429, sem erro de rede, sem estado
+recusado**, pico de 70 req/min contra o teto de 300, e sem vazamento de memória.
+
+E deu o primeiro número de latência do projeto: **a fatia da ponte é de 1 a
+18ms**, de um orçamento de 1000ms (`CLAUDE.md`, princípio nº 1). O que falta
+medir é o pedaço do Roblox — que é o F0-8, e é da sessão.
+
+**A metade do LUAU continua sua**: watchdog de restauração, Tween pousando na
+plataforma, HUD legível no celular. Isso é código rodando no Studio.
+
 ---
 
 ## Medições que decidem coisa

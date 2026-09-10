@@ -490,3 +490,48 @@ As chaves de erro nasceram `panel.error.sem_conta_da_live`, copiando o código d
 ponte. O schema recusou: o ADR-P03 exige slug alfanumérico. A tentação era
 afrouxar o schema; o certo foi converter (`semContaDaLive`) num `emSlug` que os
 dois lados — painel e teste de contrato — importam do mesmo lugar.
+
+---
+
+## A maratona — a metade do F0-6 que não precisa do Studio (2026-09-09)
+
+### A fatia da ponte no orçamento de latência: medida
+Primeira medição real do projeto contra o Princípio nº 1. Com o jogo simulado
+(long-poll + estado a cada 2s) e presente entrando sem parar:
+
+| Carga | Mediana | p95 | Máxima |
+|---|---|---|---|
+| 24 presentes/min | 1 ms | 8 ms | 18 ms |
+| 120 presentes/min | 1 ms | 2 ms | 4 ms |
+
+**A ponte gasta 1 a 18ms de um orçamento de 1000ms.** O que sobra é do Roblox e
+da rede até o Studio — o que o F0-8 ainda precisa medir. Sem 429, sem erro de
+rede, sem estado recusado, pico de 70 req/min contra o teto de 300.
+
+Memória: +2 MB em 2 minutos sob carga alta, com queda em outra corrida. Não há
+vazamento aparente no long-poll.
+
+### Quase reportei "a ponte atrasa presente em 100 segundos"
+A primeira corrida a 120/min mediu **p95 de 101 SEGUNDOS**. Era a régua suja: o
+script entrava com `cursor = 0` numa ponte que já tinha rodado antes, e colhia
+eventos guardados da corrida anterior. Como `emitidoEm` é marcado no DESPACHO, a
+idade deles entrava na conta.
+
+Sessão limpa no começo, e o número virou 1ms. **Antes de acusar o sistema,
+perguntar se a medição está medindo o que diz medir.** Terceira vez nesta
+sessão que essa pergunta salva um relatório errado.
+
+### Entregar menos eventos que presentes é o desenho
+"67 de 228 chegaram" parecia perda. É o combate do ADR-012: presente que chega
+com o boneco ocupado não vira animação própria, entra na briga, e o conjunto sai
+como UM evento. **O número certo de eventos não é o número de presentes, é o
+número de janelas de animação.** A heurística que chamava isso de problema saiu.
+
+### Ferramenta de diagnóstico não pode sujar o que diagnostica
+A maratona abria sessão e não apagava o arquivo — e `data/sessoes/` é o
+histórico de lives que o painel mostra ao dono. Pior: o `afterEach` que eu criei
+na correção do flake **também** gravava, porque `encerrarSessao` persiste.
+
+E ao medir, apareceu um vazamento anterior a mim: `painel-novo.test.mjs` abria
+uma sessão de verdade e a deixava lá. **Um arquivo por `npm test`**, com cerca
+de 200 acumulados. Os três consertados; medido em duas suítes seguidas: zero.

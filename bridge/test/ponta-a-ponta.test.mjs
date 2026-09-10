@@ -42,7 +42,11 @@ let nucleo;
 // ela, 3. ]]
 afterEach(async () => {
   try {
-    await nucleo?.encerrarSessao();
+    // `encerrarSessao` GRAVA o arquivo da sessão. Sem apagar aqui, esta rede de
+    // segurança suja `data/sessoes/` a cada suíte — o histórico de lives do
+    // dono, na máquina dele. Medido: um arquivo por execução.
+    const resumo = await nucleo?.encerrarSessao();
+    if (resumo?.sessaoId) await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));
   } catch {
     // Sem sessão rodando é o caso NORMAL: o teste encerrou a dele.
   }

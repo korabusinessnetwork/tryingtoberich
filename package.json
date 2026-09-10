@@ -18,6 +18,7 @@
     "luau": "node scripts/verificar-luau.mjs",
     "sondar": "node scripts/sondar-localhost.mjs",
     "vistoria": "node scripts/verificar-estudio.mjs",
+    "maratona": "node scripts/maratona.mjs",
     "gemini": "node scripts/verificar-gemini.mjs",
     "painel": "npm run dev --workspace @kora/painel",
     "build:painel": "npm run build --workspace @kora/painel",

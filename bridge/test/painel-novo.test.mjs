@@ -13,7 +13,7 @@ import { readFile, rm } from "node:fs/promises";
 
 import { criarAppDoJogo, criarAppDoPainel } from "../src/http/servidor.mjs";
 import { Nucleo } from "../src/nucleo.mjs";
-import { caminhoDeDados } from "../src/repos/arquivo.mjs";
+import { apagar, caminhoDeDados } from "../src/repos/arquivo.mjs";
 
 const TOKEN = "t".repeat(32);
 
@@ -320,6 +320,12 @@ test("a vitória não sobrevive ao fim da sessão", async () => {
   const resumo = await (await fetch(`${basePainel}/api/sessao/stop`, { method: "POST" })).json();
   assert.ok(resumo.resumo, "e o stop devolve o resumo que o painel mostra (F5.5)");
   assert.equal((await (await fetch(`${basePainel}/api/sessao`)).json()).estado.vitoria, false);
+
+  // `data/sessoes/` é o histórico de lives do dono, e o painel o mostra na
+  // página Histórico. Este teste abre uma sessão de verdade para exercitar o
+  // start, e sem esta linha deixa uma "live" falsa lá a cada `npm test` —
+  // medido: um arquivo por execução, e 200 acumulados até 2026-09-10.
+  if (resumo.sessaoId) await apagar(caminhoDeDados("sessoes", `${resumo.sessaoId}.json`));
 });
 
 test("trocar o mapa do preset ativo manda o jogo reerguer a torre, sem segundo clique", async () => {
