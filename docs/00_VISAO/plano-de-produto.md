@@ -168,6 +168,18 @@ O console mede as duas separadas, e é de propósito: `venda_avulsa` e
 `assinatura_criada` são tipos diferentes na tabela de faturamento justamente
 para ninguém confundir dinheiro de uma vez com dinheiro que volta.
 
+**A moeda é o dólar, e a loja é uma só.** Decidido em 2026-09-10, montando a
+loja, que nasceu em BRL por engano. O alvo é o streamer de língua inglesa e o
+funil é em inglês (ADR-P03); preço em real seria atrito no checkout de quem o
+plano quer alcançar. Quem comprar do Brasil paga o equivalente convertido pelo
+cartão, e a Lemon Squeezy, sendo merchant of record, cuida disso. Não existe
+segunda tabela de preço, e toda conta deste documento está em dólar.
+
+> Nota técnica achada na hora: a API deles **não** troca a moeda da loja
+> (`PATCH /v1/stores/<id>` responde 405, só GET). Produto, variante e preço
+> também são somente leitura. Tudo isso é painel, e é por isso que cadastrar
+> produto não pode ser automatizado daqui.
+
 Afiliado custa 3% adicionais por indicação. Entra na conta na Fase 2.
 
 ---
