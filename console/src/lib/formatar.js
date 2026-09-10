@@ -86,6 +86,93 @@ export function dinheiro(centavos, moeda = "USD") {
 export const numero = (valor) =>
   Number.isFinite(valor) ? new Intl.NumberFormat(LOCAL).format(valor) : VAZIO;
 
+/** `2026-09` vira "setembro de 2026". O mês do faturamento é lido, não comparado. */
+export function mesPorExtenso(mes) {
+  if (!/^\d{4}-\d{2}$/.test(String(mes ?? ""))) return VAZIO;
+  const [ano, numeroDoMes] = String(mes).split("-").map((parte) => Number.parseInt(parte, 10));
+  return new Intl.DateTimeFormat(LOCAL, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(ano, numeroDoMes - 1, 1)),
+  );
+}
+
+/** `2026-09-10` vira "10/09". A série do mês compara dias, e o ano é sempre o mesmo. */
+export function diaCurto(dia) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dia ?? ""))) return VAZIO;
+  const [ano, mes, numeroDoDia] = String(dia).split("-").map((parte) => Number.parseInt(parte, 10));
+  return new Intl.DateTimeFormat(LOCAL, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
+    new Date(Date.UTC(ano, mes - 1, numeroDoDia)),
+  );
+}
+
+/** `2026-09-10T14:00` vira "10/09 14h". A série da saúde pergunta "que hora começou". */
+export function horaCurta(hora) {
+  const valor = new Date(hora);
+  if (Number.isNaN(valor.getTime())) return VAZIO;
+  const dia = new Intl.DateTimeFormat(LOCAL, { day: "2-digit", month: "2-digit" }).format(valor);
+  return `${dia} ${String(valor.getHours()).padStart(2, "0")}h`;
+}
+
+/**
+ * Como o console escreve cada tipo de evento de telemetria.
+ *
+ * Mapa, e não `tipo` cru na tela, porque `desconexao` e `queda` parecem a mesma
+ * coisa escritas assim e são opostas: uma é a live acabando, a outra é a live
+ * sendo perdida. É a diferença que o item 6 inteiro existe para enxergar.
+ */
+export const NOME_DO_EVENTO = {
+  instalacao: { texto: "Instalação", pastilha: "pastilha-neutra" },
+  conexao: { texto: "Conectou", pastilha: "pastilha-ok" },
+  desconexao: { texto: "Encerrou", pastilha: "pastilha-neutra" },
+  queda: { texto: "Caiu", pastilha: "pastilha-erro" },
+};
+
+export const evento = (tipo) => NOME_DO_EVENTO[tipo] ?? { texto: ouVazio(tipo), pastilha: "pastilha-neutra" };
+
+/**
+ * O `detalhe` de uma ação administrativa, em uma linha legível.
+ *
+ * A troca de plano é a ação que existe hoje e ela tem forma conhecida
+ * (`de`, `para`, `motivo`), então essa forma é escrita por extenso. O resto
+ * cai no genérico: ação futura precisa aparecer no log desde o primeiro dia,
+ * mesmo feia, e não ficar invisível até alguém lembrar de formatá-la.
+ */
+export function resumirDetalhe(detalhe) {
+  if (!detalhe || typeof detalhe !== "object") return VAZIO;
+
+  const partes = [];
+  if (detalhe.de !== undefined || detalhe.para !== undefined) {
+    partes.push(`${ouVazio(detalhe.de) === VAZIO ? "sem plano" : detalhe.de} → ${ouVazio(detalhe.para)}`);
+  }
+  if (detalhe.motivo) partes.push(String(detalhe.motivo));
+
+  const conhecidas = new Set(["de", "para", "motivo", "cobranca"]);
+  const sobra = Object.entries(detalhe).filter(([chave]) => !conhecidas.has(chave));
+  for (const [chave, valor] of sobra) {
+    partes.push(`${chave}: ${typeof valor === "object" ? JSON.stringify(valor) : String(valor)}`);
+  }
+
+  return partes.length > 0 ? partes.join(" · ") : VAZIO;
+}
+
+/**
+ * O que aconteceu do lado do dinheiro numa troca de plano.
+ *
+ * Frase própria, e não um "ok" genérico: "a cobrança mudou" e "não havia
+ * cobrança para mudar" são desfechos diferentes, e o segundo é o normal em
+ * conta de cortesia. Confundir os dois faria o operador achar que cobrou
+ * alguém que não foi cobrado.
+ */
+export const RECADO_DA_COBRANCA = {
+  sem_cliente_na_lemon: "Sem cliente na Lemon Squeezy: a troca valeu só na base da Kora.",
+  plano_sem_cobranca: "Plano sem cobrança: nada foi alterado na Lemon Squeezy.",
+};
+
+export function recadoDaCobranca(cobranca) {
+  if (!cobranca) return VAZIO;
+  if (cobranca.escrita) return "Assinatura alterada na Lemon Squeezy.";
+  return RECADO_DA_COBRANCA[cobranca.motivo] ?? "Nada foi alterado na Lemon Squeezy.";
+}
+
 /** Campo ausente escrito de um jeito só na tela inteira. */
 export const ouVazio = (valor) => {
   if (valor === null || valor === undefined) return VAZIO;

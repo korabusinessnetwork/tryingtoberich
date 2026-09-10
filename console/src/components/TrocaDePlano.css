@@ -1,0 +1,80 @@
+/* TrocaDePlano. Faixa no rodapé da ficha, separada por borda.
+
+   Fica embaixo da grade e não no topo de propósito: o topo é para LER quem é o
+   cliente, e a única ação destrutiva do console não pode dividir espaço com a
+   primeira coisa que o olho encontra. */
+
+.troca {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: var(--borda);
+}
+
+.troca-topo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.troca-nota {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Campos numa linha só: são dois campos e um botão, e empilhá-los faria a ação
+   ocupar meia tela para pedir duas informações. */
+.troca-campos {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.troca-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* O motivo cresce e o plano não: o plano é uma palavra, o motivo é uma frase. */
+.troca-campo-largo {
+  flex: 1 1 240px;
+}
+
+.troca-select {
+  min-width: 140px;
+}
+
+.troca-motivo {
+  width: 100%;
+}
+
+.troca-botao {
+  font-weight: 600;
+}
+
+.troca-aviso {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.troca-recado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+/* A pastilha do resultado não é `.pastilha` no elemento inteiro: o recado tem
+   duas partes, o veredito e o que aconteceu na cobrança, e só a primeira é
+   estado. */
+.troca-ok {
+  line-height: 1.5;
+}

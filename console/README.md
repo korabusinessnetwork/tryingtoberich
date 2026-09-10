@@ -7,6 +7,32 @@ sai da máquina de quem opera.
 npm run console      # sobe em http://127.0.0.1:5273
 ```
 
+## As quatro telas, e os seis itens do ADR-P05
+
+| Aba | Itens do v1 | O que responde |
+|---|---|---|
+| Assinantes | 1, 2 e 3 | quem são, a ficha de cada um e a troca de plano |
+| Faturamento | 4 | recebido no mês, vendas e cancelamentos |
+| Logs | 5 | ação administrativa (imutável) e evento de telemetria |
+| Saúde de conexão | 6 | conectados agora e quedas em 24h, como **alarme** |
+
+Os itens 2 e 3 não têm aba: a ficha abre pela lista, e a troca de plano acontece
+dentro dela. Aba para cada um daria seis entradas onde há quatro telas.
+
+## Duas coisas que o número da tela quer dizer
+
+**O valor grande do faturamento é RECEITA COBRADA no mês, não projeção da
+carteira.** Um plano anual entra inteiro no mês em que foi cobrado, então esse
+número não é taxa mensal corrente. A escolha e o porquê estão em
+`src/dados/exemplo.js`, em `resumirFaturamento`, e a própria tela diz isso ao
+operador: a tabela `faturamento` guarda eventos de cobrança, não assinaturas
+vivas com preço, então a projeção não é calculável com o que existe hoje.
+
+**A saúde de conexão é alarme, não gráfico.** A regra que decide entre calmo,
+atenção e alarme é uma função pura em `src/lib/alarme.js`, testada nos dois
+sentidos: quedas espalhadas pelo dia são a vida normal de quem transmite de
+casa; quedas juntas na mesma hora, em instalações diferentes, é a plataforma.
+
 ## O que ele é, em três linhas
 
 - **Seis itens, e só eles.** A fronteira do v1 está congelada no ADR-P05. Item
@@ -49,6 +75,32 @@ como se esquece o mock ligado em produção.
 
 Hoje a chave não existe, então a base falsa está ligada, e a pastilha no canto
 superior da tela diz **Dado de exemplo** em toda tela que o operador abrir.
+
+## O adaptador da Lemon Squeezy
+
+```
+src/faturamento/
+  contrato.js   a interface, o catálogo de planos e o verbo do log
+  lemon.js      o real, com LEMON_API_KEY. NUNCA rodou contra a API deles
+  exemplo.js    o falso, ativo por padrão
+  index.js      escolhe
+  troca.js      o item 3: a única operação que escreve em DOIS sistemas
+```
+
+**Mesma regra de escolha: sem `LEMON_API_KEY`, vale o falso.** E o falso grava
+no log administrativo igual ao real, senão o teste do item 5 passaria por
+acidente.
+
+A ordem da troca de plano é Lemon Squeezy primeiro, base da Kora depois, e
+recusa da cobrança aborta a troca inteira. Ficha dizendo "anual" enquanto lá
+continua cobrando mensal é ficha que mente para quem atende, e o cliente
+descobre pela fatura.
+
+**O que falta antes da primeira venda:** o adaptador real precisa de
+`LEMON_VARIANTE_MENSAL` e `LEMON_VARIANTE_ANUAL` no `.env` (o `variant_id` de
+cada plano no catálogo deles) e de uma rodada contra a API de verdade. Sem a
+variante, a troca não sai e a tela diz por quê: chutar um id mudaria o plano do
+cliente para o produto errado.
 
 ## Testes
 

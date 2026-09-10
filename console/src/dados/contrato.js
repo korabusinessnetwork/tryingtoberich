@@ -38,6 +38,14 @@
  * início, última conexão, modalidades usadas, idioma do perfil e versão
  * instalada.
  *
+ * @typedef {Object} Cobranca         o vínculo do assinante com a Lemon Squeezy
+ * @property {boolean}     existe          se o assinante existe na base
+ * @property {string|null} lemonCustomerId nulo em cortesia e conta criada à mão
+ * Existe separada da ficha, e não como mais um campo dela, porque a ficha é
+ * aberta a cada clique da lista e a cobrança só interessa na troca de plano
+ * (item 3). Juntar as duas pagaria uma consulta a mais em toda visita a uma
+ * ficha para servir a operação mais rara do console.
+ *
  * @typedef {Object} Evento            uma linha de telemetria (item 5)
  * @property {number}      id
  * @property {string}      streamerId
@@ -67,6 +75,7 @@
 export const FUNCOES = Object.freeze([
   "listarAssinantes",
   "buscarFicha",
+  "buscarCobranca",
   "trocarPlano",
   "resumoDeFaturamento",
   "listarEventos",

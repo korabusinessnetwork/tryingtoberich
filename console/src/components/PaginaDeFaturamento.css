@@ -1,0 +1,185 @@
+/* PaginaDeFaturamento. Um cartão só, alinhado ao topo, largura de leitura.
+
+   Mesma forma da saúde de conexão: três números e uma série curta. Esticar até
+   a borda faria a tela parecer análise de negócio, e o ADR-P05 adiou análise
+   para o v2 por um motivo que continua valendo — com zero assinante, não há o
+   que analisar. */
+
+.fat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-self: start;
+  max-width: 780px;
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.fat-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco);
+  flex-wrap: wrap;
+}
+
+.fat-identidade {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.fat-titulo {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fat-subtitulo {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.fat-mes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.fat-mes-campo {
+  min-width: 150px;
+}
+
+.fat-cartoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--painel-borda);
+  border: var(--borda);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.fat-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 16px;
+  background: var(--painel-superficie);
+}
+
+/* O de dinheiro ganha fundo diferente porque é o único que exige a leitura da
+   definição embaixo. Os outros dois são contagens e não têm ambiguidade. */
+.fat-cartao-destaque {
+  background: var(--painel-fundo);
+}
+
+.fat-valor {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.fat-apoio {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* A definição do número é conteúdo, não rodapé: ela tem borda e ocupa lugar,
+   porque um número de dinheiro sem definição escrita vira briga daqui a três
+   meses e ganha quem lembra melhor. */
+.fat-definicao {
+  margin: 0;
+  max-width: 70ch;
+  padding: 10px 14px;
+  border: var(--borda);
+  border-left: 3px solid var(--estado-atencao);
+  border-radius: var(--raio);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.fat-serie {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fat-sem-serie {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.fat-barras {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fat-barra {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 90px 96px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+/* Mês só de cancelamento: sem dinheiro, sem trilho. Coluna de barras zeradas é
+   indistinguível de gráfico que não carregou, e as linhas continuam valendo
+   pelo dia e pela contagem. */
+.fat-barras-sem-dinheiro .fat-barra {
+  grid-template-columns: 48px 90px minmax(0, 1fr);
+}
+
+.fat-barras-sem-dinheiro .fat-barra-trilho {
+  display: none;
+}
+
+.fat-barras-sem-dinheiro .fat-barra-contagem {
+  text-align: left;
+}
+
+.fat-barra-dia {
+  white-space: nowrap;
+}
+
+.fat-barra-trilho {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  overflow: hidden;
+}
+
+.fat-barra-preenchida {
+  display: block;
+  height: 100%;
+  background: var(--estado-ok);
+}
+
+.fat-barra-valor {
+  text-align: right;
+  font-weight: 600;
+}
+
+.fat-barra-contagem {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fat-recado {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 12px;
+  line-height: 1.5;
+}

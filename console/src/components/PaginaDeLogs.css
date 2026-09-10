@@ -1,0 +1,113 @@
+/* PaginaDeLogs. Duas colunas iguais, cada uma com rolagem própria.
+
+   Iguais, e não uma maior: as duas são listas de linhas curtas, e dar mais
+   espaço a uma delas só espalharia o mesmo texto. Cada coluna rola por dentro
+   para o cabeçalho de cada log ficar à vista enquanto a outra é lida. */
+
+.logs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espaco);
+  height: 100%;
+  min-height: 0;
+}
+
+.logs-coluna {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.logs-cabecalho {
+  padding: 12px 16px;
+  border-bottom: var(--borda);
+}
+
+.logs-titulo {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.logs-subtitulo {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  max-width: 62ch;
+}
+
+.logs-rolagem {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.logs-linhas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Hora à esquerda com largura fixa, corpo elástico, operador à direita. A hora
+   é a coluna que o olho desce quando a pergunta é "quando isso mudou", e ela
+   só serve alinhada. */
+.logs-linha {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 16px;
+  border-bottom: var(--borda);
+  font-size: 12px;
+}
+
+.logs-quando {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.logs-corpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* O verbo em fonte tabular porque ele é snake_case e se compara com o de cima:
+   `plano_trocado` e `plano_trocado_na_lemon` só se distinguem alinhados. */
+.logs-verbo {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.logs-alvo {
+  font-size: 11px;
+}
+
+.logs-detalhe {
+  flex: 1 1 100%;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.logs-operador {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.logs-tipo {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.logs-recado {
+  margin: 14px 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 52ch;
+}

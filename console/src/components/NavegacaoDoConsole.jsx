@@ -10,18 +10,18 @@ import "./NavegacaoDoConsole.css";
  *
  * Os itens 3 e 2 não têm aba própria de propósito: a ficha abre pela lista, e
  * a troca de plano acontece dentro da ficha. Aba para cada um faria a navegação
- * ter seis entradas onde há duas telas.
+ * ter seis entradas onde há quatro telas.
  *
- * As três abas ainda não construídas ficam visíveis e clicáveis, levando a um
- * aviso do que virá. Escondê-las até estarem prontas faria a fronteira do v1
- * parecer menor do que é, e é a fronteira inteira que precisa estar à vista.
+ * Desde a onda 3 as quatro estão construídas, e por isso não há mais marca de
+ * "ainda não". A lista continua sendo a fronteira: quatro entradas, seis itens,
+ * e uma quinta aba só entra com "qual operação fica impossível sem ela" escrito.
  */
 
 export const PAGINAS = [
-  { id: "assinantes", rotulo: "Assinantes", item: 1, pronto: true },
-  { id: "faturamento", rotulo: "Faturamento", item: 4, pronto: false, tarefa: "C08" },
-  { id: "logs", rotulo: "Logs", item: 5, pronto: false, tarefa: "C05" },
-  { id: "saude", rotulo: "Saúde de conexão", item: 6, pronto: false, tarefa: "C06" },
+  { id: "assinantes", rotulo: "Assinantes", item: 1 },
+  { id: "faturamento", rotulo: "Faturamento", item: 4 },
+  { id: "logs", rotulo: "Logs", item: 5 },
+  { id: "saude", rotulo: "Saúde de conexão", item: 6 },
 ];
 
 export function NavegacaoDoConsole({ pagina, aoTrocar }) {
@@ -38,9 +38,10 @@ export function NavegacaoDoConsole({ pagina, aoTrocar }) {
             onClick={() => aoTrocar?.(entrada.id)}
           >
             <span className="navegacao-rotulo">{entrada.rotulo}</span>
-            {/* Texto, e não só o cinza: "ainda não existe" precisa ser lido,
-                não deduzido de um tom mais apagado. */}
-            {!entrada.pronto && <span className="navegacao-marca">onda 3</span>}
+            {/* O número do item do ADR fica na aba porque é ele que amarra a
+                tela à fronteira escrita: aba sem item correspondente no ADR-P05
+                é aba que não deveria existir. */}
+            <span className="navegacao-marca">item {entrada.item}</span>
           </button>
         );
       })}

@@ -11,15 +11,19 @@
  * Aqui o processo Node é o próprio servidor de desenvolvimento do Vite, que
  * monta estas rotas como middleware (ver `console/vite.config.js`). Não é
  * atalho: o console é ferramenta interna que roda em `localhost`, como o
- * painel, e um segundo processo só para servir oito funções seria um segundo
- * processo para o operador lembrar de subir.
+ * painel, e um segundo processo só para servir um punhado de funções seria um
+ * segundo processo para o operador lembrar de subir.
  *
  * Nenhuma regra de negócio mora aqui. Isto traduz caminho e querystring em
- * chamada da camada de dados, e devolve o envelope como está.
+ * chamada da camada de dados, e devolve o envelope como está. A única operação
+ * que envolve dois sistemas, a troca de plano do item 3, é delegada inteira a
+ * `src/faturamento/troca.js`, que é onde a ordem entre eles está justificada.
  */
 
 import { escolherDados } from "../src/dados/index.js";
 import { falha, MOTIVOS } from "../src/dados/contrato.js";
+import { escolherFaturamento } from "../src/faturamento/index.js";
+import { trocarPlanoDoAssinante } from "../src/faturamento/troca.js";
 
 /** Corpo JSON, com teto. Sem teto, um POST torto segura o processo na memória. */
 const CORPO_MAXIMO = 64 * 1024;
@@ -77,6 +81,11 @@ function responder(res, resultado) {
 export function montarRotas(env = process.env) {
   const dados = escolherDados(env);
 
+  // Os DOIS adaptadores de cobrança recebem a mesma `registrarAcao`, e é aqui
+  // que a exigência da seção 4 do contrato vira código: o falso grava no log
+  // administrativo igual ao real, senão o teste do item 5 passaria por acidente.
+  const faturamento = escolherFaturamento(env, { registrarAcao: dados.registrarAcao });
+
   return async function rotasDoConsole(req, res, proximo) {
     // O middleware é montado em `/api`, então `req.url` já chega sem o prefixo.
     const url = new URL(req.url ?? "/", "http://console.local");
@@ -102,23 +111,31 @@ export function montarRotas(env = process.env) {
         return responder(res, await dados.buscarFicha(decodeURIComponent(ficha[1])));
       }
 
-      /* Item 3 (onda 3): a troca de plano. A rota existe porque ela é do
-         contrato da camada de dados; a TELA que a usa não é desta onda. */
+      /* Item 3: a troca de plano.
+         Passa por `faturamento/troca.js`, e não direto pela camada de dados,
+         porque a operação escreve em DOIS sistemas: a Lemon Squeezy primeiro,
+         a base da Kora depois. A ordem e o motivo dela estão lá. */
       const plano = caminho.match(/^\/assinantes\/([^/]+)\/plano$/);
       if (req.method === "POST" && plano) {
         const corpo = await lerCorpo(req);
         return responder(
           res,
-          await dados.trocarPlano(decodeURIComponent(plano[1]), corpo.plano, { motivo: corpo.motivo ?? null }),
+          await trocarPlanoDoAssinante({
+            dados,
+            faturamento,
+            streamerId: decodeURIComponent(plano[1]),
+            plano: corpo.plano,
+            motivo: corpo.motivo ?? null,
+          }),
         );
       }
 
-      /* Item 4 (onda 3). */
+      /* Item 4. */
       if (req.method === "GET" && caminho === "/faturamento") {
         return responder(res, await dados.resumoDeFaturamento({ mes: q.get("mes") }));
       }
 
-      /* Item 5 (onda 3): os dois logs. */
+      /* Item 5: os dois logs. */
       if (req.method === "GET" && caminho === "/eventos") {
         return responder(
           res,
@@ -149,7 +166,7 @@ export function montarRotas(env = process.env) {
         );
       }
 
-      /* Item 6 (onda 3). */
+      /* Item 6. */
       if (req.method === "GET" && caminho === "/saude") {
         return responder(res, await dados.saudeDeConexao());
       }
