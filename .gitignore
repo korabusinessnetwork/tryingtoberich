@@ -11,6 +11,11 @@ build/
 # submodulo por acidente.
 .claude/worktrees/
 
+# Diario do vigia de limite da skill full-automatico. E de execucao, nao de
+# projeto: cada maquina tem o seu, e ele nao conta nada sobre o produto.
+.full-auto/vigia.log
+.full-auto/.vigia.lock
+
 # Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
 data/sessoes/*
 !data/sessoes/.gitkeep.md

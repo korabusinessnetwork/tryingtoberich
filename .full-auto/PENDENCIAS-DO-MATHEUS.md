@@ -135,7 +135,27 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
 > `KORA_RELEASE_DONO` e `KORA_RELEASE_REPO` no ambiente do build. Não precisa
 > tocar em código.
 
-## P07 A carência da licença: 14 dias serve? [prioridade: baixa]
+## P07 O `claude.exe` global desta máquina é de arquitetura incompatível [prioridade: baixa]
+
+- **Por quê:** a skill instala um vigia que retoma a execução sozinho quando o
+  limite de uso acaba. Ele subiu, tentou uma vez e desistiu, com a mensagem
+  certa: `Esta versão de ...
+pm
+ode_modules\@anthropic-ai\claude-codein\claude.exe
+  não é compatível com a versão do Windows sendo executada.` **A retomada
+  automática não funciona aqui até isso ser resolvido.**
+- **Contorno atual:** você retoma com `/full-automatico continuar`. Foi o que
+  aconteceu hoje, e custou só a sua mensagem.
+- **Passo a passo:** reinstalar o Claude Code global (`npm i -g
+  @anthropic-ai/claude-code`) com o Node da mesma arquitetura do Windows, ou
+  apontar o vigia para o executável certo.
+- **Como confirmar que funcionou:** `claude -p "oi"` responde num PowerShell
+  novo.
+
+> O vigia acertou em desistir: ele separa erro de limite de erro que ele não
+> resolve, e não ficou tentando para sempre.
+
+## P08 A carência da licença: 14 dias serve? [prioridade: baixa]
 
 - **Por quê:** licença ativa que não pôde ser reconfirmada continua valendo por
   14 dias (ADR-P08). Trocar é uma constante.
@@ -145,7 +165,7 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
   offline vira a forma mais barata de usar o produto.
 - **Onde colar o resultado:** só me diga o número.
 
-## P08 `assetId` × `faces.ft` no skybox [prioridade: baixa]
+## P09 `assetId` × `faces.ft` no skybox [prioridade: baixa]
 
 - **Por quê:** o painel pode dessincronizar os dois. **Não está acontecendo
   hoje**, os 10 skybox têm `assetId` igual a `faces.ft`.
@@ -155,7 +175,7 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
   em vez de improvável, e não pede tela nova.
 - **Onde colar o resultado:** só o número.
 
-## P09 Assinatura de código [prioridade: baixa, custa dinheiro]
+## P10 Assinatura de código [prioridade: baixa, custa dinheiro]
 
 - **Por quê:** sem ela o Windows mostra "O Windows protegeu o computador" na
   primeira execução.

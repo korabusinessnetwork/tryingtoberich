@@ -602,3 +602,85 @@ justamente o presente que a plateia mais manda.**
 Contar no casamento, e não no despacho, custou um callback (`aoCasar`) e umas 15
 linhas. O que custou de verdade foi perguntar de novo: **"que decisão alguém
 toma olhando este número?"** — e não só "o que este número é".
+
+## A proteção que existia no arquivo e não existia para a pessoa (2026-09-10)
+
+Achado com o Supabase de pé, abrindo a tela, não em teste.
+
+A regra era certa e estava escrita: chave de licença digitada errada não pode
+apagar a licença que funciona, porque o caminho realista é erro de digitação e
+um caractere trocado não pode custar a licença de quem pagou. O teste dela
+passava. O disco de fato ficava intacto.
+
+Só que a ponte **devolvia** o veredito da recusa, e o núcleo adotava esse
+veredito como o estado da sessão. Do lado do streamer: perdeu um caractere ao
+colar, a tela passa a dizer "sem licença", e só volta reiniciando o programa.
+
+**O padrão, e ele vale para além deste caso:** um teste que verifica o EFEITO
+COLATERAL (o arquivo em disco) e não o VALOR DEVOLVIDO deixa passar a metade da
+proteção que o usuário enxerga. Quando a regra é sobre o que a pessoa vê,
+o teste tem que olhar o que a pessoa recebe.
+
+Corrigido devolvendo a licença que continua valendo, com o motivo explicando o
+que houve com a chave digitada. Um objeto só, verdadeiro, sem mudar o contrato.
+
+## `truncate` não passa por trigger de linha (2026-09-10)
+
+O log administrativo do console (ADR-P05, item 5) precisa ser imutável, e não
+como adjetivo de documentação: como regra do banco. O trigger recusava `update`
+e `delete`, e o teste provava isso inserindo uma linha e tentando as duas.
+
+Testando contra o Postgres de verdade apareceu o buraco: **`truncate` não
+dispara trigger de linha.** A tabela inteira podia ser apagada sem levantar
+nada. Precisa de um trigger `for each statement`.
+
+Quem alcança o `truncate` é o dono do schema e a chave de serviço, que é a do
+console. Ou seja, exatamente quem teria motivo para sumir com a própria linha. O
+buraco era pequeno e estava no único lugar onde importava.
+
+## Contrato entre processos se cobra pela interseção, não pela união (2026-09-10)
+
+Ao traduzir os 26 erros que carregam valor na frase, a chave de i18n virou
+`Não achei o mapa {mapaId}` e o `{mapaId}` passou a vir de um campo que a ponte
+manda separado do texto.
+
+O mesmo código de erro é lançado de lugares diferentes do código. Se o teste
+cobrasse a UNIÃO dos campos, um parâmetro que só um dos pontos manda passaria, e
+apareceria cru na tela (`{colecao}`) exatamente no outro ponto. A regra certa é
+a **interseção**: o parâmetro tem que existir em TODOS os pontos onde aquele
+código é lançado.
+
+E teste novo que passa de primeira não vale nada: troquei `mapaId` por `mapId`
+no catálogo inglês e conferi que ele reprova, dizendo idioma, chave, parâmetro
+errado e o certo.
+
+## O instalador não herda a regra do portátil (2026-09-10)
+
+No portátil, a pasta do streamer vem de `PORTABLE_EXECUTABLE_DIR`, porque o exe
+roda de uma cópia descompactada no `%TEMP%`.
+
+**Essa variável não existe no instalador.** Com a regra antiga, o `data/` do
+cliente cairia na pasta de instalação: somente leitura numa instalação por
+máquina, e apagada pelo desinstalador em qualquer uma. Passou a ser o
+`userData`, e quem vem do portátil não perde nada, porque o portátil deixa um
+bilhete dizendo onde rodava e a versão instalada, nascendo vazia, traz os
+arquivos.
+
+Verificado instalando em silêncio numa pasta de teste, rodando, e desinstalando:
+a pasta do programa some e os arquivos do streamer ficam.
+
+## O vigia de limite não funciona nesta máquina (2026-09-10)
+
+A skill `full-automatico` instala um `StopFailure` que sobe um vigia quando o
+limite de uso acaba, e ele relança a execução a cada 10 minutos com
+`claude -p`. Ele subiu, tentou uma vez e desistiu sozinho, com a mensagem certa:
+
+> Esta versão de `...\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`
+> não é compatível com a versão do Windows sendo executada.
+
+O `claude.exe` instalado pelo npm global é de arquitetura incompatível. **A rede
+de segurança de retomada automática não existe aqui até isso ser resolvido**, e
+quem retoma é o dono, com `/full-automatico continuar`.
+
+O vigia acertou em desistir: ele distingue erro de limite de erro que ele não
+resolve, e não ficou tentando para sempre.

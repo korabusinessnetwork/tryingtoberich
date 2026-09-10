@@ -114,13 +114,15 @@ Construído por 6 agentes em paralelo, em duas levas. Relatório da síntese em
 - [x] Gate estrutural (`npm run painel:gate`) e 190 testes
 
 ### Aberto pelo Bloco 3
-- [ ] **Abrir o painel num navegador.** O gate prova que compila e que a fiação
-      bate; não prova que a tela é legível em 2 segundos nem que os 6 slots
-      cabem lado a lado. `npm run painel` e olhar.
-- [ ] **Subir painel e ponte juntos.** A camada de serviços é testada com
-      `fetch` substituído; os dois nunca se falaram de verdade.
-- [ ] **Teste de componente renderizado.** Exigiria vitest e testing-library, e
-      instalar dependência é decisão de arquitetura que não foi tomada.
+- [x] **Abrir o painel num navegador.** Feito na rodada 6, e valeu a pena: o
+      BUG-008 passava por 504 testes verdes e só apareceu ali.
+- [x] **Subir painel e ponte juntos.** F0-3, feito.
+- [x] **Teste de componente renderizado.** Feito em 2026-09-10, **sem vitest e
+      sem testing-library**: o `rolldown` que o Vite já trazia tem o
+      transformador do oxc, e ele basta para o `node --test` montar `.jsx`. A
+      decisão de arquitetura que faltava era menor do que parecia, e o que a
+      destravou foi procurar de novo com o que já estava instalado. Ver
+      `panel/test/ferramentas/` e `console/test/ferramentas/`.
 
 ## Bloco 3b — Pontas soltas do painel — **concluído**
 O painel do Bloco 3 ficou completo como tela e incompleto como produto: a ponte
@@ -204,28 +206,25 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
 
 ### O que falta no portátil
 
-- [ ] **Instalação limpa abre o painel com os seis slots em vermelho.** O preset
-      que vai na semente (`escalada-padrao`) aponta para ids reais da TikTok
-      (`6064`, `5655`…), e o catálogo que vai na semente tem ids inventados
-      (`sem-rose`), de propósito: o `repos/catalogo.mjs` nunca mistura semente
-      com coleta real, senão um id de mentira ficaria marcado `ativo: false`
-      sujando o seletor para sempre. Enquanto o streamer não conectar na live
-      uma vez, o painel diz "Presente fora do catálogo" seis vezes — sobre um
-      preset que está certo. **Se cura sozinho na primeira conexão**, mas é a
-      primeira tela que o cliente vê. A correção provável é o cartão calar essa
-      pastilha enquanto o catálogo em mãos for `origem: "semente"`, trocando as
-      seis pastilhas por uma linha só: "o catálogo ainda não foi coletado".
-- [ ] **`LEIA-ME.txt` em inglês.** O funil da Fase 1 é em inglês (ADR-P03) e o
-      arquivo que acompanha o exe é em português. Não bloqueia enquanto os
-      testadores forem daqui.
+- [x] **Instalação limpa abre o painel com os seis slots em vermelho.** Feito em
+      2026-09-10. Com o catálogo semente em mãos o painel não tem como afirmar
+      que um presente real é desconhecido, e não afirma mais: a pastilha por
+      cartão se cala e sobe uma linha só, dizendo que falta coletar da live.
+      Com catálogo real tudo volta a ser como era, porque ali a acusação é
+      verdadeira.
+- [x] **`LEIA-ME.txt` em inglês.** Feito em 2026-09-10. `npm run empacotar` sai
+      em português e `npm run empacotar -- --idioma=en` em inglês.
 - [ ] **Assinatura de código.** US$ 200 a 400/ano, adiada no ADR-P07. Reavaliar
       quando o cliente deixar de ser conhecido.
-- [ ] **Atualização automática.** O `electron-builder` já tem `electron-updater`,
-      mas ele quer um servidor de onde baixar. Hoje atualizar é o cliente trocar
-      o exe à mão, o que serve enquanto os clientes cabem numa conversa.
-- [ ] **O instalador do ADR-P04.** Sai do mesmo build: é trocar o alvo
-      `portable` por `nsis`. Depois de o produto rodar na máquina de alguém que
-      não é o dono.
+- [x] **Atualização automática.** Feita em 2026-09-10, pelo GitHub Releases, que
+      custa US$ 0. Ela é covarde de propósito: nunca no arranque, nunca uma
+      caixa de diálogo, nunca reiniciar sozinha, e nunca no portátil. Falta só o
+      dono publicar o primeiro release, com o Setup **e** o `latest.yml`.
+- [x] **O instalador do ADR-P04.** Feito em 2026-09-10, do mesmo build. Instala
+      só para o usuário, sem pedir administrador. O dado do streamer vai para o
+      perfil e **não** para a pasta de instalação, senão o desinstalador levaria
+      o trabalho dele junto. Verificado instalando, rodando e desinstalando numa
+      pasta de teste.
 - **Fase 2 — distribuição e recorrência.**
 
 Bloqueia a Fase 1 inteira: a decisão do dono sobre o
