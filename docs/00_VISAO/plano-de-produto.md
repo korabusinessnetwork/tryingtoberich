@@ -131,6 +131,43 @@ assinantes** — bem menos que o mix do plano original. Vale corrigir antes de
 virar pressão de venda, porque a diferença entre 90 e 70 assinantes em 90 dias é
 a diferença entre uma meta dura e uma meta impossível.
 
+### Revisão de 2026-09-10: o preço do pack e as duas ofertas juntas
+
+O dono fechou o modelo montando a loja, e ele mudou em dois pontos:
+
+- **O pack passa de US$ 39 para US$ 79,90.**
+- **A assinatura sai da Fase 2 e entra junto**, a US$ 12/mês. Nas palavras
+  dele: *"a ideia é vender assinatura pra ser algo recorrente, mas o pack é um
+  bom escape pra levantar uma grana boa."*
+
+O papel de cada oferta ficou explícito, e é o que deve guiar a comunicação: **a
+assinatura é o produto, o pack é a saída para quem não quer recorrência.**
+
+Refazendo a conta com o pack a US$ 79,90 (líquido US$ 75,41) e a assinatura a
+US$ 12 (líquido US$ 10,90 por mês):
+
+| Mix num mês | Líquido |
+|---|---|
+| 25 packs + 11 assinantes | ~US$ 2.005 |
+| 20 packs + 46 assinantes | ~US$ 2.009 |
+| 15 packs + 80 assinantes | ~US$ 2.003 |
+| 10 packs + 115 assinantes | ~US$ 2.008 |
+| 0 packs + 184 assinantes | ~US$ 2.006 |
+
+**O pack dobrou de preço e a meta ficou muito mais perto**: 25 packs e 11
+assinantes contra os 35 packs e 70 assinantes de antes.
+
+**A armadilha desta tabela, e ela é a parte que importa:** as linhas de cima são
+mais fáceis de atingir e as de baixo são as que sobrevivem ao mês seguinte. Pack
+é receita que acontece uma vez; assinante é receita que volta. Um mês de 25
+packs zera em outubro se ninguém assinar. **A meta de US$ 2.000 não deve ser
+perseguida pela linha mais fácil**, e é por isso que o portão da Fase 1 continua
+sendo o número de vendas, e não o faturamento.
+
+O console mede as duas separadas, e é de propósito: `venda_avulsa` e
+`assinatura_criada` são tipos diferentes na tabela de faturamento justamente
+para ninguém confundir dinheiro de uma vez com dinheiro que volta.
+
 Afiliado custa 3% adicionais por indicação. Entra na conta na Fase 2.
 
 ---

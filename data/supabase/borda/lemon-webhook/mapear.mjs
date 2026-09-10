@@ -34,6 +34,29 @@ const EVENTOS = {
 };
 
 /**
+ * A venda avulsa, e por que ela é o caso delicado.
+ *
+ * A loja vende duas coisas: o pack, que é compra única, e a assinatura. O
+ * problema é que `order_created` dispara nas DUAS. Numa assinatura nova ele
+ * chega junto de `subscription_created`, e contar os dois dobraria a venda.
+ *
+ * Por isso `order_created` só vira linha quando a variante comprada está na
+ * lista de variantes de PACK, que é configuração explícita. **Sem a lista, ele
+ * é ignorado**, que é o comportamento seguro: perder uma venda no relatório é
+ * ruim, inventar receita é pior, e a linha perdida está no painel deles.
+ */
+const AVULSOS = {
+  order_created: "venda_avulsa",
+  order_refunded: "reembolso",
+};
+
+/** A variante que a compra carrega, quando dá para saber. */
+function varianteDoPedido(atributos) {
+  const bruto = atributos?.first_order_item?.variant_id ?? atributos?.variant_id ?? null;
+  return bruto == null ? null : String(bruto);
+}
+
+/**
  * `subscription_updated` é o evento mais ambíguo do lote: ele chega quando o
  * plano muda, quando o cartão é trocado, e quando a assinatura renova. Só o
  * `status` de dentro diz qual foi.
@@ -73,7 +96,7 @@ export function emCentavos(valor) {
  * Nunca lança. Webhook que responde 500 é webhook que a Lemon Squeezy reenvia
  * para sempre, e um corpo estranho não pode virar uma fila infinita.
  */
-export function mapear(corpo) {
+export function mapear(corpo, { variantesDePack = [] } = {}) {
   const nome = corpo?.meta?.event_name;
   if (!nome) return null;
 
@@ -81,6 +104,15 @@ export function mapear(corpo) {
 
   let tipo = EVENTOS[nome];
   if (nome === "subscription_updated") tipo = tipoDeAtualizacao(atributos.status);
+
+  if (!tipo && AVULSOS[nome]) {
+    // Só conta se for o pack. Assinatura nova também dispara `order_created`, e
+    // contar os dois dobraria a venda no mês.
+    const doPack = new Set([...variantesDePack].map(String));
+    const variante = varianteDoPedido(atributos);
+    if (variante && doPack.has(variante)) tipo = AVULSOS[nome];
+  }
+
   if (!tipo) return null;
 
   // O id do evento é a chave da tabela: webhook reenvia, e reenvio virando

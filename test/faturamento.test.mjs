@@ -112,3 +112,71 @@ test("o corpo cru fica guardado, para o número ter de onde ser conferido", () =
   const original = corpo("subscription_created");
   assert.deepEqual(mapear(original).bruto, original);
 });
+
+/* ------------------------------------------------------------------ */
+/* A venda avulsa, que entrou quando a loja passou a ter pack E assinatura */
+/* ------------------------------------------------------------------ */
+
+const pedido = (nome, variante, extras = {}) => ({
+  meta: { event_name: nome, event_id: "evt_ord_1" },
+  data: {
+    id: "ord_1",
+    attributes: {
+      currency: "USD",
+      total: "7990",
+      created_at: "2026-09-10T00:00:00.000Z",
+      first_order_item: { variant_id: variante, variant_name: "Pack" },
+      ...extras,
+    },
+  },
+});
+
+const PACK = ["999001"];
+
+test("a compra do pack vira linha, quando a variante é do pack", () => {
+  const linha = mapear(pedido("order_created", 999001), { variantesDePack: PACK });
+
+  assert.equal(linha.tipo, "venda_avulsa");
+  assert.equal(linha.valor_centavos, 7990, "US$ 79,90 em centavos inteiros");
+  assert.equal(linha.moeda, "USD");
+});
+
+test("a MESMA compra é ignorada quando a variante não é do pack", () => {
+  //[[ Este é o teste que impede dobrar a receita.
+  //
+  // `order_created` dispara nas DUAS coisas que a loja vende. Numa assinatura
+  // nova ele chega junto de `subscription_created`; contar os dois faria cada
+  // assinante novo aparecer duas vezes no mês. Por isso a conta só acontece
+  // quando a variante comprada está na lista do pack. ]]
+  assert.equal(mapear(pedido("order_created", 555222), { variantesDePack: PACK }), null);
+});
+
+test("sem a lista configurada, nenhuma compra avulsa é contada", () => {
+  // Falha segura: perder uma linha do relatório é ruim, inventar receita é pior,
+  // e a venda perdida continua no painel deles para conferência.
+  assert.equal(mapear(pedido("order_created", 999001)), null);
+  assert.equal(mapear(pedido("order_created", 999001), { variantesDePack: [] }), null);
+});
+
+test("a lista aceita número e texto, porque a Lemon Squeezy manda os dois", () => {
+  assert.equal(mapear(pedido("order_created", 999001), { variantesDePack: [999001] }).tipo, "venda_avulsa");
+  assert.equal(mapear(pedido("order_created", "999001"), { variantesDePack: ["999001"] }).tipo, "venda_avulsa");
+  assert.equal(mapear(pedido("order_created", 999001), { variantesDePack: ["999001"] }).tipo, "venda_avulsa");
+});
+
+test("o reembolso do pack é reembolso, e o da assinatura continua sendo o dela", () => {
+  assert.equal(mapear(pedido("order_refunded", 999001), { variantesDePack: PACK }).tipo, "reembolso");
+  assert.equal(mapear(pedido("order_refunded", 555222), { variantesDePack: PACK }), null);
+});
+
+test("pedido sem variante nenhuma não vira linha", () => {
+  const sem = { meta: { event_name: "order_created" }, data: { id: "x", attributes: {} } };
+  assert.equal(mapear(sem, { variantesDePack: PACK }), null);
+});
+
+test("a assinatura continua sendo contada pelo evento dela, com a lista ligada", () => {
+  // A lista do pack não pode atrapalhar o caminho da assinatura.
+  const linha = mapear(corpo("subscription_created"), { variantesDePack: PACK });
+  assert.equal(linha.tipo, "assinatura_criada");
+});
+

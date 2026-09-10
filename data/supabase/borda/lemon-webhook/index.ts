@@ -88,7 +88,20 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { status: 200 });
   }
 
-  const linha = mapear(corpo);
+  //[[ Quais variantes são o pack, e não a assinatura.
+  //
+  // Sem esta lista o `order_created` é ignorado, e é de propósito: numa
+  // assinatura nova ele chega junto do `subscription_created`, e contar os dois
+  // dobraria a venda. Ignorar perde uma linha do relatório; contar errado
+  // inventa receita, que é pior e mais difícil de descobrir.
+  //
+  // `supabase secrets set LEMON_VARIANTES_PACK=123,456`
+  const variantesDePack = (Deno.env.get("LEMON_VARIANTES_PACK") ?? "")
+    .split(",")
+    .map((v: string) => v.trim())
+    .filter(Boolean);
+
+  const linha = mapear(corpo, { variantesDePack });
   if (!linha) return new Response("ignored", { status: 200 });
 
   const supabase = createClient(
