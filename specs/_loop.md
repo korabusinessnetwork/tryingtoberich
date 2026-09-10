@@ -7,6 +7,28 @@ Uma seção por rodada, mais recente no topo.
 commits do dono que também estavam sem push — a `claude/monta-b1h5fy` remota
 estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
 
+## Rodada 6 — F0-3, painel e ponte juntos — 2026-09-09
+- Spec: `specs/f0-3-painel-e-ponte-juntos.md`
+- Resultado da review: **aprovado sem ressalvas** — 9 de 9, com evidência de
+  tela e não de raciocínio sobre o código
+- **Rodada contra a minha própria recomendação.** O ledger da rodada 5 mandava
+  parar; conferir mostrou que F0-3 é bloqueador da Fase 0 e precisa de
+  navegador, não do Studio.
+- **BUG-008 achado e corrigido**, com teste de regressão verificado revertendo o
+  arquivo. Os 504 testes passavam — todos estáticos, nenhum renderiza.
+- Aprendido: `memory/learnings.md` e `memory/bugs.md`
+- Commit: `9320a5f` na branch `claude/camada-de-produto-e-fase-0`
+- Números: 505 testes verdes
+- **Pendência nova, honesta:** a suíte falhou 2 de 8 execuções hoje, com dois
+  testes que não consegui identificar nem reproduzir (3 execuções limpas
+  seguidas depois). Uma causa foi achada e corrigida na rodada 4 (teste lendo
+  arquivo que outro teste escreve); esta é outra. **Não declarar a suíte
+  determinística.** Se reaparecer, capturar o nome do teste antes de mexer.
+- Próximo item recomendado: **a sessão no Studio** — F0-2, F0-7 e F0-4, com o
+  roteiro em `docs/09_BACKLOG/roteiro-da-sessao-no-studio.md`. Agora sim não
+  sobra item de código na Fase 0: F0-1 e F0-3 estão feitos, e F0-5 e F0-6
+  acontecem dentro da mesma sessão.
+
 ## Rodada 5 — F0-2, a vistoria antes do Studio — 2026-09-09
 - Spec: `specs/f0-2-vistoria-antes-do-studio.md`
 - Resultado da review: **aprovado sem ressalvas** — 9 de 9, depois de a review
