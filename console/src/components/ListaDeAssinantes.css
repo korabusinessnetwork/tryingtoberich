@@ -1,0 +1,118 @@
+/* ListaDeAssinantes. Coluna esquerda, largura fixa, rolagem própria.
+
+   Rolagem própria e não da página: a ficha da direita fica parada enquanto o
+   operador procura o próximo assinante na lista, que é o gesto de quem está
+   comparando dois clientes. */
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lista-rolagem {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.lista-linhas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A linha inteira é o alvo de clique, não o nome. Alvo grande é o que permite
+   varrer a lista com o mouse sem mirar. */
+.lista-linha {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 12px;
+  min-height: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: var(--borda);
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  text-align: left;
+}
+
+.lista-linha:hover {
+  background: var(--painel-fundo);
+}
+
+/* A escolhida ganha barra à esquerda E fundo. Duas marcas porque a lista rola:
+   ao voltar de uma rolagem longa, o fundo sozinho some entre linhas parecidas. */
+.lista-linha-ativa,
+.lista-linha-ativa:hover {
+  background: var(--painel-fundo);
+  border-left-color: var(--painel-texto-primario);
+}
+
+.lista-linha-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lista-nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lista-estado {
+  flex: 0 0 auto;
+}
+
+.lista-linha-meio,
+.lista-linha-base {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* O @ nunca encolhe e o e-mail encolhe: o @ é curto por regra do banco (24
+   caracteres) e é por ele que o operador reconhece a linha de longe. */
+.lista-tiktok {
+  flex: 0 0 auto;
+}
+
+.lista-email {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lista-linha-base {
+  justify-content: space-between;
+}
+
+.lista-vazia {
+  margin: 0;
+  padding: 16px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.lista-erro {
+  margin: 10px 12px;
+  align-self: flex-start;
+}
+
+.lista-mais {
+  width: calc(100% - 24px);
+  margin: 10px 12px;
+}

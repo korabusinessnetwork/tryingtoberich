@@ -1,0 +1,118 @@
+/* FichaDoAssinante. Coluna direita, largura elástica, rolagem própria. */
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Estado sem ficha: recado centralizado, para não parecer painel quebrado. */
+.ficha-recado {
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+
+.ficha-recado p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ficha-topo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espaco);
+  padding: 14px 16px;
+  border-bottom: var(--borda);
+}
+
+.ficha-identidade {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ficha-nome {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ficha-contato,
+.ficha-id {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ficha-id {
+  font-size: 11px;
+}
+
+/* Licença e plano à direita, empilhados e alinhados à direita: são as duas
+   coisas que decidem se o cliente tem direito ao que está pedindo, e ficam no
+   canto para onde o olho vai depois de ler o nome. */
+.ficha-estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.ficha-plano {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ficha-onda3 {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Grade de pares rótulo/valor. Duas colunas fixas, não `auto-fit`: a ordem em
+   que as seis coisas do ADR-P05 aparecem é a ordem em que elas são perguntadas
+   ao atender, e uma grade que reflui sozinha embaralha essa ordem. */
+.ficha-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--painel-borda);
+  border-bottom: var(--borda);
+}
+
+.ficha-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 16px;
+  background: var(--painel-superficie);
+}
+
+.ficha-valor {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ficha-apoio {
+  font-size: 11px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}

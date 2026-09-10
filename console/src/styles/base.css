@@ -1,0 +1,113 @@
+/* Base do console do operador.
+
+   As cores vêm de tokens.css, que é GERADO de data/tokens.json, o mesmo arquivo
+   que o painel e o HUD do jogo espelham. Nenhum hex literal aqui: é o que
+   impede um segundo design system nascer nesta superfície (contrato da onda 2,
+   seção 5).
+
+   O contexto é OPOSTO ao do painel, e por isso o desenho é outro. O painel é
+   segunda tela durante a live, olhada por 2 segundos por vez. O console é uma
+   pessoa sentada, atendendo um cliente ou conferindo o mês: aqui o que importa
+   é caber muita linha na tela e a linha ser comparável com a de cima. Daí
+   tabela densa, número tabular e nenhuma animação.
+
+   Desktop apenas, sem tema e sem responsividade além disso. O ADR-P05 é
+   explícito: é ferramenta interna, e cada refinamento gasto aqui é refinamento
+   que não foi para o produto. */
+
+@import "./tokens.css";
+
+:root {
+  --raio: 6px;
+  --espaco: 12px;
+  /* O operador clica com calma, mas alvo pequeno erra igual. */
+  --alvo-minimo: 36px;
+  --borda: 1px solid var(--painel-borda);
+  --largura-da-lista: 420px;
+
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--painel-fundo);
+  color: var(--painel-texto-primario);
+  font-size: 14px;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  border-radius: var(--raio);
+  border: var(--borda);
+  background: var(--painel-superficie);
+  min-height: var(--alvo-minimo);
+  padding: 0 10px;
+}
+
+button { cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+:focus-visible {
+  outline: 2px solid var(--painel-texto-primario);
+  outline-offset: 2px;
+}
+
+/* Transição só onde comunica mudança de estado. Nada decorativo. */
+button, .cartao { transition: border-color 120ms, background 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+.secundario { color: var(--painel-texto-secundario); }
+
+/* Todo número que se compara com o de cima é tabular. Sem isso as colunas de
+   data e de dinheiro dançam de linha para linha e a comparação exige leitura. */
+.numero { font-variant-numeric: tabular-nums; }
+
+.cartao {
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+/* Estado sempre com TEXTO junto, nunca cor sozinha: 8% dos homens são
+   daltônicos, e a regra vale igual numa ferramenta de uma pessoa só. */
+.pastilha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: var(--borda);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pastilha::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pastilha-ok { color: var(--estado-ok); }
+.pastilha-atencao { color: var(--estado-atencao); }
+.pastilha-erro { color: var(--estado-erro); }
+.pastilha-neutra { color: var(--painel-texto-secundario); }
+
+/* Rótulo de campo: pequeno, em caixa alta, sempre acima do valor. A ficha é
+   feita de pares rótulo/valor, e é a repetição da forma que deixa ler a coluna
+   inteira de relance. */
+.rotulo {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--painel-texto-secundario);
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@kora/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Console do operador da Kora (ADR-P05). Roda em localhost, português apenas, sem i18n. Dono exclusivo de console/.",
+  "scripts": {
+    "predev": "node scripts/gerar-tokens.mjs --silencioso",
+    "dev": "vite",
+    "prebuild": "node scripts/gerar-tokens.mjs --silencioso",
+    "build": "vite build",
+    "preview": "vite preview",
+    "pretest": "node scripts/gerar-tokens.mjs --silencioso",
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.2.2"
+  },
+  "engines": { "node": ">=22" }
+}
