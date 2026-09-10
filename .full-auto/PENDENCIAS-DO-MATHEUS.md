@@ -90,11 +90,29 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
   comanda por ela (ADR-P05, itens 3 e 4).
 - **Contorno atual:** adaptador falso, que registra a ação no log administrativo
   e devolve resposta plausível.
-- **Passo a passo:** criar a loja, cadastrar o plano, gerar uma chave de API e o
-  segredo do webhook, e publicar a Edge Function do webhook no Supabase.
-- **Onde colar o resultado:** `LEMON_API_KEY` e `LEMON_WEBHOOK_SECRET` no `.env`
-  do console.
-- **Como confirmar que funcionou:** a aba Faturamento sai do dado de exemplo.
+- **Passo a passo:**
+  1. Criar a loja na Lemon Squeezy e cadastrar o plano.
+  2. No checkout, mandar o `streamer_id` em `custom_data`. É ele que liga a
+     venda à conta; sem ele a linha entra com `streamer_id` nulo e o console não
+     sabe de quem é.
+  3. Gerar uma chave de API e um segredo de webhook.
+  4. Publicar a função que recebe o webhook. Ela **já está escrita e testada**,
+     em `data/supabase/borda/lemon-webhook/`:
+
+     ```
+     supabase functions deploy lemon-webhook --no-verify-jwt
+     supabase secrets set LEMON_WEBHOOK_SECRET=<o segredo>
+     ```
+
+     O `--no-verify-jwt` é obrigatório e é seguro: quem chama é a Lemon Squeezy,
+     que não tem JWT do Supabase. Quem autentica a chamada é a assinatura HMAC,
+     que a função confere em tempo constante e **sem o segredo recusa tudo**.
+  5. Apontar o webhook da Lemon Squeezy para a URL que o deploy imprimir.
+- **Onde colar o resultado:** `LEMON_API_KEY` no `.env`, e o segredo do webhook
+  **só** no `supabase secrets`, nunca em arquivo do repositório.
+- **Como confirmar que funcionou:** dispare um evento de teste no painel da
+  Lemon Squeezy e veja a linha aparecer em `faturamento`. A aba Faturamento do
+  console sai do dado de exemplo.
 
 ## P06 A carência da licença: 14 dias serve? [prioridade: baixa]
 
