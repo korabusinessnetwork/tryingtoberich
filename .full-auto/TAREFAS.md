@@ -21,10 +21,10 @@ três dívidas conhecidas do ADR-P03.
 
 ## Fase 1: o console do operador (ADR-P05, seis itens, PT apenas)
 
-- [~] C01 Fundação do console | trilha: console | depende: M01, M02 | pronto quando: `npm run console` sobe uma tela em porta própria, usando os tokens do design system, sem uma linha de i18n
-- [~] C02 Camada de dados do console | trilha: console | depende: M01 | pronto quando: lê do Supabase por REST com a chave de serviço vinda do `.env`, e o adaptador FALSO está ativo por padrão, com dado de exemplo realista
-- [~] C03 Item 1, lista de assinantes | trilha: console | depende: C01, C02 | pronto quando: a lista abre e a busca por usuário da TikTok, e-mail ou licença filtra
-- [~] C04 Item 2, ficha individual | trilha: console | depende: C03 | pronto quando: a ficha mostra status, plano, início, última conexão, modalidades, idioma e versão instalada
+- [x] C01 Fundação do console | trilha: console | depende: M01, M02 | pronto quando: `npm run console` sobe uma tela em porta própria, usando os tokens do design system, sem uma linha de i18n
+- [x] C02 Camada de dados do console | trilha: console | depende: M01 | pronto quando: lê do Supabase por REST com a chave de serviço vinda do `.env`, e o adaptador FALSO está ativo por padrão, com dado de exemplo realista
+- [x] C03 Item 1, lista de assinantes | trilha: console | depende: C01, C02 | pronto quando: a lista abre e a busca por usuário da TikTok, e-mail ou licença filtra
+- [x] C04 Item 2, ficha individual | trilha: console | depende: C03 | pronto quando: a ficha mostra status, plano, início, última conexão, modalidades, idioma e versão instalada
 - [ ] C05 Item 5, logs de evento e de ação administrativa | trilha: console | depende: C01, C02 | pronto quando: a tela lista os dois, o log administrativo é imutável no banco, e há teste provando que ele não aceita update nem delete
 - [ ] C06 Item 6, saúde de conexão | trilha: console | depende: C01, C02 | pronto quando: mostra quantos clientes conectados agora e quantas quedas em 24h, alimentado pela telemetria que a ponte já manda
 - [ ] C07 Item 3, edição de plano | trilha: console | depende: C04 | pronto quando: a ação escreve pelo adaptador da Lemon Squeezy (falso por padrão) e registra no log administrativo
@@ -55,3 +55,7 @@ três dívidas conhecidas do ADR-P03.
 - **Console v2** (desempenho por assinante, ranking, funil, retenção). O próprio
   ADR-P05 adia, e o motivo continua valendo: heatmap com zero assinante não
   mostra nada.
+- **A refatoração do layout do painel.** Pedida pelo dono em 2026-09-10 para ser
+  REGISTRADA, não executada. O problema está escrito em
+  `docs/09_BACKLOG/refatoracao-do-layout.md`, e ela pede uma live de verdade
+  antes de qualquer desenho. Entra numa execução própria.

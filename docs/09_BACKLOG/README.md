@@ -193,6 +193,15 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
 > [`tarefas-do-dono.md`](./tarefas-do-dono.md) — decisão de negócio, dinheiro,
 > conta em serviço de terceiro e a sessão no Studio.
 
+### Registrado e não executado
+
+- [ ] **Refatoração do layout do painel**, pedida pelo dono em 2026-09-10.
+      Nove abas em ordem cronológica, não de uso; a aba "Ao vivo" empilha o
+      editor inteiro acima do que se opera durante a live; o único alarme do
+      produto é um número ao lado da palavra "Log". O problema está escrito, com
+      o que não pode quebrar e o que medir antes de desenhar, em
+      [`refatoracao-do-layout.md`](./refatoracao-do-layout.md).
+
 ### O que falta no portátil
 
 - [ ] **Instalação limpa abre o painel com os seis slots em vermelho.** O preset

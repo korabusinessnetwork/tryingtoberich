@@ -8,7 +8,7 @@
     "start": "node scripts/subir-tudo.mjs",
     "dev": "node scripts/subir-tudo.mjs",
     "atalho": "node scripts/criar-atalho.mjs",
-    "test": "node --test \"test/**/*.test.mjs\" \"bridge/test/**/*.test.mjs\" \"panel/test/**/*.test.mjs\"",
+    "test": "node --test \"test/**/*.test.mjs\" \"bridge/test/**/*.test.mjs\" \"panel/test/**/*.test.mjs\" \"console/test/**/*.test.mjs\"",
     "validar": "node scripts/validar-contratos.mjs",
     "gerar": "node scripts/gerar-animacoes.mjs && node scripts/gerar-tokens.mjs && node scripts/gerar-i18n.mjs",
     "pretest": "node scripts/gerar-animacoes.mjs --silencioso && node scripts/gerar-tokens.mjs --silencioso && node scripts/gerar-i18n.mjs --silencioso",
