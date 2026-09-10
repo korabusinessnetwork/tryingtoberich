@@ -61,14 +61,14 @@ export const api = {
   /* Item 2 */
   buscarFicha: (streamerId) => chamar(`/assinantes/${encodeURIComponent(streamerId)}`),
 
-  /* Item 3, onda 3 */
+  /* Item 3 */
   trocarPlano: (streamerId, plano, { motivo = null } = {}) =>
     chamar(`/assinantes/${encodeURIComponent(streamerId)}/plano`, json("POST", { plano, motivo })),
 
-  /* Item 4, onda 3 */
+  /* Item 4 */
   resumoDeFaturamento: ({ mes = null } = {}) => chamar(`/faturamento${querystring({ mes })}`),
 
-  /* Item 5, onda 3 */
+  /* Item 5 */
   listarEventos: ({ streamerId = null, desde = null, limite = null } = {}) =>
     chamar(`/eventos${querystring({ streamerId, desde, limite })}`),
   listarAcoesAdministrativas: ({ desde = null, limite = null } = {}) =>
@@ -76,7 +76,7 @@ export const api = {
   registrarAcao: ({ acao, streamerId = null, detalhe = {} }) =>
     chamar("/acoes", json("POST", { acao, streamerId, detalhe })),
 
-  /* Item 6, onda 3 */
+  /* Item 6 */
   saudeDeConexao: () => chamar("/saude"),
 
   /** Qual implementação está do outro lado. Só o nome, nunca a URL nem a chave. */

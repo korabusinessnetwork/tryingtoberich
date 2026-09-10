@@ -95,6 +95,24 @@ test("o módulo do banco não é importado por nenhum componente", async () => {
   }
 });
 
+test("nenhum componente importa o adaptador que carrega a chave da Lemon Squeezy", async () => {
+  // `faturamento/contrato.js` é só constante e pode ser lido pela tela (é dele
+  // que sai a lista de planos). `lemon.js` e o `index.js` que o escolhe carregam
+  // `LEMON_API_KEY` e vivem no Node, como `dados/supabase.js`.
+  const componentes = await arquivosDe(path.join(CONSOLE, "src", "components"), [".jsx"]);
+
+  for (const arquivo of componentes) {
+    const { fonte } = await ler(arquivo);
+    for (const proibido of ["faturamento/lemon", "faturamento/index", "faturamento/exemplo", "faturamento/troca"]) {
+      assert.equal(
+        fonte.includes(proibido),
+        false,
+        `${path.basename(arquivo)} importa ${proibido}, que vive no Node`,
+      );
+    }
+  }
+});
+
 test("nenhuma chave, url de projeto ou token aparece cravado no código", async () => {
   const arquivos = [
     ...(await arquivosDe(path.join(CONSOLE, "src"), [".js", ".jsx"])),

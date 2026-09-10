@@ -259,7 +259,29 @@ export function criarDadosDoSupabase({ url, chave, buscar, cliente } = {}) {
       return sucesso({ ficha: linha ? daFicha(linha) : null });
     },
 
-    async trocarPlano(streamerId, plano, { motivo = null } = {}) {
+    /**
+     * O vínculo do assinante com a Lemon Squeezy, para a troca de plano.
+     *
+     * Vai à tabela `assinantes`, e não à visão `ficha_do_assinante`, porque a
+     * visão do `002-console.sql` não traz `lemon_customer_id`. Pedir a coluna
+     * na visão seria mudança de SQL, e SQL é do maestro (contrato da onda 2,
+     * seção 2): está no relatório da onda. Enquanto isso, esta consulta paga o
+     * custo no lugar certo, que é a operação rara, e não a ficha.
+     */
+    async buscarCobranca(streamerId) {
+      if (!streamerId) return falha(MOTIVOS.PEDIDO_INVALIDO, "streamerId é obrigatório");
+
+      const resposta = await banco.chamar(
+        `assinantes?select=lemon_customer_id&streamer_id=eq.${encodeURIComponent(streamerId)}&limit=1`,
+      );
+      if (resposta.ok !== true) return resposta;
+
+      const linha = resposta.linhas[0];
+      if (!linha) return sucesso({ existe: false, lemonCustomerId: null });
+      return sucesso({ existe: true, lemonCustomerId: linha.lemon_customer_id ?? null });
+    },
+
+    async trocarPlano(streamerId, plano, { motivo = null, cobranca = null } = {}) {
       if (!streamerId) return falha(MOTIVOS.PEDIDO_INVALIDO, "streamerId é obrigatório");
 
       const antes = await this.buscarFicha(streamerId);
@@ -282,7 +304,7 @@ export function criarDadosDoSupabase({ url, chave, buscar, cliente } = {}) {
       const registro = await registrarAcao({
         acao: "plano_trocado",
         streamerId,
-        detalhe: { de: antes.ficha.plano, para: plano, motivo },
+        detalhe: { de: antes.ficha.plano, para: plano, motivo, ...(cobranca ? { cobranca } : {}) },
       });
       if (registro.ok !== true) return registro;
 

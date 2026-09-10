@@ -42,6 +42,7 @@ const amarrar = (nome) => (...argumentos) => dados[nome](...argumentos);
 
 export const listarAssinantes = amarrar("listarAssinantes");
 export const buscarFicha = amarrar("buscarFicha");
+export const buscarCobranca = amarrar("buscarCobranca");
 export const trocarPlano = amarrar("trocarPlano");
 export const resumoDeFaturamento = amarrar("resumoDeFaturamento");
 export const listarEventos = amarrar("listarEventos");

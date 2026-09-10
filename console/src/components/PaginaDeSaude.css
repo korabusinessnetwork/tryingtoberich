@@ -1,0 +1,138 @@
+/* PaginaDeSaude. Um cartão só, alinhado ao topo, com largura de leitura.
+
+   Não ocupa a tela inteira de propósito: são dois números e uma série curta, e
+   esticá-los até a borda faria o alarme parecer um dashboard, que é exatamente
+   o que o ADR-P05 diz que ele não é. */
+
+.saude {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-self: start;
+  max-width: 720px;
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.saude-recado {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+}
+
+.saude-recado p {
+  margin: 0;
+  max-width: 48ch;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* A borda esquerda repete o nível do alarme. É redundância deliberada com a
+   pastilha: quem passa os olhos vê a faixa, quem lê vê a palavra, e a cor
+   nunca informa sozinha. */
+.saude-alarme { border-left: 3px solid var(--estado-erro); }
+.saude-atencao { border-left: 3px solid var(--estado-atencao); }
+.saude-calmo { border-left: 3px solid var(--estado-ok); }
+
+.saude-topo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.saude-explicacao {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.saude-numeros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--painel-borda);
+  border: var(--borda);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.saude-numero {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 16px;
+  background: var(--painel-superficie);
+}
+
+/* Grande porque é a única coisa desta tela que se lê de longe: o gesto é
+   passar por perto e conferir, não sentar e analisar. */
+.saude-valor {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.saude-apoio {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.saude-serie {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saude-sem-serie {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.saude-barras {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Barras horizontais, e não colunas: o rótulo é uma hora e cabe inteiro à
+   esquerda, sem girar texto nem abreviar. */
+.saude-barra {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.saude-barra-hora {
+  white-space: nowrap;
+}
+
+.saude-barra-trilho {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--painel-fundo);
+  border: var(--borda);
+  overflow: hidden;
+}
+
+.saude-barra-preenchida {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--estado-erro);
+}
+
+.saude-barra-total {
+  text-align: right;
+  font-weight: 600;
+}

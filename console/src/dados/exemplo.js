@@ -323,7 +323,13 @@ export function criarDadosDeExemplo({ agora = new Date() } = {}) {
       return sucesso({ ficha: assinante ? montarFicha(assinante) : null });
     },
 
-    async trocarPlano(streamerId, plano, { motivo = null } = {}) {
+    async buscarCobranca(streamerId) {
+      const assinante = acharAssinante(streamerId);
+      if (!assinante) return sucesso({ existe: false, lemonCustomerId: null });
+      return sucesso({ existe: true, lemonCustomerId: assinante.lemonCustomerId ?? null });
+    },
+
+    async trocarPlano(streamerId, plano, { motivo = null, cobranca = null } = {}) {
       const assinante = acharAssinante(streamerId);
       if (!assinante) return falha(MOTIVOS.NAO_ENCONTRADO, streamerId);
 
@@ -335,7 +341,10 @@ export function criarDadosDeExemplo({ agora = new Date() } = {}) {
       await registrarAcao({
         acao: "plano_trocado",
         streamerId,
-        detalhe: { de: anterior, para: plano, motivo },
+        // `cobranca` só entra quando quem chamou sabe o que aconteceu do lado
+        // do dinheiro. Chave presente e vazia diria "não houve cobrança", que é
+        // uma afirmação diferente de "quem chamou não olhou".
+        detalhe: { de: anterior, para: plano, motivo, ...(cobranca ? { cobranca } : {}) },
       });
 
       return sucesso({ ficha: montarFicha(assinante) });
@@ -387,12 +396,40 @@ const PERDA = new Set(["assinatura_cancelada", "assinatura_expirada"]);
 /**
  * MRR, vendas e cancelamentos do mês, mais a série por dia.
  *
- * **MRR aqui é a receita reconhecida no mês**, e não a projeção da carteira.
- * A diferença aparece no plano anual, que entra inteiro num mês só. Está
- * escrito porque é o número que o dono vai ler, e um número de dinheiro sem
- * definição escrita vira briga com o painel da Lemon Squeezy. Quando a Fase 1
- * tiver carteira de verdade, o item 4 revisita, e a fonte da verdade continua
- * sendo a Lemon Squeezy (ADR-P02).
+ * ======================================================================
+ * **A DECISÃO: `mrrCentavos` é RECEITA COBRADA NO MÊS, não projeção da
+ * carteira.** Ela estava em aberto desde a onda 2 e é decidida aqui.
+ * ======================================================================
+ *
+ * Os dois números divergem, e divergem feio no plano anual: US$ 199 cobrados
+ * uma vez entram inteiros num mês pela receita cobrada, e entrariam como
+ * US$ 16,58 por mês, doze vezes, pela projeção da carteira.
+ *
+ * **Por que a cobrada, e não a projeção:** a projeção precisa de duas coisas
+ * que esta tabela não tem, e olhar `data/supabase/borda/lemon-webhook/mapear.mjs`
+ * mostra o buraco de uma vez. A tabela `faturamento` é um livro de EVENTOS do
+ * webhook: id do evento, tipo, valor cobrado, moeda, quando. Ela não guarda
+ * quais assinaturas estão vivas hoje nem quanto cada uma vale por mês. Para
+ * projetar carteira seria preciso cruzar `licencas.plano` com um preço por
+ * plano, e `licencas` não tem preço nenhum: ele mora na Lemon Squeezy. Um
+ * número de dinheiro montado a partir de duas suposições continua parecendo um
+ * número, e é assim que ele acaba numa decisão.
+ *
+ * A receita cobrada, essa, a tabela responde EXATAMENTE, linha por linha, e
+ * bate com o painel da Lemon Squeezy, que é a fonte da verdade do dinheiro
+ * (ADR-P02). Quando um número do console discordar do painel deles, a diferença
+ * é uma linha que faltou ou sobrou, e o corpo cru está guardado ao lado.
+ *
+ * **O custo desta escolha, e ele é real:** este número NÃO é taxa mensal
+ * corrente. Um mês com uma venda anual parece um mês excelente e não repete.
+ * Por isso a tela do item 4 chama o valor de "Recebido no mês" e diz, na
+ * própria tela, que ele não é run-rate. Rótulo "MRR" em cima de receita cobrada
+ * seria a mentira de dois caracteres que ninguém desfaz depois.
+ *
+ * O nome do campo continua `mrrCentavos` porque é o que a tabela do contrato da
+ * onda 2 nomeia, e renomear campo de contrato no meio da onda é o BUG-001 de
+ * novo. Quando a carteira existir de verdade, o item 4 revisita, e aí os dois
+ * números coexistem com nomes diferentes.
  */
 export function resumirFaturamento(linhas, mes, agora = new Date()) {
   const alvo = mesDe(mes, agora);

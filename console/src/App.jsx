@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "./lib/api.js";
+import { usarCarga } from "./lib/usarCarga.js";
 import { CabecalhoDoConsole } from "./components/CabecalhoDoConsole.jsx";
 import { FichaDoAssinante } from "./components/FichaDoAssinante.jsx";
 import { ListaDeAssinantes } from "./components/ListaDeAssinantes.jsx";
 import { NavegacaoDoConsole } from "./components/NavegacaoDoConsole.jsx";
-import { PaginaDaOnda3 } from "./components/PaginaDaOnda3.jsx";
+import { PaginaDeFaturamento } from "./components/PaginaDeFaturamento.jsx";
+import { PaginaDeLogs } from "./components/PaginaDeLogs.jsx";
+import { PaginaDeSaude } from "./components/PaginaDeSaude.jsx";
 import "./App.css";
 
 /**
- * O console do operador (ADR-P05).
+ * O console do operador (ADR-P05), com os seis itens do v1 em quatro páginas.
  *
  * Este arquivo carrega dado, guarda estado e distribui. Ele é o único que chama
  * `api`, porque componente não toca a rede (CLAUDE.md): é o que permite testar
@@ -20,8 +23,10 @@ import "./App.css";
  * trabalho gasto em plateia de uma pessoa (ADR-P05). O painel do cliente é o
  * lugar dos três idiomas, e ele já os tem.
  *
- * A navegação mostra as quatro páginas do v1. Três ainda não existem, e ficam
- * visíveis mesmo assim: é a fronteira congelada do ADR-P05 à vista.
+ * **Cada página só carrega quando está à vista.** Consultar faturamento
+ * enquanto o operador olha a lista é gastar o tier gratuito com resposta que
+ * ninguém leu (CLAUDE.md, Custo), e nada disto está no caminho crítico do
+ * presente: o console não toca a live.
  */
 
 /**
@@ -33,6 +38,9 @@ import "./App.css";
  * (CLAUDE.md, Princípio nº 1): nada aqui toca a live.
  */
 const ESPERA_DA_BUSCA_MS = 250;
+
+/** O mês corrente em UTC, que é o fuso em que o banco carimba `em`. */
+const mesCorrente = () => new Date().toISOString().slice(0, 7);
 
 export function App() {
   const [pagina, definirPagina] = useState("assinantes");
@@ -51,6 +59,12 @@ export function App() {
   const [ficha, definirFicha] = useState(null);
   const [carregandoFicha, definirCarregandoFicha] = useState(false);
   const [erroDaFicha, definirErroDaFicha] = useState(null);
+
+  const [trocandoPlano, definirTrocandoPlano] = useState(false);
+  const [resultadoDaTroca, definirResultadoDaTroca] = useState(null);
+  const [erroDaTroca, definirErroDaTroca] = useState(null);
+
+  const [mes, definirMes] = useState(mesCorrente);
 
   // Cada carga de lista leva um número. Resposta de carga velha que chega
   // depois da nova é descartada: digitando rápido, as respostas voltam fora de
@@ -144,24 +158,98 @@ export function App() {
 
   useEffect(() => {
     carregarFicha(escolhido);
+    // Trocar de assinante limpa o desfecho da troca anterior: um "Plano agora é
+    // anual" pendurado na ficha do próximo cliente seria a pior frase possível
+    // nesta tela.
+    definirResultadoDaTroca(null);
+    definirErroDaTroca(null);
   }, [escolhido, carregarFicha]);
 
+  /* ---- item 3: a troca de plano ------------------------------------ */
+
+  const trocarPlano = useCallback(
+    async (plano, motivo) => {
+      if (!escolhido) return;
+      definirTrocandoPlano(true);
+      definirErroDaTroca(null);
+      definirResultadoDaTroca(null);
+
+      const resposta = await api.trocarPlano(escolhido, plano, { motivo });
+      definirTrocandoPlano(false);
+
+      if (resposta?.ok !== true) {
+        definirErroDaTroca(resposta?.motivo ?? "rede");
+        return;
+      }
+
+      definirResultadoDaTroca(resposta);
+      definirFicha(resposta.ficha ?? null);
+      // A lista mostra o plano em cada linha: deixá-la desatualizada faria a
+      // mesma tela dizer duas coisas diferentes sobre o mesmo cliente.
+      carregarLista(buscaAplicada);
+    },
+    [buscaAplicada, carregarLista, escolhido],
+  );
+
+  /* ---- item 5: os dois logs --------------------------------------- */
+
+  const carregarAcoes = useCallback(() => api.listarAcoesAdministrativas({}), []);
+  const carregarEventos = useCallback(() => api.listarEventos({}), []);
+
+  const acoes = usarCarga(carregarAcoes, { ativo: pagina === "logs" });
+  const eventos = usarCarga(carregarEventos, { ativo: pagina === "logs" });
+
+  /* ---- item 6: saúde de conexão ------------------------------------ */
+
+  const carregarSaude = useCallback(() => api.saudeDeConexao(), []);
+  const saude = usarCarga(carregarSaude, { ativo: pagina === "saude" });
+
+  /* ---- item 4: faturamento ----------------------------------------- */
+
+  const carregarFaturamento = useCallback(() => api.resumoDeFaturamento({ mes }), [mes]);
+  const faturamento = usarCarga(carregarFaturamento, { ativo: pagina === "faturamento" });
+
+  /* ---- o botão de atualizar --------------------------------------- */
+
   const atualizar = useCallback(() => {
-    carregarLista(buscaAplicada);
-    if (escolhido) carregarFicha(escolhido);
-  }, [buscaAplicada, carregarFicha, carregarLista, escolhido]);
+    // Atualiza a página que está à vista, e só ela. Recarregar as quatro faria
+    // três consultas para ninguém.
+    if (pagina === "assinantes") {
+      carregarLista(buscaAplicada);
+      if (escolhido) carregarFicha(escolhido);
+      return;
+    }
+    if (pagina === "logs") {
+      acoes.recarregar();
+      eventos.recarregar();
+      return;
+    }
+    if (pagina === "saude") saude.recarregar();
+    if (pagina === "faturamento") faturamento.recarregar();
+  }, [
+    acoes,
+    buscaAplicada,
+    carregarFicha,
+    carregarLista,
+    escolhido,
+    eventos,
+    faturamento,
+    pagina,
+    saude,
+  ]);
+
+  const atualizando = useMemo(
+    () => carregandoLista || carregandoFicha || acoes.carregando || eventos.carregando || saude.carregando || faturamento.carregando,
+    [acoes.carregando, carregandoFicha, carregandoLista, eventos.carregando, faturamento.carregando, saude.carregando],
+  );
 
   return (
     <div className="console">
-      <CabecalhoDoConsole
-        fonte={fonte}
-        aoAtualizar={atualizar}
-        atualizando={carregandoLista || carregandoFicha}
-      />
+      <CabecalhoDoConsole fonte={fonte} aoAtualizar={atualizar} atualizando={atualizando} />
       <NavegacaoDoConsole pagina={pagina} aoTrocar={definirPagina} />
 
       <main className="console-corpo">
-        {pagina === "assinantes" ? (
+        {pagina === "assinantes" && (
           <div className="console-duas-colunas">
             <ListaDeAssinantes
               assinantes={assinantes}
@@ -180,10 +268,37 @@ export function App() {
               carregando={carregandoFicha}
               erro={erroDaFicha}
               streamerId={escolhido}
+              aoTrocarPlano={trocarPlano}
+              trocandoPlano={trocandoPlano}
+              resultadoDaTroca={resultadoDaTroca}
+              erroDaTroca={erroDaTroca}
             />
           </div>
-        ) : (
-          <PaginaDaOnda3 pagina={pagina} />
+        )}
+
+        {pagina === "faturamento" && (
+          <PaginaDeFaturamento
+            resumo={faturamento.dado}
+            mes={mes}
+            aoTrocarMes={definirMes}
+            carregando={faturamento.carregando}
+            erro={faturamento.erro}
+          />
+        )}
+
+        {pagina === "logs" && (
+          <PaginaDeLogs
+            acoes={acoes.dado?.acoes}
+            eventos={eventos.dado?.eventos}
+            carregandoAcoes={acoes.carregando}
+            carregandoEventos={eventos.carregando}
+            erroDeAcoes={acoes.erro}
+            erroDeEventos={eventos.erro}
+          />
+        )}
+
+        {pagina === "saude" && (
+          <PaginaDeSaude saude={saude.dado} carregando={saude.carregando} erro={saude.erro} />
         )}
       </main>
     </div>

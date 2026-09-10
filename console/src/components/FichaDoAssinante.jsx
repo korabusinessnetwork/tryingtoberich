@@ -8,6 +8,7 @@ import {
   mensagemDeFalha,
   ouVazio,
 } from "../lib/formatar.js";
+import { TrocaDePlano } from "./TrocaDePlano.jsx";
 import "./FichaDoAssinante.css";
 
 /**
@@ -32,7 +33,11 @@ import "./FichaDoAssinante.css";
  * - **Tempo aparece duas vezes.** A distância ("há 2 d") responde "esse cliente
  *   está vivo"; a data absoluta ao lado é a que se cola num e-mail de suporte.
  *
- * Componente não busca dado: quem chama a rede é o `App` (CLAUDE.md).
+ * No rodapé mora o **item 3**, a troca de plano (`TrocaDePlano.jsx`). Ela mora
+ * aqui, e não numa aba, porque plano é um campo do assinante e a pergunta "qual
+ * o plano dele" já está respondida no topo desta mesma tela.
+ *
+ * Componente não busca dado nem escreve: quem chama a rede é o `App` (CLAUDE.md).
  */
 
 function Campo({ rotulo, valor, apoio, titulo }) {
@@ -45,7 +50,16 @@ function Campo({ rotulo, valor, apoio, titulo }) {
   );
 }
 
-export function FichaDoAssinante({ ficha, carregando, erro, streamerId }) {
+export function FichaDoAssinante({
+  ficha,
+  carregando,
+  erro,
+  streamerId,
+  aoTrocarPlano,
+  trocandoPlano,
+  resultadoDaTroca,
+  erroDaTroca,
+}) {
   if (erro) {
     return (
       <section className="ficha cartao ficha-recado" aria-label="Ficha do assinante">
@@ -105,10 +119,6 @@ export function FichaDoAssinante({ ficha, carregando, erro, streamerId }) {
         <div className="ficha-estado">
           <span className={`pastilha ${estado.pastilha}`}>{estado.texto}</span>
           <span className="ficha-plano">{ficha.plano ? `Plano ${ficha.plano}` : "Sem plano"}</span>
-          {/* A troca de plano é o item 3 do ADR-P05 e mora aqui, dentro da
-              ficha. A tela dela é da onda 3; a linha existe para quem abrir
-              esta ficha saber onde ela vai aparecer. */}
-          <span className="ficha-onda3 secundario">Trocar plano: onda 3</span>
         </div>
       </header>
 
@@ -147,6 +157,17 @@ export function FichaDoAssinante({ ficha, carregando, erro, streamerId }) {
           apoio={modalidades.length > 0 ? null : "Nada rodou nesta instalação"}
         />
       </div>
+
+      {/* Item 3 do ADR-P05, no rodapé da ficha: a única ação de escrita do
+          console fica depois de tudo que se lê sobre o cliente, para nunca ser
+          a primeira coisa que a mão encontra. */}
+      <TrocaDePlano
+        ficha={ficha}
+        aoTrocar={aoTrocarPlano}
+        trocando={trocandoPlano}
+        resultado={resultadoDaTroca}
+        erro={erroDaTroca}
+      />
     </section>
   );
 }

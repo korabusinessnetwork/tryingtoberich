@@ -78,12 +78,6 @@
   font-weight: 600;
 }
 
-.ficha-onda3 {
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 /* Grade de pares rótulo/valor. Duas colunas fixas, não `auto-fit`: a ordem em
    que as seis coisas do ADR-P05 aparecem é a ordem em que elas são perguntadas
    ao atender, e uma grade que reflui sozinha embaralha essa ordem. */
