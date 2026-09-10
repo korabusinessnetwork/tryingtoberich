@@ -1,0 +1,139 @@
+KORA STREAM GAMES — TERMO DE USO
+=================================
+
+Versão 1, 10 de setembro de 2026.
+
+Este texto é curto de propósito. Ele diz o que o programa faz, o que ele
+não garante, e o que é seu. Se algo aqui não estiver claro, escreva para
+a gente antes de assinar.
+
+
+1. O QUE VOCÊ ESTÁ CONTRATANDO
+------------------------------
+
+Um programa que roda na SUA máquina. Ele conecta na sua live da TikTok,
+lê os presentes que a sua plateia manda, e faz um jogo no Roblox reagir
+a eles.
+
+A Kora vende a ferramenta. Ela não opera a sua live, não armazena a sua
+transmissão e não fica no meio da sua conexão com a TikTok. Quem conecta
+é o programa na sua máquina, com a sua conta, na sua live.
+
+
+2. O QUE A GENTE NÃO GARANTE, E ISTO É O PONTO MAIS IMPORTANTE
+---------------------------------------------------------------
+
+A TikTok NÃO oferece uma forma oficial de um programa acompanhar os
+presentes de uma live. Não existe. O que existe é um acesso não oficial,
+que funciona bem hoje e que a TikTok pode mudar ou interromper a
+qualquer momento, sem aviso e sem nos consultar.
+
+Ou seja, em português claro:
+
+  * O Kora Stream Games depende de uma plataforma de terceiro sobre a
+    qual a Kora não tem controle nenhum.
+  * Se a TikTok mudar como a live funciona por dentro, o programa pode
+    parar de receber os presentes, do dia para a noite.
+  * Isso pode durar horas, dias, ou ser definitivo.
+
+A gente trabalha para consertar rápido quando acontecer, e existe um
+alarme do nosso lado que avisa a Kora antes de você precisar reclamar.
+Mas a gente não pode prometer que não vai acontecer, e não vai fingir
+que pode.
+
+**O que acontece com a sua assinatura quando o serviço fica fora está
+escrito no item 4, e foi decidido antes de acontecer, não depois.**
+
+
+3. ISTO NÃO É UM PRODUTO OFICIAL DA TIKTOK NEM DO ROBLOX
+---------------------------------------------------------
+
+A Kora não é parceira, afiliada nem autorizada pela TikTok ou pela
+Roblox. Nenhuma das duas empresas endossa, revisa ou tem qualquer
+relação com este programa. As marcas delas pertencem a elas.
+
+Você continua responsável por seguir os termos da TikTok e da Roblox nas
+suas contas.
+
+
+4. QUANDO O SERVIÇO FICA FORA
+------------------------------
+
+Vale a partir do momento em que a Kora confirma a interrupção, e não do
+momento em que você reclama:
+
+  * Até 24 horas fora: nada muda. Interrupção curta acontece, e a gente
+    conserta.
+  * Mais de 24 horas: a sua assinatura é PAUSADA, e você não é cobrado
+    pelos dias em que o serviço não funcionou. A pausa é automática, não
+    precisa pedir.
+  * Mais de 7 dias: você escolhe. Ou continua pausado, esperando, sem
+    pagar nada, ou cancela e recebe de volta a parte proporcional do que
+    já tinha pago no ciclo.
+  * Se a interrupção for definitiva: a assinatura é encerrada e a parte
+    proporcional é devolvida. A gente avisa por e-mail, e não espera
+    você descobrir sozinho.
+
+Em qualquer um dos casos, o seu trabalho continua seu. Ver o item 5.
+
+
+5. O QUE É SEU
+--------------
+
+Tudo que você monta no programa: presets, mapas, personagens, acervo e
+histórico das suas lives. Eles ficam em arquivos, na sua máquina, num
+formato aberto.
+
+Você pode copiar, levar embora e continuar com eles sem a Kora. A gente
+não guarda nada disso e não trava nada disso atrás da assinatura.
+
+Se você cancelar, os arquivos continuam onde estão.
+
+
+6. O QUE A KORA GUARDA
+-----------------------
+
+Só o que precisa para a sua conta funcionar e para saber se o produto
+está de pé: o seu e-mail, a sua licença, a sua conta da TikTok, o idioma
+e a versão instalada, mais o registro de quando o seu programa conectou
+e caiu.
+
+O QUE A KORA NÃO GUARDA, e isto é regra técnica do programa e não
+promessa de marketing: **nada sobre os seus espectadores.** Nome, foto,
+identificador, nada. O programa usa esses dados enquanto a live está no
+ar, para o jogo reagir, e descarta ao encerrar a sessão. Eles nunca saem
+da sua máquina.
+
+
+7. CANCELAMENTO
+---------------
+
+Quando quiser, sem multa e sem prazo mínimo. Você continua usando até o
+fim do ciclo já pago.
+
+Nos primeiros 14 dias, se não servir para você, é reembolso integral,
+sem perguntas.
+
+
+8. LIMITE DE RESPONSABILIDADE
+------------------------------
+
+A Kora responde, no máximo, pelo valor que você pagou nos últimos 12
+meses. Ela não responde por lucro que você deixou de ter, por presente
+que a sua plateia não mandou, nem por qualquer coisa que a TikTok ou a
+Roblox façam nas contas delas.
+
+
+9. MUDANÇAS NESTE TERMO
+------------------------
+
+Se a gente mudar algo que te afete, avisa por e-mail com 30 dias de
+antecedência. Se você não concordar, pode cancelar nesse prazo com
+reembolso proporcional.
+
+
+CONTATO
+-------
+
+Kora Business Network
+matheusbonato3561@gmail.com

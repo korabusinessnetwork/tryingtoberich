@@ -83,12 +83,22 @@ linha sem citá-la. **Este ADR é a reavaliação formal que o ADR-006 exigiu.**
 |---|---|---|
 | 1 | Interface de captura isolada em `bridge/src/tiktok/` | **Feita**, e já era assim. Passa a ser requisito, com teste guardando a fronteira |
 | 2 | Nunca anunciar como integração oficial | **Regra**, sem código. Vale para landing, e-mail e loja |
-| 3 | Termo de uso do cliente | **A escrever**, e vai junto no pacote |
+| 3 | Termo de uso do cliente | **Feita.** `scripts/modelos/termo-de-uso.txt` e `terms-of-use.txt`, e o pacote os leva ao lado do exe |
 | 4 | Alarme de saúde de conexão no console | **Feita** (ADR-P05, item 6) |
-| 5 | Política de quebra escrita antes de acontecer | **A escrever** |
+| 5 | Política de quebra escrita antes de acontecer | **Feita.** `docs/00_VISAO/politica-de-quebra.md` |
 
-As duas que faltam são texto, não código, e o ADR é explícito sobre o custo de
+**As cinco estão de pé.** As duas últimas eram texto e foram escritas em
+2026-09-10, no mesmo dia da decisão, porque o ADR é explícito sobre o custo de
 pulá-las: **é a nº 3 e a nº 5 que transformam uma quebra técnica em chargeback.**
+
+A nº 1 ganhou teste (`test/fronteira-da-captura.test.mjs`): ela deixou de ser
+bom gosto de código e virou o plano de contingência do produto, e plano de
+contingência que não é testado se perde num `import` conveniente feito numa
+terça-feira. A nº 3 e a nº 5 também têm teste, guardando o que não pode sumir
+dos dois textos.
+
+O que ainda não existe da política é **o botão de pausar a assinatura**, que
+depende da conta na Lemon Squeezy.
 
 ---
 

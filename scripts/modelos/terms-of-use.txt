@@ -1,0 +1,137 @@
+KORA STREAM GAMES — TERMS OF USE
+=================================
+
+Version 1, September 10, 2026.
+
+This is short on purpose. It says what the software does, what we do not
+promise, and what is yours. If anything here is unclear, email us before
+you subscribe.
+
+
+1. WHAT YOU ARE SUBSCRIBING TO
+-------------------------------
+
+Software that runs on YOUR machine. It connects to your TikTok LIVE,
+reads the gifts your viewers send, and makes a Roblox game react to
+them.
+
+Kora sells the tool. We do not run your stream, we do not store your
+broadcast, and we are not in the middle of your connection to TikTok.
+What connects is the program on your machine, with your account, to your
+own live.
+
+
+2. WHAT WE DO NOT PROMISE, AND THIS IS THE MOST IMPORTANT PART
+---------------------------------------------------------------
+
+TikTok does NOT offer an official way for software to follow the gifts
+in a live. There isn't one. What exists is unofficial access that works
+well today and that TikTok can change or shut off at any moment, without
+notice and without asking us.
+
+In plain English:
+
+  * Kora Stream Games depends on a third-party platform that Kora has no
+    control over.
+  * If TikTok changes how lives work internally, the software can stop
+    receiving gifts overnight.
+  * That can last hours, days, or be permanent.
+
+We work to fix it fast when it happens, and we have an alarm on our side
+that tells us before you have to complain. But we cannot promise it
+won't happen, and we won't pretend we can.
+
+**What happens to your subscription while the service is down is in
+section 4, and it was decided before it happened, not after.**
+
+
+3. THIS IS NOT AN OFFICIAL TIKTOK OR ROBLOX PRODUCT
+-----------------------------------------------------
+
+Kora is not a partner of, affiliated with, or authorized by TikTok or
+Roblox. Neither company endorses, reviews, or has any relationship with
+this software. Their trademarks belong to them.
+
+You remain responsible for following TikTok's and Roblox's terms on your
+own accounts.
+
+
+4. WHEN THE SERVICE IS DOWN
+----------------------------
+
+The clock starts when Kora confirms the outage, not when you report it:
+
+  * Under 24 hours: nothing changes. Short outages happen, and we fix
+    them.
+  * Over 24 hours: your subscription is PAUSED. You are not charged for
+    the days the service did not work. The pause is automatic; you don't
+    have to ask.
+  * Over 7 days: you choose. Either stay paused, waiting, paying
+    nothing, or cancel and get back the unused part of the cycle you
+    already paid.
+  * If the outage is permanent: the subscription ends and the unused
+    part is refunded. We email you; we don't wait for you to find out.
+
+In every case, your work stays yours. See section 5.
+
+
+5. WHAT IS YOURS
+----------------
+
+Everything you build in the software: presets, maps, characters, art
+library and the history of your lives. They live in files, on your
+machine, in an open format.
+
+You can copy them, take them elsewhere, and keep them without Kora. We
+do not store any of it and we do not lock any of it behind the
+subscription.
+
+If you cancel, the files stay where they are.
+
+
+6. WHAT KORA STORES
+--------------------
+
+Only what your account needs in order to work, and what tells us whether
+the product is up: your email, your license, your TikTok account, your
+language and installed version, plus a record of when your software
+connected and dropped.
+
+WHAT KORA DOES NOT STORE, and this is a technical rule of the software
+rather than a marketing promise: **nothing about your viewers.** No
+name, no picture, no identifier. The software uses that data while the
+live is running, so the game can react, and discards it when the session
+ends. It never leaves your machine.
+
+
+7. CANCELLING
+-------------
+
+Any time, no penalty, no minimum term. You keep using it until the end
+of the cycle you already paid for.
+
+Within the first 14 days, if it isn't for you, it's a full refund, no
+questions.
+
+
+8. LIMITATION OF LIABILITY
+---------------------------
+
+Kora's liability is capped at what you paid in the last 12 months. We
+are not liable for profit you did not make, for gifts your viewers did
+not send, or for anything TikTok or Roblox do on their own platforms.
+
+
+9. CHANGES TO THESE TERMS
+--------------------------
+
+If we change something that affects you, we email you 30 days ahead. If
+you don't agree, you can cancel within that window with a prorated
+refund.
+
+
+CONTACT
+-------
+
+Kora Business Network
+matheusbonato3561@gmail.com

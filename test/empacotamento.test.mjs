@@ -23,7 +23,7 @@ import { RAIZ, listarArquivosRecursivo } from "../bridge/src/repos/arquivo.mjs";
 import { EMPACOTADO, RECURSOS } from "../bridge/src/empacotamento.mjs";
 import { carregarPainel, eDoPrograma, montarEnv, semear } from "../bridge/src/aplicativo.mjs";
 import { cacheDoArquivo, resolverChave, tipoDoArquivo } from "../bridge/src/http/painel-embutido.mjs";
-import { IDIOMA_PADRAO, LEIA_ME, configDoBuilder, escolherIdioma, listarSemente } from "../scripts/empacotar.mjs";
+import { IDIOMA_PADRAO, LEIA_ME, TERMO, configDoBuilder, escolherIdioma, listarSemente } from "../scripts/empacotar.mjs";
 import { desenhar, montarIco, montarPng } from "../scripts/gerar-icone.mjs";
 
 const temporario = () => mkdtemp(path.join(os.tmpdir(), "kora-portatil-"));
@@ -379,4 +379,47 @@ test("o ícone tem canto arredondado — transparente fora, opaco no meio", () =
   assert.equal(alfa(0, 0), 0, "o canto superior esquerdo é vazio");
   assert.equal(alfa(63, 63), 0, "e o inferior direito também");
   assert.equal(alfa(32, 32), 255, "o meio é opaco");
+});
+
+test("o termo de uso vai no pacote, nos dois idiomas", async () => {
+  //[[ Mitigação nº 3 do ADR-P06, e ela não é formalidade.
+  //
+  // O acesso à live da TikTok é não oficial e pode ser cortado sem aviso. Sem um
+  // texto dizendo isso ao cliente ANTES, a primeira quebra vira pedido de
+  // reembolso com razão, e reembolso pedido com razão vira chargeback. O ADR é
+  // explícito: é a nº 3 e a nº 5 que transformam uma quebra técnica nisso. ]]
+  assert.deepEqual(Object.keys(TERMO).sort(), Object.keys(LEIA_ME).sort(), "um termo para cada LEIA-ME");
+
+  for (const [idioma, { modelo }] of Object.entries(TERMO)) {
+    const texto = await readFile(path.join(RAIZ, "scripts", "modelos", modelo), "utf8");
+
+    // O que não pode faltar, e cada um é uma promessa que o ADR-P06 obriga.
+    assert.ok(texto.length > 1500, `${idioma}: termo curto demais para dizer o que precisa`);
+    assert.match(texto, /TikTok/, `${idioma}: precisa nomear a plataforma de que depende`);
+    assert.match(
+      texto,
+      idioma === "pt" ? /não oficial/i : /unofficial/i,
+      `${idioma}: precisa dizer, com essa palavra, que o acesso não é oficial`,
+    );
+    assert.match(
+      texto,
+      idioma === "pt" ? /pausad/i : /paused/i,
+      `${idioma}: precisa dizer o que acontece com a cobrança quando o serviço cai`,
+    );
+    assert.ok(
+      !/oficial da TikTok(?! nem)/i.test(texto) || /não é|not an official/i.test(texto),
+      `${idioma}: mitigação nº 2, nunca se anunciar como integração oficial`,
+    );
+  }
+});
+
+test("a política de quebra existe, e diz o que fazer em cada degrau", async () => {
+  // Mitigação nº 5. "Decidir isso no calor da quebra é decidir errado", e um
+  // documento que existe mas não decide nada é o mesmo que não existir.
+  const texto = await readFile(path.join(RAIZ, "docs", "00_VISAO", "politica-de-quebra.md"), "utf8");
+
+  assert.match(texto, /24 horas/, "o degrau que pausa a cobrança");
+  assert.match(texto, /7 dias/, "o degrau em que o cliente escolhe");
+  assert.match(texto, /chargeback/i, "o motivo de a política existir precisa estar escrito nela");
+  assert.match(texto, /ADR-P05/, "ela depende do alarme de saúde, e isso tem que estar dito");
 });

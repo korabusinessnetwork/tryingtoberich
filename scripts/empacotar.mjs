@@ -100,6 +100,23 @@ export const LEIA_ME = {
   en: { modelo: "readme-portable.txt", nome: "README.txt" },
 };
 
+/**
+ * O termo de uso, que vai no pacote junto com o exe.
+ *
+ * Não é formalidade jurídica: é a **mitigação nº 3 do ADR-P06**, e o ADR é
+ * explícito sobre o custo de pulá-la. O acesso à live da TikTok é não oficial e
+ * pode ser cortado sem aviso; o item 4 do termo diz o que acontece com a
+ * assinatura quando isso acontecer. Sem esse texto, a primeira quebra vira
+ * pedido de reembolso com razão, e reembolso pedido com razão vira chargeback.
+ *
+ * Vai como arquivo ao lado do exe, e não escondido dentro do pacote, porque
+ * termo que ninguém acha é termo que ninguém leu.
+ */
+export const TERMO = {
+  pt: { modelo: "termo-de-uso.txt", nome: "TERMO-DE-USO.txt" },
+  en: { modelo: "terms-of-use.txt", nome: "TERMS-OF-USE.txt" },
+};
+
 export const IDIOMA_PADRAO = "pt";
 
 /** Lê `--idioma=en` da linha de comando, ou `KORA_IDIOMA`, ou fica no padrão. */
@@ -390,9 +407,11 @@ async function principal(argumentos = process.argv.slice(2)) {
   await cp(indice, path.join(SAIDA, "latest.yml"));
   console.log(`  ${"latest.yml".padEnd(34)} índice do atualizador`);
 
-  const { modelo, nome } = LEIA_ME[idioma];
-  await cp(path.join(RAIZ, "scripts", "modelos", modelo), path.join(SAIDA, nome));
-  console.log(`  ${nome.padEnd(34)} texto em ${idioma}`);
+  for (const grupo of [LEIA_ME, TERMO]) {
+    const { modelo, nome } = grupo[idioma];
+    await cp(path.join(RAIZ, "scripts", "modelos", modelo), path.join(SAIDA, nome));
+    console.log(`  ${nome.padEnd(34)} texto em ${idioma}`);
+  }
 
   console.log(`\n✓ ${path.relative(RAIZ, SAIDA)}`);
   console.log("  Portátil: copie o exe para a máquina do cliente e mande dar duplo clique.");
