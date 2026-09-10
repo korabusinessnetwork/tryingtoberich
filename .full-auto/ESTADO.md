@@ -8,12 +8,12 @@ status: EXECUTANDO
   em `docs/08_DECISOES` (001 a 016 de fundação, P01 a P08 de produto)
 - **Branch:** `claude/camada-de-produto-e-fase-0` (ver D01, não é `full-auto/<slug>`)
 - **Início:** 2026-09-10
-- **Fase atual:** Fase 1, quebrar o plano em tarefas
-- **Tarefa atual:** nenhuma, montando a onda 2
-- **Próximo passo:** escrever o contrato da camada de dados do console em
-  `docs/contratos/onda-2.md`, acrescentar `console` aos workspaces do
-  `package.json`, e despachar as duas frentes da onda 2 em worktree própria
-- **Progresso:** 0 de 12 tarefas concluídas nesta execução
+- **Fase atual:** Fase 2, onda 2 em execução
+- **Tarefa atual:** C01 a C04 (frente console) e P01 a P03 (frente produto), em paralelo
+- **Próximo passo:** esperar as duas frentes da onda 2, integrar uma por vez
+  com verificação completa depois de cada merge, e então despachar a onda 3
+  (C05 a C08 no console, P04 na ponte)
+- **Progresso:** 2 de 17 tarefas concluídas, 7 em andamento
 
 ## O que já estava pronto antes desta execução
 

@@ -16,15 +16,15 @@ três dívidas conhecidas do ADR-P03.
 
 ## Fase 0: preparação do maestro (sequencial, não paraleliza)
 
-- [ ] M01 Contrato da onda 2 | trilha: base | depende: nenhum | pronto quando: `docs/contratos/onda-2.md` descreve a camada de dados do console e o adaptador da Lemon Squeezy, e está commitado
-- [ ] M02 `console` nos workspaces | trilha: base | depende: nenhum | pronto quando: `npm install` reconhece `console/` como workspace e a suíte continua verde
+- [x] M01 Contrato da onda 2 | trilha: base | depende: nenhum | pronto quando: `docs/contratos/onda-2.md` descreve a camada de dados do console e o adaptador da Lemon Squeezy, e está commitado
+- [x] M02 `console` nos workspaces | trilha: base | depende: nenhum | pronto quando: `npm install` reconhece `console/` como workspace e a suíte continua verde
 
 ## Fase 1: o console do operador (ADR-P05, seis itens, PT apenas)
 
-- [ ] C01 Fundação do console | trilha: console | depende: M01, M02 | pronto quando: `npm run console` sobe uma tela em porta própria, usando os tokens do design system, sem uma linha de i18n
-- [ ] C02 Camada de dados do console | trilha: console | depende: M01 | pronto quando: lê do Supabase por REST com a chave de serviço vinda do `.env`, e o adaptador FALSO está ativo por padrão, com dado de exemplo realista
-- [ ] C03 Item 1, lista de assinantes | trilha: console | depende: C01, C02 | pronto quando: a lista abre e a busca por usuário da TikTok, e-mail ou licença filtra
-- [ ] C04 Item 2, ficha individual | trilha: console | depende: C03 | pronto quando: a ficha mostra status, plano, início, última conexão, modalidades, idioma e versão instalada
+- [~] C01 Fundação do console | trilha: console | depende: M01, M02 | pronto quando: `npm run console` sobe uma tela em porta própria, usando os tokens do design system, sem uma linha de i18n
+- [~] C02 Camada de dados do console | trilha: console | depende: M01 | pronto quando: lê do Supabase por REST com a chave de serviço vinda do `.env`, e o adaptador FALSO está ativo por padrão, com dado de exemplo realista
+- [~] C03 Item 1, lista de assinantes | trilha: console | depende: C01, C02 | pronto quando: a lista abre e a busca por usuário da TikTok, e-mail ou licença filtra
+- [~] C04 Item 2, ficha individual | trilha: console | depende: C03 | pronto quando: a ficha mostra status, plano, início, última conexão, modalidades, idioma e versão instalada
 - [ ] C05 Item 5, logs de evento e de ação administrativa | trilha: console | depende: C01, C02 | pronto quando: a tela lista os dois, o log administrativo é imutável no banco, e há teste provando que ele não aceita update nem delete
 - [ ] C06 Item 6, saúde de conexão | trilha: console | depende: C01, C02 | pronto quando: mostra quantos clientes conectados agora e quantas quedas em 24h, alimentado pela telemetria que a ponte já manda
 - [ ] C07 Item 3, edição de plano | trilha: console | depende: C04 | pronto quando: a ação escreve pelo adaptador da Lemon Squeezy (falso por padrão) e registra no log administrativo
@@ -32,9 +32,9 @@ três dívidas conhecidas do ADR-P03.
 
 ## Fase 2: o que falta do produto
 
-- [ ] P01 Instalador do ADR-P04 | trilha: produto | depende: nenhum | pronto quando: `npm run empacotar -- --instalador` produz um instalador NSIS além do portátil, e ele instala e desinstala numa pasta de teste
-- [ ] P02 Atualização automática | trilha: produto | depende: P01 | pronto quando: o `electron-updater` está fiado e configurado, com o servidor de publicação escolhido e o passo do Matheus anotado
-- [ ] P03 `LEIA-ME.txt` em inglês | trilha: produto | depende: nenhum | pronto quando: o pacote leva o LEIA-ME no idioma certo e o `npm run empacotar` escolhe qual
+- [~] P01 Instalador do ADR-P04 | trilha: produto | depende: nenhum | pronto quando: `npm run empacotar -- --instalador` produz um instalador NSIS além do portátil, e ele instala e desinstala numa pasta de teste
+- [~] P02 Atualização automática | trilha: produto | depende: P01 | pronto quando: o `electron-updater` está fiado e configurado, com o servidor de publicação escolhido e o passo do Matheus anotado
+- [~] P03 `LEIA-ME.txt` em inglês | trilha: produto | depende: nenhum | pronto quando: o pacote leva o LEIA-ME no idioma certo e o `npm run empacotar` escolhe qual
 - [ ] P04 Os 26 erros dinâmicos traduzidos | trilha: ponte | depende: nenhum | pronto quando: a ponte manda `detalhe` estruturado, o painel monta a frase nos três idiomas, e o teste que hoje guarda a lista dos não traduzidos vira zero
 
 ## Fase 3: integração e fechamento (maestro)

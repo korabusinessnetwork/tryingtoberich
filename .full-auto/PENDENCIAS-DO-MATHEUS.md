@@ -44,23 +44,29 @@ depois de pronto.
 - **Como confirmar que funcionou:** a torre sobe no Play e o presente move o
   boneco.
 
-## P03 Criar o projeto no Supabase [prioridade: alta, grátis]
+## P03 Rodar os dois SQL no Supabase [prioridade: alta, 2 minutos]
 
-- **Por quê:** é onde vivem licença, telemetria e saúde de conexão (ADR-P02), e
-  é o que faz o console mostrar dado de verdade em vez de exemplo.
-- **Contorno atual:** a ponte roda inteira sem Supabase, a licença fica
-  `indeterminada` e nada quebra. O console usa um adaptador falso com dado de
-  exemplo realista.
+**Metade feita.** O projeto existe, e a URL e a chave anon já estão no `.env`
+desta máquina. Confirmei contra o servidor: ele responde. O que falta é criar
+as tabelas, sem elas o PostgREST responde `Could not find the table
+'public.licencas'`.
+
+- **Por quê:** é o que faz a licença sair de `indeterminada` e o console mostrar
+  dado de verdade em vez de exemplo.
+- **Contorno atual:** a ponte roda inteira sem as tabelas e nada quebra. O
+  console usa um adaptador falso com dado de exemplo realista.
 - **Passo a passo:**
-  1. supabase.com, criar conta, **New project**, tier gratuito, US$ 0.
-  2. No SQL Editor, rodar `data/supabase/001-esquema.sql` inteiro.
-  3. Em **Project Settings → API**, copiar o **Project URL** e a chave
-     **anon public**.
-- **Onde colar o resultado:** `SUPABASE_URL` e `SUPABASE_ANON_KEY` no `.env`.
-  A chave `service_role` **não** sai do painel do Supabase para o produto, ela é
-  só do console, e não deve ser mandada para mim.
-- **Como confirmar que funcionou:** abrir a aba Licença no painel; ela sai de
-  "Não deu para confirmar".
+  1. No SQL Editor do projeto, colar e rodar `data/supabase/001-esquema.sql`
+     inteiro.
+  2. Depois, colar e rodar `data/supabase/002-console.sql` inteiro. Nessa
+     ordem, o segundo depende de uma função criada pelo primeiro.
+  3. Em **Project Settings → API**, copiar a chave **`service_role`** e colar
+     **só no `.env` da máquina**, em `SUPABASE_SERVICE_KEY`. Ela ignora RLS,
+     então é do console e de mais ninguém: **não mande para mim e não ponha em
+     arquivo versionado.**
+- **Como confirmar que funcionou:** abra a aba Licença no painel. Ela sai de
+  "Não deu para confirmar" e passa a dizer "Sem licença", que é a resposta
+  correta de uma instalação que ainda não ativou nada.
 
 ## P04 Instalar o `/ciclo` com nome invocável [prioridade: média]
 
