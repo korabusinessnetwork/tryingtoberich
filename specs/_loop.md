@@ -7,6 +7,22 @@ Uma seção por rodada, mais recente no topo.
 commits do dono que também estavam sem push — a `claude/monta-b1h5fy` remota
 estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
 
+## Continuação da rodada 6 — a suíte e os erros da ponte — 2026-09-09
+- Sem spec próprio: fechou a pendência da rodada 6 e o item que a rodada 1
+  registrou como próximo.
+- **A suíte instável foi diagnosticada e corrigida.** Ver a rodada 6 abaixo.
+- **Erro da ponte agora traduz**: 25 códigos de frase fixa em PT, ES e EN, sem
+  mudança de contrato — a ponte já mandava o código. Os 26 que carregam valor na
+  frase continuam em português, com teste mantendo a lista para que seja decisão
+  registrada e não esquecimento.
+- Commit: `ed61452` na branch `claude/camada-de-produto-e-fase-0`
+- Números: 510 testes verdes em três execuções seguidas
+- Pendente de decisão: continuam abertas o **ADR-P06** (bloqueia vender), a
+  dessincronia `assetId`×`faces.ft` (rodada 4), e agora **traduzir os 26 erros
+  com valor na frase**, que exige a ponte mandar `detalhe` estruturado.
+- Próximo item recomendado: **a sessão no Studio**, sem mudança. Não sobra item
+  de código na Fase 0.
+
 ## Rodada 6 — F0-3, painel e ponte juntos — 2026-09-09
 - Spec: `specs/f0-3-painel-e-ponte-juntos.md`
 - Resultado da review: **aprovado sem ressalvas** — 9 de 9, com evidência de
@@ -19,11 +35,13 @@ estava parada em `8b12de9`. Nada foi enviado para a branch padrão.
 - Aprendido: `memory/learnings.md` e `memory/bugs.md`
 - Commit: `9320a5f` na branch `claude/camada-de-produto-e-fase-0`
 - Números: 505 testes verdes
-- **Pendência nova, honesta:** a suíte falhou 2 de 8 execuções hoje, com dois
-  testes que não consegui identificar nem reproduzir (3 execuções limpas
-  seguidas depois). Uma causa foi achada e corrigida na rodada 4 (teste lendo
-  arquivo que outro teste escreve); esta é outra. **Não declarar a suíte
-  determinística.** Se reaparecer, capturar o nome do teste antes de mexer.
+- **Pendência RESOLVIDA na mesma sessão** (commit `ed61452`). A suíte instável
+  tinha nome: `ponta-a-ponta.test.mjs` rodava o laço numa janela de 2600ms
+  contra um combate de 2000ms, e ao falhar deixava a sessão aberta — um defeito
+  virava três. Janela alargada e `afterEach` fechando a sessão, verificado
+  quebrando um assert de propósito (1 falha em vez de 3). E o motivo de eu não
+  ter conseguido identificar antes: meu `grep` dos marcadores do node:test
+  nunca casou, porque são multibyte.
 - Próximo item recomendado: **a sessão no Studio** — F0-2, F0-7 e F0-4, com o
   roteiro em `docs/09_BACKLOG/roteiro-da-sessao-no-studio.md`. Agora sim não
   sobra item de código na Fase 0: F0-1 e F0-3 estão feitos, e F0-5 e F0-6
