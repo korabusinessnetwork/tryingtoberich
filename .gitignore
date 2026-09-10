@@ -2,6 +2,10 @@
 node_modules/
 dist/
 
+# Intermediarios do `npm run empacotar`: o pacote fundido, o blob e a config
+# do executavel. Sao subprodutos do build, refeitos do zero a cada vez.
+build/
+
 # Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
 data/sessoes/*
 !data/sessoes/.gitkeep.md

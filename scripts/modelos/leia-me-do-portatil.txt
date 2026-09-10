@@ -1,0 +1,81 @@
+KORA STREAM GAMES — versão portátil
+===================================
+
+Não tem instalação. A pasta inteira é o programa: copie para onde quiser
+(inclusive um pendrive) e dê duplo clique em KoraStreamGames.exe.
+
+
+COMEÇANDO
+---------
+
+1. Duplo clique em KoraStreamGames.exe.
+
+   Na primeira vez o Windows pode mostrar uma tela azul dizendo
+   "O Windows protegeu o computador". Isso NÃO é vírus: acontece com todo
+   programa novo que ainda não tem assinatura digital comprada. Clique em
+   "Mais informações" e depois em "Executar assim mesmo".
+
+2. Uma janela preta abre e fica aberta. É o motor. NÃO FECHE enquanto
+   estiver ao vivo — fechar ali desliga o jogo.
+
+3. O painel abre sozinho no navegador. Se não abrir, o endereço está
+   escrito na janela preta: http://127.0.0.1:8788
+
+4. No painel, informe o @ da sua conta da TikTok e monte o seu preset.
+
+
+O QUE PRECISA ESTAR INSTALADO NA MÁQUINA (uma vez só)
+-----------------------------------------------------
+
+O jogo roda dentro do Roblox Studio, na sua máquina, como já roda hoje.
+Estes dois programas são de terceiros e têm instalador próprio — o
+KoraStreamGames.exe não instala nada por você:
+
+  * Roblox Studio
+      https://create.roblox.com/  ->  "Start Creating"
+      Entre com a sua conta do Roblox.
+
+  * Rojo (é ele que monta o jogo dentro do Studio)
+      Abra o PowerShell e rode:
+          winget install Rojo.Rojo
+      Depois FECHE e abra um terminal novo, senão ele não é encontrado.
+
+      Sem winget, baixe em https://github.com/rojo-rbx/rojo/releases
+      e ponha o rojo.exe numa pasta que esteja no PATH.
+
+Com os dois instalados, o painel tem o botão "Abrir o jogo no Studio", que
+monta o lugar e abre o Studio nele. Só sobra dar Play. Se faltar o Rojo, o
+próprio painel avisa e repete o comando acima.
+
+
+O QUE APARECE NA PASTA DEPOIS DO PRIMEIRO USO
+----------------------------------------------
+
+  .env      as suas configurações e o seu token. É desta instalação:
+            não copie para outra máquina.
+  data/     tudo que é seu — presets, acervo, histórico das lives.
+  game/     a fonte do jogo, que o Rojo monta dentro do Studio.
+
+FAZER BACKUP = copiar a pasta data/. É só isso.
+
+
+TROCANDO POR UMA VERSÃO NOVA
+-----------------------------
+
+Substitua o KoraStreamGames.exe pelo novo, na mesma pasta. O data/ e o .env
+continuam onde estão e nada se perde. A pasta game/ é atualizada sozinha
+para casar com a versão nova do exe.
+
+
+DEU ERRADO
+----------
+
+A janela preta é onde está escrito o motivo. Se ela sumir rápido demais,
+abra o PowerShell na pasta e rode:
+
+    .\KoraStreamGames.exe
+
+Assim a mensagem fica na tela.
+
+"Porta já ocupada": sobrou um KoraStreamGames de antes. Abra o Gerenciador
+de Tarefas e encerre o que estiver rodando, ou reinicie a máquina.

@@ -182,8 +182,30 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
   absorvido por ela.
 - **Fase 1 — produto vendável v1.** ~~i18n (ADR-P03) como primeiro commit~~ —
   **feito em 2026-09-09**, rodada 1 do ciclo (`specs/_loop.md`): 627 chaves em
-  PT, ES e EN, 465 testes verdes. Depois
-  Supabase (ADR-P02), instalador (ADR-P04), console v1 (ADR-P05) e venda.
+  PT, ES e EN, 465 testes verdes. ~~Empacotamento~~ — **portátil feito em
+  2026-09-10** (ADR-P07): `npm run empacotar` produz o `KoraStreamGames.exe`,
+  e o passo a passo de instalar na máquina de outra pessoa está em
+  [`instalacao-na-maquina-do-cliente.md`](./instalacao-na-maquina-do-cliente.md).
+  Depois Supabase (ADR-P02), instalador (ADR-P04), console v1 (ADR-P05) e venda.
+
+### O que falta no portátil
+
+- [ ] **Instalação limpa abre o painel com os seis slots em vermelho.** O preset
+      que vai na semente (`escalada-padrao`) aponta para ids reais da TikTok
+      (`6064`, `5655`…), e o catálogo que vai na semente tem ids inventados
+      (`sem-rose`), de propósito: o `repos/catalogo.mjs` nunca mistura semente
+      com coleta real, senão um id de mentira ficaria marcado `ativo: false`
+      sujando o seletor para sempre. Enquanto o streamer não conectar na live
+      uma vez, o painel diz "Presente fora do catálogo" seis vezes — sobre um
+      preset que está certo. **Se cura sozinho na primeira conexão**, mas é a
+      primeira tela que o cliente vê. A correção provável é o cartão calar essa
+      pastilha enquanto o catálogo em mãos for `origem: "semente"`, trocando as
+      seis pastilhas por uma linha só: "o catálogo ainda não foi coletado".
+- [ ] **`LEIA-ME.txt` em inglês.** O funil da Fase 1 é em inglês (ADR-P03) e o
+      arquivo que acompanha o exe é em português. Não bloqueia enquanto os
+      testadores forem daqui.
+- [ ] **Assinatura de código.** US$ 200 a 400/ano, adiada no ADR-P07. Reavaliar
+      quando o cliente deixar de ser conhecido.
 - **Fase 2 — distribuição e recorrência.**
 
 Bloqueia a Fase 1 inteira: a decisão do dono sobre o

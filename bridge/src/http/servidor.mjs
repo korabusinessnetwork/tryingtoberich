@@ -22,6 +22,7 @@ import { rotasDoJogo } from "./rotas-jogo.mjs";
 import { rotasDoPainel } from "./rotas-painel.mjs";
 import { montarOverlay } from "./overlay.mjs";
 import { montarOverlayHud } from "./overlay-hud.mjs";
+import { montarPainelEmbutido } from "./painel-embutido.mjs";
 
 function baseComum(nucleo) {
   const app = express();
@@ -72,5 +73,11 @@ export function criarAppDoPainel(nucleo) {
   montarOverlay(app);
   // O segundo overlay, o HUD da live (ADR-015). Mesma porta, mesmo motivo.
   montarOverlayHud(app);
+  //[[ E, POR ÚLTIMO, a tela do painel — só no executável portátil.
+  //
+  // Por último porque ela é a única coisa aqui que responde a qualquer caminho:
+  // montada antes, engoliria `/api` e os overlays. Rodando do repositório ela
+  // não monta nada, e quem serve a tela continua sendo o Vite. ]]
+  montarPainelEmbutido(app);
   return fecharComTratamentoDeErro(app);
 }

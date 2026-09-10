@@ -125,6 +125,32 @@ dos cinco erros eram argumentos a favor de jogar fora o trabalho existente.**
    os termos. Virou o ADR-P06.
 5. A aritmética da meta não fechava (US$ 3.030, não US$ 2.100).
 
+## Resolvida em 2026-09-10 — como o produto chega na máquina do cliente
+
+- **Portátil primeiro, instalador depois (ADR-P07).** Pedido do dono: "eu
+  gostaria que inicialmente, pra gente ir testando, ele fosse um exe portable, e
+  depois a gente transicionasse pra um aplicativo instalável". `npm run
+  empacotar` produz um `KoraStreamGames.exe` de 94 MB, sem Node e sem terminal
+  na máquina do cliente. O instalador do ADR-P04 continua sendo o destino e vai
+  empacotar ESTE exe.
+  - Feito com o que o Node já traz: `rolldown` funde a ponte num arquivo,
+    `node --experimental-sea-config` monta o blob, `postject` cola no `node.exe`.
+    As duas ferramentas são MIT e só de desenvolvimento — custo zero.
+  - A linha do que fica dentro e do que fica fora é **de quem é o arquivo**.
+    Programa (schema, i18n, `game/`, tabela de animações) é reescrito a cada
+    arranque para casar com a versão do exe; o que é do streamer (`data/`,
+    `.env`) nasce uma vez e nunca mais é tocado. É isso que faz "substitua o exe
+    pelo novo" funcionar sem migração.
+  - **Painel e ponte viram um processo só** no pacote — o painel construído é
+    servido de dentro do exe, na mesma porta da `/api`. Some o CORS e some a
+    chance de painel e ponte ficarem em versões diferentes. No repositório nada
+    muda: continua Vite em `:5173` encaminhando `/api`.
+  - **Assinatura de código adiada.** US$ 200 a 400/ano; o SmartScreen avisa na
+    primeira execução e o `LEIA-ME.txt` explica o caminho. Reavaliar quando o
+    cliente deixar de ser conhecido. O que deu para fazer de graça foi remover a
+    assinatura da Node.js Foundation do binário: assinatura CORROMPIDA é lida
+    por antivírus como adulteração, sem assinatura é só o aviso.
+
 ## Decisões pendentes
 
 - **ADR-P06: aceitar ou não o risco de uso comercial da captura não oficial.**
@@ -135,8 +161,9 @@ dos cinco erros eram argumentos a favor de jogar fora o trabalho existente.**
   testes passam com ele, e ele não é bloqueador da Fase 0. Terminar e commitar,
   ou guardar num branch — mas decidir antes de rodar no Studio, para não
   confundir bug da escalada com bug de meia feature.
-- **Onde a ponte roda na Fase 1** ficou resolvido pelo ADR-P04 (na máquina do
-  cliente). O que continua aberto é se painel e ponte viram um processo só.
+- ~~**Onde a ponte roda na Fase 1**~~ — resolvido em duas partes: ADR-P04 (na
+  máquina do cliente) e ADR-P07 (painel e ponte são um processo só no pacote,
+  dois no repositório).
 - **O túnel é mesmo necessário?** O jogo roda no Roblox Studio, na mesma máquina
   que a ponte. A restrição de `localhost` que justifica o ADR-002 nunca foi
   testada no Studio. Cinco minutos de teste decidem se o túnel some, junto com a

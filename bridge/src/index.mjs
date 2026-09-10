@@ -11,7 +11,10 @@
  * O .env é carregado pelo Node com --env-file, não por dependência.
  */
 
+import { pathToFileURL } from "node:url";
+
 import { carregarConfig, configValida } from "./config.mjs";
+import { EMPACOTADO } from "./empacotamento.mjs";
 import { log } from "./log.mjs";
 import { Nucleo } from "./nucleo.mjs";
 import { criarAppDoJogo, criarAppDoPainel } from "./http/servidor.mjs";
@@ -24,7 +27,14 @@ const escutar = (app, porta, host) =>
     const servidor = app.listen(porta, host, () => resolve(servidor));
   });
 
-async function principal() {
+/**
+ * Sobe as duas portas e devolve o que subiu, ou `null` quando não deu.
+ *
+ * Exportada porque o executável portátil (`empacotado.mjs`) precisa dela sem o
+ * `await` de módulo lá embaixo: ele tem coisa a fazer ANTES (extrair a semente,
+ * criar o `.env`) e DEPOIS (abrir o navegador na porta que subiu).
+ */
+export async function principal() {
   const config = carregarConfig();
 
   if (!configValida(config)) {
@@ -42,7 +52,7 @@ async function principal() {
   } catch (erro) {
     console.error(erro.message);
     process.exitCode = 1;
-    return;
+    return null;
   }
 
   // ANTES de abrir as portas: o Roblox pede o mapa na entrada, e uma ponte que
@@ -76,6 +86,27 @@ async function principal() {
 
   process.on("SIGINT", () => encerrar("SIGINT"));
   process.on("SIGTERM", () => encerrar("SIGTERM"));
+
+  return { config, servidorDoJogo, servidorDoPainel };
 }
 
-await principal();
+//[[ Só roda sozinha quando FOI ela a chamada.
+//
+// Dentro do executável portátil quem manda é o `empacotado.mjs` — ele tem que
+// extrair a semente e criar o `.env` ANTES da ponte subir — e lá o
+// `process.argv[1]` nem sempre existe.
+//
+// Sem `await` de topo: este arquivo é fundido em CommonJS para virar o
+// executável, e CommonJS não tem await de topo. O `.catch` faz o mesmo serviço
+// que o await fazia, que é não deixar a falha sumir em silêncio. ]]
+// `!EMPACOTADO` primeiro porque dentro do executável a comparação dá TRUE por
+// acidente: os dois lados viram o caminho do próprio exe. Sem esta guarda a
+// ponte subia duas vezes, e a primeira — antes do `.env` existir — cuspia
+// "BRIDGE_TOKEN precisa de no mínimo 32 caracteres" logo acima do arranque bom.
+const chamadaDireta = !EMPACOTADO && process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (chamadaDireta) {
+  principal().catch((erro) => {
+    console.error(erro);
+    process.exitCode = 1;
+  });
+}

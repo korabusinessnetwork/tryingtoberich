@@ -11,11 +11,17 @@
 import { createReadStream } from "node:fs";
 import { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 
-/** Raiz do repositório: bridge/src/repos → ../../.. */
-export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+import { RAIZ } from "../empacotamento.mjs";
+
+//[[ A raiz vem de fora porque ela NÃO é sempre a pasta do repositório.
+//
+// Dentro do `KoraStreamGames.exe` não existe "três níveis acima deste arquivo":
+// o código é um blob colado no executável. Lá a raiz é a pasta do exe. O
+// `empacotamento.mjs` sabe qual é qual; daqui para baixo, tudo que muda é o
+// valor. ]]
+export { RAIZ };
 export const DIR_DADOS = path.join(RAIZ, "data");
 
 export const caminhoDeDados = (...partes) => path.join(DIR_DADOS, ...partes);
