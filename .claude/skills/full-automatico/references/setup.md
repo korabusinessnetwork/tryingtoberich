@@ -67,7 +67,7 @@ Como o hook decide:
 - Tudo marcado mas status não é `CONCLUIDO` → bloqueia uma vez pedindo o relatório final.
 - Se nada mudar em `TAREFAS.md`/`ESTADO.md` entre 3 bloqueios seguidos → deixa parar (evita loop infinito quando o Claude travou de verdade) e anota no `LOG.md`.
 
-O Claude Code encerra o turno após 8 bloqueios consecutivos de Stop hook. Para execuções muito longas, retome com `/full-automatico continuar`, ou deixe uma rede de segurança rodando na sessão:
+O Claude Code encerra o turno após 8 bloqueios consecutivos de Stop hook. O vigia de limite (seção 3.2) já relança a execução quando isso acontece. Se preferir sem ele, retome com `/full-automatico continuar`, ou deixe uma rede de segurança rodando na sessão:
 
 ```
 /loop 20m /full-automatico continuar
@@ -90,6 +90,26 @@ claude --worktree api --permission-mode auto
 # dentro da sessão:
 /full-automatico trilha api
 ```
+
+## 3.2 Vigia de limite de uso
+
+O instalador também copia `full-auto-limite.js` e `vigia-limite.js` para `.claude/hooks/` e registra um hook `StopFailure` com matcher `rate_limit`. Quando o limite acaba, o vigia sobe sozinho e checa a cada 10 minutos.
+
+Comandos úteis:
+
+```powershell
+node .claude/hooks/vigia-limite.js . --agora              # ligar na mão, tentando já
+node .claude/hooks/vigia-limite.js . --intervalo 15       # outro intervalo
+node .claude/hooks/vigia-limite.js . --max-horas 12       # desistir antes
+Get-Content .full-auto/vigia.log -Wait                    # acompanhar
+```
+
+Para encerrar o vigia: mude o status no `ESTADO.md` para `PAUSADO` (ele sai na próxima checagem), ou mate o processo cujo pid está em `.full-auto/.vigia.lock`.
+
+Limitações:
+- O computador precisa ficar ligado e sem suspender. Com o PC dormindo, nada roda.
+- As rodadas do vigia são sessões headless novas (`claude -p`). Elas usam `--permission-mode auto`; se o auto mode não estiver disponível na sua conta, ações que pediriam permissão são negadas e anotadas, e a execução segue como der.
+- Enquanto o vigia estiver rodando, não use a sessão interativa antiga no mesmo projeto, para não ter duas sessões mexendo nos mesmos arquivos.
 
 ## 4. Travas de segurança (`--com-protecoes`)
 

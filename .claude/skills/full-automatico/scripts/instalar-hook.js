@@ -17,6 +17,9 @@ const arquivoSettings = path.join(pastaClaude, "settings.json");
 
 fs.mkdirSync(pastaHooks, { recursive: true });
 fs.copyFileSync(path.join(__dirname, "full-auto-stop.js"), destinoHook);
+for (const extra of ["full-auto-limite.js", "vigia-limite.js"]) {
+  fs.copyFileSync(path.join(__dirname, extra), path.join(pastaHooks, extra));
+}
 
 let settings = {};
 if (fs.existsSync(arquivoSettings)) {
@@ -55,6 +58,21 @@ if (!fs.existsSync(arquivoInclude)) {
   fs.writeFileSync(arquivoInclude, ".env\n.env.local\n");
 }
 
+// Limite de uso: quando o turno cai por rate_limit, liga o vigia.
+settings.hooks.StopFailure = settings.hooks.StopFailure || [];
+if (!JSON.stringify(settings.hooks.StopFailure).includes("full-auto-limite.js")) {
+  settings.hooks.StopFailure.push({
+    matcher: "rate_limit",
+    hooks: [
+      {
+        type: "command",
+        command: "node",
+        args: ["${CLAUDE_PROJECT_DIR}/.claude/hooks/full-auto-limite.js"],
+      },
+    ],
+  });
+}
+
 if (comProtecoes) {
   settings.permissions = settings.permissions || {};
   const adicionar = (lista, regras) => {
@@ -76,6 +94,7 @@ fs.writeFileSync(arquivoSettings, JSON.stringify(settings, null, 2) + "\n");
 
 console.log(`Hook ${jaTem ? "já estava instalado" : "instalado"}: ${destinoHook}`);
 console.log(`settings.json atualizado: ${arquivoSettings}`);
+console.log("Vigia de limite instalado (StopFailure rate_limit → checagem a cada 10 min).");
 console.log(`Paralelismo: worktree.baseRef = ${settings.worktree.baseRef}, .worktreeinclude pronto.`);
 if (comProtecoes) console.log("Travas de segurança adicionadas (deny + ask).");
 console.log("Reinicie a sessão do Claude Code (ou abra /hooks) para o hook ser carregado.");

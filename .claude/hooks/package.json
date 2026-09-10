@@ -1,0 +1,4 @@
+{
+  "type": "commonjs",
+  "//": "Os hooks do Full Automatico sao CommonJS. A raiz do projeto e \"type\": \"module\", entao sem este arquivo todo .js daqui seria tratado como ESM e o hook morreria com \"require is not defined\" na hora de rodar."
+}

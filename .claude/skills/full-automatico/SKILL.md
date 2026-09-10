@@ -109,6 +109,21 @@ Nunca são motivo para escalar: escolha de biblioteca, nome, cor, layout, estrut
 - Mantenha o `ESTADO.md` atualizado a cada tarefa. Se a sessão cair no meio, é ele que salva o trabalho.
 - O Stop hook bloqueia o encerramento enquanto houver `[ ]` ou `[~]`. O Claude Code aceita no máximo 8 continuações seguidas por hook; se a execução parar por isso, o Matheus retoma com `/full-automatico continuar`.
 
+## Adendo: quando o limite de uso acabar
+
+Se o limite de sessão do Matheus acabar no meio da execução, o trabalho não para de vez. Quem cuida disso é o **vigia de limite**, um processo que roda fora do Claude Code (porque sem limite o Claude não consegue executar nada, nem uma checagem):
+
+1. O hook `StopFailure` detecta que o turno caiu por `rate_limit` e liga o vigia em segundo plano (`.claude/hooks/vigia-limite.js`).
+2. **A cada 10 minutos** o vigia tenta retomar com `claude -p "/full-automatico continuar (executado pelo vigia de limite)"`. Se o limite ainda não voltou, a tentativa falha na hora, sem gastar nada, e ele espera mais 10 minutos.
+3. Quando o limite volta, a execução continua a partir do `ESTADO.md`. O vigia segue relançando até o status virar `CONCLUIDO`, `AGUARDANDO_MATHEUS` ou `PAUSADO`, o que também cobre o teto de 8 continuações do Stop hook.
+4. Travas: desiste após 48 horas, para após 3 rodadas seguidas sem progresso, para em erro que não seja de limite, e só existe um vigia por projeto (arquivo `.full-auto/.vigia.lock`). Tudo fica em `.full-auto/vigia.log` e numa linha do `ESTADO.md`.
+
+Regras para você, dentro da skill:
+
+- **Mantenha o `ESTADO.md` sempre atualizado**, com o próximo passo concreto. O limite pode acabar a qualquer momento e é desse arquivo que a próxima sessão parte.
+- Ao receber `/full-automatico continuar` **sem** a marca "executado pelo vigia de limite", confira se existe `.full-auto/.vigia.lock` com um processo vivo. Se existir, avise o Matheus que o vigia já está tocando a execução e não trabalhe em paralelo nos mesmos arquivos, a não ser que ele peça para encerrar o vigia.
+- Para ligar o vigia manualmente (ex.: o limite acabou numa sessão sem o hook): `node .claude/hooks/vigia-limite.js . --agora`.
+
 ## Honestidade (inegociável)
 
 A autonomia só funciona se o Matheus puder confiar no relatório. Portanto: nunca marque `[x]` sem verificar, nunca apague ou reescreva tarefas para esvaziar a lista, nunca diga que testou o que não testou, e deixe explícito no relatório tudo o que está mockado.
