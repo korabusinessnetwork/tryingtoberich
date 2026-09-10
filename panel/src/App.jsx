@@ -32,6 +32,7 @@ import { TestadorDePresente } from "./components/TestadorDePresente.jsx";
 import { SeletorDeIdioma } from "./components/SeletorDeIdioma.jsx";
 import { TraducaoProvider } from "./i18n/TraducaoProvider.jsx";
 import { useTraducao } from "./i18n/useTraducao.js";
+import { mensagemDoErro } from "./i18n/erro.js";
 import { hora } from "./i18n/formatar.js";
 import "./App.css";
 
@@ -154,7 +155,10 @@ function Painel() {
     try {
       return await acao();
     } catch (falha) {
-      const texto = falha?.message ?? "Algo falhou.";
+      // Traduz pelo CÓDIGO que a ponte manda, e cai na frase dela quando não há
+      // tradução (ADR-P03). Sem isto, um streamer com o painel em inglês recebia
+      // "Escolha um preset antes de começar." em português.
+      const texto = mensagemDoErro(falha, t("common.state.error"));
       // O aviso some da tela; a linha de log fica. Quando o streamer perceber
       // que algo parou, é no log que ele vai olhar.
       fluxo.registrarLocal("erro", falha?.codigo ?? "acao_falhou", { mensagem: texto });
@@ -723,7 +727,7 @@ function Painel() {
     return (
       <main className="app app-vazio">
         <h1 className="app-titulo">{t("panel.app.title")}</h1>
-        <p className="pastilha pastilha-erro">{erroDeCarga.message}</p>
+        <p className="pastilha pastilha-erro">{mensagemDoErro(erroDeCarga)}</p>
         <button onClick={carregar}>{t("common.action.retry")}</button>
       </main>
     );

@@ -161,9 +161,22 @@ const CHAVES_DINAMICAS = new Set([
   ...IDIOMAS.map((codigo) => `panel.language.${codigo}`),
 ]);
 
+/**
+ * Prefixos resolvidos em tempo de execução a partir de um valor que vem de
+ * fora do painel — não há literal no código para a análise estática achar.
+ *
+ * `panel.error.*` é montado por `panel/src/i18n/erro.js` a partir do CÓDIGO que
+ * a ponte responde. Quem garante que essas chaves existem não é este teste, e
+ * sim `test/erros-traduzidos.test.mjs`, que lê os dois lados do contrato.
+ */
+const PREFIXOS_DINAMICOS = ["panel.error."];
+
 test("toda chave do catálogo é usada em algum lugar", () => {
   const citadas = new Set([...chavesCitadas().keys(), ...CHAVES_DINAMICAS]);
-  const mortas = [...chavesDe(IDIOMA_PADRAO)].filter((k) => !citadas.has(k)).sort();
+  const mortas = [...chavesDe(IDIOMA_PADRAO)]
+    .filter((k) => !citadas.has(k))
+    .filter((k) => !PREFIXOS_DINAMICOS.some((prefixo) => k.startsWith(prefixo)))
+    .sort();
 
   assert.deepEqual(
     mortas,

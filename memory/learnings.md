@@ -450,3 +450,43 @@ demais. Medindo em português: **o mesmo excesso** — era uma lista de ids de
 textura separados por vírgula sem espaço, que o navegador trata como palavra só.
 Defeito pré-existente, consertado com duas linhas de CSS. Confirmar no idioma
 original antes de culpar a tradução.
+
+---
+
+## Continuação da rodada 6 — a instabilidade tinha nome (2026-09-09)
+
+### Eu não conseguia LER o relatório de falha
+Três rodadas reportando "a suíte falhou e não consegui identificar" tinham uma
+causa boba: meu `grep '^✖ '` nunca casava, porque `ℹ` e `✖` são multibyte e eu
+ancorava errado. O comando que funciona:
+
+```bash
+npm test > saida.log 2>&1
+sed -n '/failing tests:/,$p' saida.log | grep -E "^✖|^test at|AssertionError"
+```
+
+**Antes de declarar um defeito irrastreável, conferir se a ferramenta de leitura
+funciona.** Perdi umas 15 execuções de suíte por causa disso.
+
+### O flake era um teste sensível a tempo, e uma cascata escondia qual
+`bridge/test/ponta-a-ponta.test.mjs` rodava o laço do jogo numa janela de 2600ms
+contra um `combateMaxMs` de 2000ms — 600ms de margem. Sob carga o laço ficava
+faminto, o segundo evento chegava depois da janela, e o teste falhava **com o
+comportamento certo**.
+
+Pior: `encerrarSessao()` mora no fim do teste, então um assert que falha antes
+dele deixa a sessão aberta, e o teste seguinte morre com `sessao_em_andamento`.
+**Um defeito virava três, e a causa se perdia no meio dos outros dois.**
+
+O `afterEach` que fecha a sessão foi verificado quebrando um assert de
+propósito: 1 falha com a rede, 3 sem ela.
+
+Regra: **teste que abre estado global fecha no `afterEach`, não no fim do
+corpo.** O fim do corpo só roda quando tudo deu certo — que é exatamente quando
+não precisa.
+
+### Convenção existe para ser seguida, mesmo quando o dado vem de fora
+As chaves de erro nasceram `panel.error.sem_conta_da_live`, copiando o código da
+ponte. O schema recusou: o ADR-P03 exige slug alfanumérico. A tentação era
+afrouxar o schema; o certo foi converter (`semContaDaLive`) num `emSlug` que os
+dois lados — painel e teste de contrato — importam do mesmo lugar.

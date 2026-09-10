@@ -6,7 +6,7 @@
  * prova de que o Bloco 1 é entregável e testável sozinho.
  */
 
-import test, { after, before } from "node:test";
+import test, { after, afterEach, before } from "node:test";
 import assert from "node:assert/strict";
 
 import { criarAppDoJogo } from "../src/http/servidor.mjs";
@@ -27,6 +27,26 @@ const config = {
 let base;
 let servidor;
 let nucleo;
+
+//[[ A rede que impede uma falha virar três.
+//
+// `encerrarSessao` mora no FIM de cada teste. Quando um assert falha antes
+// dele, a sessão fica aberta, e o teste seguinte morre com
+// `sessao_em_andamento` — um defeito vira três, e o de verdade se perde no meio
+// dos outros dois.
+//
+// Foi assim que a instabilidade desta suíte ficou irrastreável por três
+// rodadas: o relatório mostrava três falhas, nenhuma delas a causa.
+//
+// Verificado quebrando um assert de propósito: com esta rede, 1 falha; sem
+// ela, 3. ]]
+afterEach(async () => {
+  try {
+    await nucleo?.encerrarSessao();
+  } catch {
+    // Sem sessão rodando é o caso NORMAL: o teste encerrou a dele.
+  }
+});
 
 before(async () => {
   await salvarPreset({ ...(await carregarExemplo("preset-escalada-padrao")), presetId: PRESET_ID });
@@ -70,7 +90,16 @@ test("o combate atravessa a ponte e sai pelo long-poll do jeito que o Roblox lê
   // O jogo tem que estar polling ANTES da sessão: com o jogo offline, evento é
   // descartado em vez de acumulado (F7), e é isso que a ponte deve fazer.
   const colhidos = [];
-  const laco = laçoDoJogo(Date.now() + 2600, colhidos);
+  //[[ A janela precisa caber o combate INTEIRO com folga.
+  //
+  // Era 2600ms contra um `combateMaxMs` de 2000ms — 600ms de margem. Sob carga,
+  // com os outros arquivos de teste rodando em paralelo, o laço ficava faminto e
+  // o segundo evento (o resultado do combate, que só sai aos ~2000ms) chegava
+  // depois de a janela fechar. O teste falhava com o comportamento CERTO: um
+  // evento colhido em vez de dois.
+  //
+  // Medido uma vez em 6132ms de duração total. A folga agora é de 2 segundos. ]]
+  const laco = laçoDoJogo(Date.now() + 4000, colhidos);
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   await nucleo.iniciarSessao({ presetId: PRESET_ID, cenario: "04-combate-de-presentes" });
