@@ -684,3 +684,31 @@ quem retoma é o dono, com `/full-automatico continuar`.
 
 O vigia acertou em desistir: ele distingue erro de limite de erro que ele não
 resolve, e não ficou tentando para sempre.
+
+## A camada da Kora não encostou no caminho do presente, e isso foi MEDIDO (2026-09-10)
+
+O `CLAUDE.md` proíbe qualquer coisa da Kora no caminho crítico do presente, e o
+ADR-P02 acrescentou licença, telemetria e saúde de conexão à ponte. Isso foi
+garantido por desenho (consulta única no arranque, depois das portas abrirem e
+sem `await`; telemetria fire-and-forget) e por teste de unidade.
+
+Nada disso é medida. A maratona é.
+
+Rodada com a camada inteira ativa e o Supabase configurado, 2 minutos, 20
+presentes por minuto:
+
+| | Antes da camada da Kora | Depois |
+|---|---|---|
+| mediana | 1 ms | **1 ms** |
+| p95 | 2 a 8 ms | **2 ms** |
+| máxima | 18 ms | **2 ms** |
+
+Zero 429, zero erro de rede, e a memória da ponte caiu de 98 para 92 MB no
+período. O orçamento inteiro até o primeiro frame é de 1000 ms; a fatia da ponte
+continua sendo ruído.
+
+**A lição não é o número, é o hábito:** toda vez que algo novo entrar na ponte,
+a maratona custa dois minutos e responde se o Princípio nº 1 continua de pé.
+Garantir por desenho e confirmar por medida são coisas diferentes, e só a
+segunda sobrevive a um refactor feito por outra pessoa.
+
