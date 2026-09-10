@@ -146,6 +146,33 @@ export async function listarArquivos(dir) {
   }
 }
 
+/**
+ * Todo arquivo de uma árvore, em caminho relativo com barra normal.
+ *
+ * Barra normal e não `path.sep` porque o resultado vira CHAVE: é assim que o
+ * painel embutido casa `/assets/index-abc.js` com o arquivo, e uma barra
+ * invertida no meio disso nunca casaria. Diretório ausente devolve [].
+ */
+export async function listarArquivosRecursivo(dir, base = dir) {
+  let entradas;
+  try {
+    entradas = await readdir(dir, { withFileTypes: true });
+  } catch (erro) {
+    if (erro.code === "ENOENT") return [];
+    throw erro;
+  }
+
+  const saida = [];
+  for (const entrada of entradas) {
+    if (entrada.name.startsWith(".")) continue;
+    const cheio = path.join(dir, entrada.name);
+    if (entrada.isDirectory()) saida.push(...(await listarArquivosRecursivo(cheio, base)));
+    else if (entrada.isFile()) saida.push(path.relative(base, cheio).split(path.sep).join("/"));
+  }
+
+  return saida.sort();
+}
+
 /** Só os .json. */
 export async function listarJson(dir) {
   return (await listarArquivos(dir)).filter((nome) => nome.endsWith(".json"));

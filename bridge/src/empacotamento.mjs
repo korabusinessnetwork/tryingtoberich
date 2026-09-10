@@ -3,13 +3,11 @@
  *
  * O mesmo código roda de dois jeitos e precisa achar as mesmas coisas nos dois:
  *
- *   - **no repositório**, `node bridge/src/index.mjs`, e a raiz é a pasta do
- *     projeto — três níveis acima deste arquivo;
- *   - **dentro do `KoraStreamGames.exe`**, onde não existe "pasta do projeto":
- *     o código não é um arquivo em disco, é um blob colado no executável, e
- *     `import.meta.url` aponta para um caminho que não existe. A raiz passa a
- *     ser **a pasta onde o exe está**, que é onde o `data/` e o `game/` do
- *     streamer vivem.
+ *   - **no repositório**, `node bridge/src/index.mjs`, e tudo — dado do
+ *     streamer e arquivo de programa — está na pasta do projeto;
+ *   - **dentro do `Kora Stream Games.exe`**, onde as duas coisas se separam: o
+ *     dado do streamer fica ao lado do executável, e o programa fica dentro do
+ *     pacote do aplicativo, onde ele não pode ser editado nem apagado.
  *
  * Esta é a única diferença de comportamento entre as duas formas, e ela mora
  * num arquivo só de propósito: quem lê `RAIZ` (o `repos/arquivo.mjs`, o
@@ -20,46 +18,36 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isSea, getRawAsset } from "node:sea";
-
-/** Verdadeiro só dentro do executável portátil. */
-export const EMPACOTADO = (() => {
-  try {
-    return isSea();
-  } catch {
-    return false;
-  }
-})();
 
 /**
- * A raiz de tudo que é lido e escrito em disco.
+ * As duas variáveis são escritas pelo `app/principal.cjs` ANTES de carregar a
+ * ponte, e por mais ninguém.
  *
- * Empacotado, é a pasta do executável — e é de propósito que o dado fique FORA
- * do exe: `data/` é do streamer, muda a cada live e precisa sobreviver à troca
- * do executável por uma versão nova.
+ * Variável de ambiente e não parâmetro porque `RAIZ` é lida no topo de módulos
+ * que são carregados por `import` — quando a primeira linha da ponte roda, já é
+ * tarde para passar argumento. O processo do aplicativo é nosso do começo ao
+ * fim, então não há com quem disputar o nome.
  */
-export const RAIZ = EMPACOTADO
-  ? path.dirname(process.execPath)
-  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const doAmbiente = (nome) => (process.env[nome] ? path.resolve(process.env[nome]) : null);
+
+const NO_REPOSITORIO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/** Verdadeiro só dentro do aplicativo empacotado. */
+export const EMPACOTADO = Boolean(doAmbiente("KORA_RAIZ"));
 
 /**
- * Um arquivo embutido no executável, ou `null` fora dele.
+ * A raiz do que é do STREAMER: `data/`, `.env`, `game/`.
  *
- * Só o que é PROGRAMA entra aqui: o painel já construído e a semente do
- * `data/`/`game/` que o primeiro arranque escreve em disco. Nada que o streamer
- * edite é lido daqui depois do primeiro arranque.
+ * Empacotado, é a pasta ao lado do executável — de propósito fora do pacote do
+ * aplicativo, porque isto muda a cada live e precisa sobreviver à troca do
+ * programa por uma versão nova.
  */
-export function embutido(chave) {
-  if (!EMPACOTADO) return null;
-  try {
-    return Buffer.from(getRawAsset(chave));
-  } catch {
-    return null;
-  }
-}
+export const RAIZ = doAmbiente("KORA_RAIZ") ?? NO_REPOSITORIO;
 
-/** O índice do que foi embutido, escrito pelo `scripts/empacotar.mjs`. */
-export function indiceEmbutido() {
-  const bruto = embutido("indice.json");
-  return bruto ? JSON.parse(bruto.toString("utf8")) : { painel: [], semente: [] };
-}
+/**
+ * A raiz do que é PROGRAMA: o painel construído e a semente de `data/`/`game/`.
+ *
+ * Empacotado, fica dentro do aplicativo. No repositório, coincide com a `RAIZ`
+ * — não existe separação a fazer quando tudo é fonte.
+ */
+export const RECURSOS = doAmbiente("KORA_RECURSOS") ?? NO_REPOSITORIO;

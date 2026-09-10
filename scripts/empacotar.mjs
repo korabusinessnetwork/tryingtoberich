@@ -1,48 +1,50 @@
 #!/usr/bin/env node
 /**
- * Monta o `KoraStreamGames.exe` — o executável portátil.
+ * Monta o `KoraStreamGames.exe` — o aplicativo portátil.
  *
  *   npm run empacotar
  *
- * O que sai: `dist/KoraStreamGames/`, com o exe e um LEIA-ME. Nada mais. O
- * `data/` e o `game/` nascem no primeiro duplo clique, ao lado do exe.
+ * O que sai: `dist/KoraStreamGames.exe`, um arquivo só. Copiar para qualquer
+ * pasta e dar duplo clique. O `data/`, o `game/` e o `.env` nascem ao lado dele
+ * no primeiro uso.
  *
- * COMO FUNCIONA, em três peças que o Node já traz de fábrica:
+ * COMO FUNCIONA, em quatro peças:
  *
- *   1. **Um arquivo só.** A ponte é dezenas de módulos ESM mais `express`,
- *      `ajv` e o `tiktok-live-connector`. O executável só aceita UM arquivo
- *      CommonJS, então tudo isso é fundido antes (o empacotador que o Vite já
- *      trazia — nenhuma dependência nova de verdade).
- *   2. **O blob.** `node --experimental-sea-config` junta esse arquivo com os
- *      anexos — o painel construído e a semente do `data/`/`game/` — num blob.
- *   3. **A cola.** O `postject` gruda o blob dentro de uma cópia do `node.exe`.
- *      A partir daí aquele exe, ao ser executado, roda o nosso código em vez do
- *      REPL do Node.
+ *   1. **O painel** é construído pelo Vite, como sempre.
+ *   2. **A ponte** — dezenas de módulos ESM mais `express`, `ajv` e o
+ *      `tiktok-live-connector` — é fundida num `ponte.cjs` pelo `rolldown`, que
+ *      o Vite já trazia. É isso que dispensa levar `node_modules` junto.
+ *   3. **O Electron** dá a janela nativa e o runtime. O processo principal é o
+ *      `app/principal.cjs`.
+ *   4. **O `electron-builder`** junta tudo num executável portátil, com ícone,
+ *      nome e versão gravados no binário.
  *
- * As duas peças de fora (`rolldown`, `postject`) são MIT, gratuitas e só de
- * desenvolvimento: não vão para a máquina do cliente. Ver ADR-P07.
+ * Tudo MIT e gratuito, e só de desenvolvimento. Ver ADR-P07.
  *
- * O QUE ESTE SCRIPT NÃO RESOLVE: o exe não é assinado, e o SmartScreen do
- * Windows avisa na primeira execução. Assinatura custa dinheiro e a decisão é
- * do dono — está registrada no ADR-P07, junto com o texto que o cliente vê.
+ * O QUE ESTE SCRIPT NÃO RESOLVE: o exe não é assinado, e o SmartScreen avisa na
+ * primeira execução. Assinatura custa dinheiro e a decisão é do dono — está no
+ * ADR-P07, junto com o texto que o cliente vê.
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import { RAIZ } from "../bridge/src/repos/arquivo.mjs";
+import { gerarIcone } from "./gerar-icone.mjs";
 
 const executar = promisify(execFile);
 
 const BUILD = path.join(RAIZ, "build");
-const DESTINO = path.join(RAIZ, "dist", "KoraStreamGames");
-const NOME_DO_EXE = process.platform === "win32" ? "KoraStreamGames.exe" : "KoraStreamGames";
-
-/** A palavra que o Node procura dentro do binário para saber onde colar o blob. */
-const FUSIVEL = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
+const APP = path.join(BUILD, "app");
+const PROGRAMA = path.join(BUILD, "programa");
+const MARCA = path.join(BUILD, "marca");
+/** Onde o electron-builder cospe os intermediários dele (`win-unpacked` e cia). */
+const PACOTE = path.join(BUILD, "pacote");
+/** O que é entregue: o exe e o LEIA-ME, e mais nada. */
+const SAIDA = path.join(RAIZ, "dist", "KoraStreamGames");
 
 const passo = (texto) => console.log(`\n▸ ${texto}`);
 const kb = (bytes) => `${(bytes / 1024).toFixed(0)} KB`;
@@ -50,7 +52,7 @@ const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 /**
  * Os arquivos da semente: o que o Git versiona em `data/` e `game/`, mais os
- * gerados que o exe não tem como gerar sozinho.
+ * gerados que o aplicativo não tem como gerar sozinho.
  *
  * Por que o Git e não uma varredura: o `.gitignore` já sabe distinguir o que é
  * do produto do que é da INSTALAÇÃO — a arte do streamer, o catálogo coletado
@@ -60,37 +62,28 @@ const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 export async function listarSemente(raiz = RAIZ) {
   let versionados;
   try {
-    const { stdout } = await executar("git", ["ls-files", "-z", "data", "game", ".env.example"], { cwd: raiz, maxBuffer: 32 * 1024 * 1024 });
+    const { stdout } = await executar("git", ["ls-files", "-z", "data", "game", ".env.example"], {
+      cwd: raiz,
+      maxBuffer: 32 * 1024 * 1024,
+    });
     versionados = stdout.split("\u0000").filter(Boolean);
   } catch {
     throw new Error("Não consegui listar a semente: este build precisa do `git` no PATH.");
   }
 
-  // Gerados a partir de `docs/`, e o exe não leva `docs/` junto. Sem eles a
-  // ponte recusa subir, com a mensagem certa e no lugar mais confuso possível:
-  // na máquina do cliente.
+  // Gerados a partir de `docs/`, e o aplicativo não leva `docs/` junto. Sem
+  // eles a ponte recusa subir, com a mensagem certa e no lugar mais confuso
+  // possível: na máquina do cliente.
   const gerados = ["data/animacoes.json", "data/tokens.json"];
 
   return [...new Set([...versionados, ...gerados])].sort();
 }
 
-/** Todo arquivo de uma pasta, em caminho relativo com barra normal. */
-async function varrer(dir, base = dir) {
-  const { readdir } = await import("node:fs/promises");
-  const saida = [];
-  for (const entrada of await readdir(dir, { withFileTypes: true })) {
-    const cheio = path.join(dir, entrada.name);
-    if (entrada.isDirectory()) saida.push(...(await varrer(cheio, base)));
-    else saida.push(path.relative(base, cheio).split(path.sep).join("/"));
-  }
-  return saida.sort();
-}
-
-async function fundirEmUmArquivo(saida) {
+async function fundirAPonte(saida) {
   const { rolldown } = await import("rolldown");
 
   const pacote = await rolldown({
-    input: path.join(RAIZ, "bridge", "src", "empacotado.mjs"),
+    input: path.join(RAIZ, "bridge", "src", "aplicativo.mjs"),
     platform: "node",
     // O `bufferutil`, o `utf-8-validate` e o `supports-color` são aceleradores
     // opcionais do `ws` e do `debug`, pedidos dentro de try/catch. Não existem
@@ -108,106 +101,116 @@ async function fundirEmUmArquivo(saida) {
 }
 
 /**
- * Arranca a assinatura digital da cópia do `node.exe`.
+ * O `package.json` que o Electron lê ao abrir.
  *
- * O `node.exe` vem assinado pela Node.js Foundation. Colar um blob dentro dele
- * deixa aquela assinatura descrevendo um arquivo que já não existe, e o
- * Windows não lê isso como "sem assinatura": lê como assinatura CORROMPIDA, que
- * é bem pior — é o que antivírus trata como binário adulterado. Um exe
- * simplesmente sem assinatura só toma o aviso normal do SmartScreen.
- *
- * Como se faz: a tabela de certificados é a entrada 4 do diretório de dados do
- * cabeçalho PE, e ela é a única cujo "endereço" é deslocamento de ARQUIVO, não
- * de memória — o bloco fica colado no fim. Zerar a entrada e cortar o fim do
- * arquivo remove a assinatura sem mexer em mais nada.
- *
- * Devolve quantos bytes saíram, ou 0 quando não havia assinatura (Linux, macOS,
- * ou um Node compilado em casa).
+ * É gerado, e não versionado, porque nome, versão e descrição são os MESMOS do
+ * `package.json` da raiz — e um segundo arquivo à mão viraria a versão que
+ * ninguém lembra de subir.
  */
-export function removerAssinatura(binario) {
-  if (binario.length < 0x40 || binario.readUInt16LE(0) !== 0x5a4d) return { binario, removidos: 0 };
+async function montarPackageDoApp() {
+  const raiz = JSON.parse(await readFile(path.join(RAIZ, "package.json"), "utf8"));
 
-  const pe = binario.readUInt32LE(0x3c);
-  if (pe + 24 > binario.length || binario.readUInt32LE(pe) !== 0x00004550) return { binario, removidos: 0 };
+  return {
+    name: "kora-stream-games",
+    productName: "Kora Stream Games",
+    version: raiz.version,
+    description: "Painel e ponte do Kora Stream Games.",
+    author: "Kora Business Network",
+    license: "UNLICENSED",
+    private: true,
+    main: "principal.cjs",
+  };
+}
 
-  // 0x20b é PE32+ (64 bits), que tem 16 bytes a mais de cabeçalho opcional.
-  const opcional = pe + 24;
-  const diretorios = opcional + (binario.readUInt16LE(opcional) === 0x20b ? 112 : 96);
-  const entrada = diretorios + 4 * 8;
-  if (entrada + 8 > binario.length) return { binario, removidos: 0 };
-
-  const inicio = binario.readUInt32LE(entrada);
-  const tamanho = binario.readUInt32LE(entrada + 4);
-  if (!inicio || !tamanho || inicio + tamanho > binario.length) return { binario, removidos: 0 };
-
-  binario.writeUInt32LE(0, entrada);
-  binario.writeUInt32LE(0, entrada + 4);
-  return { binario: binario.subarray(0, inicio), removidos: tamanho };
+function configDoBuilder() {
+  return {
+    appId: "network.kora.streamgames",
+    productName: "Kora Stream Games",
+    copyright: `Copyright © ${new Date().getFullYear()} Kora Business Network`,
+    directories: {
+      app: path.relative(RAIZ, APP),
+      output: path.relative(RAIZ, PACOTE),
+      buildResources: path.relative(RAIZ, MARCA),
+    },
+    //[[ O painel e a semente vão como RECURSO, fora do `app.asar`.
+    //
+    // Dentro do asar eles até seriam lidos — o Electron remenda o `fs` para
+    // isso — mas remendo de `fs` é exatamente o tipo de coisa que funciona até
+    // o dia em que não funciona, e o `repos/arquivo.mjs` usa `open`, `stat` e
+    // `createReadStream`. Fora do asar é `fs` de verdade, sem surpresa. ]]
+    extraResources: [{ from: path.relative(RAIZ, PROGRAMA), to: "programa" }],
+    asar: true,
+    // Não há dependência nativa: a ponte inteira virou um arquivo.
+    npmRebuild: false,
+    compression: "maximum",
+    win: {
+      target: ["portable"],
+      icon: path.relative(RAIZ, path.join(MARCA, "icon.ico")),
+      // Sem isto o Windows mostra "Electron" nas propriedades do arquivo.
+      legalTrademarks: "Kora Business Network",
+    },
+    portable: { artifactName: "KoraStreamGames.exe" },
+  };
 }
 
 async function principal() {
   if (process.platform !== "win32") {
-    console.log(`Atenção: rodando em ${process.platform}. O executável sai para ESTA plataforma, não para Windows.`);
+    console.log(`Atenção: rodando em ${process.platform}. O aplicativo sai para ESTA plataforma, não para Windows.`);
   }
 
   await rm(BUILD, { recursive: true, force: true });
-  await rm(DESTINO, { recursive: true, force: true });
-  await mkdir(BUILD, { recursive: true });
-  await mkdir(DESTINO, { recursive: true });
+  await rm(SAIDA, { recursive: true, force: true });
+  for (const dir of [APP, PROGRAMA, MARCA, PACOTE, SAIDA]) await mkdir(dir, { recursive: true });
 
   passo("Gerando os artefatos (animações, tokens, i18n)");
   for (const script of ["gerar-animacoes.mjs", "gerar-tokens.mjs", "gerar-i18n.mjs"]) {
     await executar(process.execPath, [path.join(RAIZ, "scripts", script), "--silencioso"], { cwd: RAIZ });
   }
 
+  passo("Desenhando o ícone");
+  const icone = await gerarIcone(path.join(MARCA, "icon.ico"));
+  console.log(`  ${icone.tamanhos.join(", ")} px`);
+  await cp(path.join(MARCA, "icon.ico"), path.join(PROGRAMA, "icone.ico"));
+
   passo("Construindo o painel");
   // O Vite direto, e não `npm run build:painel`: o Node 24 recusa spawnar um
   // `.cmd` sem shell, e com shell os argumentos vão concatenados na linha de
-  // comando — que é justamente o que ele deprecou. O caminho do binário é o
-  // mesmo que o `scripts/verificar-painel.mjs` já usa.
+  // comando — que é justamente o que ele deprecou.
   const vite = path.join(RAIZ, "node_modules", "vite", "bin", "vite.js");
   await executar(process.execPath, [vite, "build"], { cwd: path.join(RAIZ, "panel"), maxBuffer: 8 * 1024 * 1024 });
+  await cp(path.join(RAIZ, "panel", "dist"), path.join(PROGRAMA, "painel"), { recursive: true });
 
   passo("Fundindo a ponte num arquivo só");
-  const entrada = path.join(BUILD, "ponte.cjs");
-  console.log(`  ${kb(await fundirEmUmArquivo(entrada))}`);
+  console.log(`  ${kb(await fundirAPonte(path.join(APP, "ponte.cjs")))}`);
+  await cp(path.join(RAIZ, "app", "principal.cjs"), path.join(APP, "principal.cjs"));
 
-  passo("Reunindo o que vai embutido");
-  const doPainel = await varrer(path.join(RAIZ, "panel", "dist"));
-  const daSemente = await listarSemente();
+  const pacote = await montarPackageDoApp();
+  await writeFile(path.join(APP, "package.json"), `${JSON.stringify(pacote, null, 2)}\n`, "utf8");
 
-  const anexos = { "indice.json": path.join(BUILD, "indice.json") };
-  for (const relativo of doPainel) anexos[`painel/${relativo}`] = path.join(RAIZ, "panel", "dist", relativo);
-  for (const relativo of daSemente) anexos[`semente/${relativo}`] = path.join(RAIZ, relativo);
+  passo("Reunindo a semente");
+  const semente = await listarSemente();
+  for (const relativo of semente) {
+    await cp(path.join(RAIZ, relativo), path.join(PROGRAMA, "semente", relativo));
+  }
+  console.log(`  ${semente.length} arquivos`);
 
-  await writeFile(path.join(BUILD, "indice.json"), JSON.stringify({ painel: doPainel, semente: daSemente }, null, 2), "utf8");
-  console.log(`  painel: ${doPainel.length} arquivos | semente: ${daSemente.length} arquivos`);
+  passo("Montando o executável (Electron)");
+  const { build, Platform } = await import("electron-builder");
+  const feitos = await build({
+    targets: Platform.WINDOWS.createTarget("portable"),
+    config: configDoBuilder(),
+    projectDir: RAIZ,
+  });
 
-  passo("Montando o blob");
-  const blob = path.join(BUILD, "kora.blob");
-  await writeFile(
-    path.join(BUILD, "sea.json"),
-    JSON.stringify({ main: entrada, output: blob, disableExperimentalSEAWarning: true, useSnapshot: false, useCodeCache: false, assets: anexos }, null, 2),
-    "utf8",
-  );
-  await executar(process.execPath, ["--experimental-sea-config", path.join(BUILD, "sea.json")], { cwd: RAIZ, maxBuffer: 32 * 1024 * 1024 });
-  console.log(`  ${mb((await stat(blob)).size)}`);
+  const cru = feitos.find((arquivo) => arquivo.endsWith(".exe"));
+  if (!cru) throw new Error(`O build não produziu um .exe. Saiu: ${feitos.join(", ")}`);
 
-  passo("Colando o blob numa cópia do Node");
-  const exe = path.join(DESTINO, NOME_DO_EXE);
-  const { binario, removidos } = removerAssinatura(await readFile(process.execPath));
-  await writeFile(exe, binario);
-  console.log(removidos ? `  assinatura do Node removida (${kb(removidos)})` : "  sem assinatura para remover");
-
-  const { inject } = await import("postject");
-  await inject(exe, "NODE_SEA_BLOB", await readFile(blob), { sentinelFuse: FUSIVEL, machoSegmentName: "NODE_SEA", overwrite: true });
-
-  await writeFile(path.join(DESTINO, "LEIA-ME.txt"), await montarLeiaMe(), "utf8");
+  const exe = path.join(SAIDA, "KoraStreamGames.exe");
+  await cp(cru, exe);
+  await cp(path.join(RAIZ, "scripts", "modelos", "leia-me-do-portatil.txt"), path.join(SAIDA, "LEIA-ME.txt"));
 
   console.log(`\n✓ ${path.relative(RAIZ, exe)} — ${mb((await stat(exe)).size)}`);
-  console.log("  Copie a pasta inteira para a máquina do cliente e mande dar duplo clique no exe.");
+  console.log("  Um arquivo só. Copie para a máquina do cliente e mande dar duplo clique.");
 }
-
-const montarLeiaMe = () => readFile(path.join(RAIZ, "scripts", "modelos", "leia-me-do-portatil.txt"), "utf8");
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await principal();

@@ -34,7 +34,7 @@ const escutar = (app, porta, host) =>
  * `await` de módulo lá embaixo: ele tem coisa a fazer ANTES (extrair a semente,
  * criar o `.env`) e DEPOIS (abrir o navegador na porta que subiu).
  */
-export async function principal() {
+export async function principal({ painel = null } = {}) {
   const config = carregarConfig();
 
   if (!configValida(config)) {
@@ -60,7 +60,7 @@ export async function principal() {
   await nucleo.restaurar();
 
   const servidorDoJogo = await escutar(criarAppDoJogo(nucleo, { token: config.token }), config.portaJogo, config.host);
-  const servidorDoPainel = await escutar(criarAppDoPainel(nucleo), config.portaPainel, config.host);
+  const servidorDoPainel = await escutar(criarAppDoPainel(nucleo, { painel }), config.portaPainel, config.host);
 
   log.info("ponte_no_ar", { host: config.host, portaJogo: config.portaJogo, portaPainel: config.portaPainel });
   console.log(`Jogo   http://${config.host}:${config.portaJogo}/jogo/*   exige X-Bridge-Token`);
@@ -75,34 +75,46 @@ export async function principal() {
     console.log(`\nTocando a fixture "${cenario}" em loop, sem live.`);
   }
 
-  const encerrar = async (sinal) => {
+  /**
+   * `sair` é falso quando quem manda no processo não é a ponte.
+   *
+   * No terminal, Ctrl+C tem que derrubar tudo, e `process.exit` é o caminho.
+   * Dentro do aplicativo quem decide a hora de morrer é o Electron: um
+   * `process.exit` aqui mataria a janela no meio do fechamento e pularia o
+   * resto do desligamento dele.
+   */
+  const encerrar = async (sinal, { sair = true } = {}) => {
     log.info("ponte_encerrando", { sinal });
     // Encerra a sessão de verdade: é o que descarta o dado de espectador (F5).
     if (nucleo.sessaoAtiva) await nucleo.encerrarSessao().catch(() => {});
     servidorDoJogo.close();
+
+    if (!sair) return new Promise((pronto) => servidorDoPainel.close(() => pronto()));
+
     servidorDoPainel.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 3000).unref();
+    return undefined;
   };
 
   process.on("SIGINT", () => encerrar("SIGINT"));
   process.on("SIGTERM", () => encerrar("SIGTERM"));
 
-  return { config, servidorDoJogo, servidorDoPainel };
+  return { config, nucleo, servidorDoJogo, servidorDoPainel, encerrar };
 }
 
 //[[ Só roda sozinha quando FOI ela a chamada.
 //
-// Dentro do executável portátil quem manda é o `empacotado.mjs` — ele tem que
-// extrair a semente e criar o `.env` ANTES da ponte subir — e lá o
-// `process.argv[1]` nem sempre existe.
+// Dentro do aplicativo quem manda é o `aplicativo.mjs` — ele tem que extrair a
+// semente e criar o `.env` ANTES da ponte subir.
 //
 // Sem `await` de topo: este arquivo é fundido em CommonJS para virar o
 // executável, e CommonJS não tem await de topo. O `.catch` faz o mesmo serviço
 // que o await fazia, que é não deixar a falha sumir em silêncio. ]]
-// `!EMPACOTADO` primeiro porque dentro do executável a comparação dá TRUE por
-// acidente: os dois lados viram o caminho do próprio exe. Sem esta guarda a
-// ponte subia duas vezes, e a primeira — antes do `.env` existir — cuspia
-// "BRIDGE_TOKEN precisa de no mínimo 32 caracteres" logo acima do arranque bom.
+// `!EMPACOTADO` primeiro porque dentro do pacote a comparação já deu TRUE por
+// acidente uma vez, com os dois lados virando o caminho do próprio executável.
+// Sem esta guarda a ponte subia duas vezes, e a primeira — antes de o `.env`
+// existir — cuspia "BRIDGE_TOKEN precisa de no mínimo 32 caracteres" logo acima
+// do arranque bom.
 const chamadaDireta = !EMPACOTADO && process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (chamadaDireta) {
   principal().catch((erro) => {

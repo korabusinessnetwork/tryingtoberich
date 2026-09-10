@@ -182,9 +182,10 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
   absorvido por ela.
 - **Fase 1 — produto vendável v1.** ~~i18n (ADR-P03) como primeiro commit~~ —
   **feito em 2026-09-09**, rodada 1 do ciclo (`specs/_loop.md`): 627 chaves em
-  PT, ES e EN, 465 testes verdes. ~~Empacotamento~~ — **portátil feito em
-  2026-09-10** (ADR-P07): `npm run empacotar` produz o `KoraStreamGames.exe`,
-  e o passo a passo de instalar na máquina de outra pessoa está em
+  PT, ES e EN, 465 testes verdes. ~~Empacotamento~~ — **aplicativo portátil
+  feito em 2026-09-10** (ADR-P07): `npm run empacotar` produz o
+  `KoraStreamGames.exe`, um programa Electron com janela nativa e sem console, e
+  o passo a passo de instalar na máquina de outra pessoa está em
   [`instalacao-na-maquina-do-cliente.md`](./instalacao-na-maquina-do-cliente.md).
   Depois Supabase (ADR-P02), instalador (ADR-P04), console v1 (ADR-P05) e venda.
 
@@ -206,6 +207,12 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
       testadores forem daqui.
 - [ ] **Assinatura de código.** US$ 200 a 400/ano, adiada no ADR-P07. Reavaliar
       quando o cliente deixar de ser conhecido.
+- [ ] **Atualização automática.** O `electron-builder` já tem `electron-updater`,
+      mas ele quer um servidor de onde baixar. Hoje atualizar é o cliente trocar
+      o exe à mão, o que serve enquanto os clientes cabem numa conversa.
+- [ ] **O instalador do ADR-P04.** Sai do mesmo build: é trocar o alvo
+      `portable` por `nsis`. Depois de o produto rodar na máquina de alguém que
+      não é o dono.
 - **Fase 2 — distribuição e recorrência.**
 
 Bloqueia a Fase 1 inteira: a decisão do dono sobre o

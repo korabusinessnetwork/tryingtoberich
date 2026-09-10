@@ -127,29 +127,35 @@ dos cinco erros eram argumentos a favor de jogar fora o trabalho existente.**
 
 ## Resolvida em 2026-09-10 — como o produto chega na máquina do cliente
 
-- **Portátil primeiro, instalador depois (ADR-P07).** Pedido do dono: "eu
-  gostaria que inicialmente, pra gente ir testando, ele fosse um exe portable, e
-  depois a gente transicionasse pra um aplicativo instalável". `npm run
-  empacotar` produz um `KoraStreamGames.exe` de 94 MB, sem Node e sem terminal
-  na máquina do cliente. O instalador do ADR-P04 continua sendo o destino e vai
-  empacotar ESTE exe.
-  - Feito com o que o Node já traz: `rolldown` funde a ponte num arquivo,
-    `node --experimental-sea-config` monta o blob, `postject` cola no `node.exe`.
-    As duas ferramentas são MIT e só de desenvolvimento — custo zero.
+- **Um programa de verdade, portátil primeiro (ADR-P07).** `npm run empacotar`
+  produz um `KoraStreamGames.exe` de 96 MB: aplicativo Electron, janela nativa,
+  ícone próprio, sem console e sem Node na máquina do cliente. O instalador do
+  ADR-P04 continua sendo o destino e vai sair deste mesmo pacote — é trocar o
+  alvo do `electron-builder`.
+  - **A embalagem é parte do produto, e isso custou duas tentativas.** A
+    primeira (Node SEA, 94 MB) abria o navegador padrão: "ele tá abrindo na web".
+    A segunda (Chromium em `--app`) dava janela sem barra, mas continuava sendo
+    o navegador do streamer: "eu quero que ele seja um programa, um programa de
+    verdade". O número que fechou a questão: SEA 94 MB, Electron 96 MB. **Dois
+    megabytes** — o runtime do Node já custava quase tudo.
+  - **Lição para a próxima:** quando o dono olha o resultado e diz que não
+    parece o que ele pediu, a resposta não é explicar o trade-off de novo. Ele
+    já sabia o preço; o que ele não aceitava era o resultado.
   - A linha do que fica dentro e do que fica fora é **de quem é o arquivo**.
     Programa (schema, i18n, `game/`, tabela de animações) é reescrito a cada
-    arranque para casar com a versão do exe; o que é do streamer (`data/`,
+    abertura para casar com a versão instalada; o que é do streamer (`data/`,
     `.env`) nasce uma vez e nunca mais é tocado. É isso que faz "substitua o exe
     pelo novo" funcionar sem migração.
   - **Painel e ponte viram um processo só** no pacote — o painel construído é
-    servido de dentro do exe, na mesma porta da `/api`. Some o CORS e some a
-    chance de painel e ponte ficarem em versões diferentes. No repositório nada
+    servido de dentro do aplicativo, na mesma porta da `/api`. Some o CORS e some
+    a chance de painel e ponte ficarem em versões diferentes. No repositório nada
     muda: continua Vite em `:5173` encaminhando `/api`.
+  - **A pasta do streamer é `PORTABLE_EXECUTABLE_DIR`, nunca `process.execPath`.**
+    O portátil roda de uma cópia descompactada no `%TEMP%`; usar o caminho do
+    executável poria o `data/` do cliente num lugar que o Windows apaga.
   - **Assinatura de código adiada.** US$ 200 a 400/ano; o SmartScreen avisa na
     primeira execução e o `LEIA-ME.txt` explica o caminho. Reavaliar quando o
-    cliente deixar de ser conhecido. O que deu para fazer de graça foi remover a
-    assinatura da Node.js Foundation do binário: assinatura CORROMPIDA é lida
-    por antivírus como adulteração, sem assinatura é só o aviso.
+    cliente deixar de ser conhecido.
 
 ## Decisões pendentes
 

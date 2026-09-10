@@ -37,4 +37,4 @@ decisão de fundação.
 | [P04](./adr-p04-distribuicao-em-roblox.md) | Distribuição: o cliente roda no Roblox Studio dele | Aceito |
 | [P05](./adr-p05-console-do-operador.md) | Console do operador: a fronteira do v1, congelada em 6 itens | Aceito |
 | [P06](./adr-p06-uso-comercial-da-captura.md) | Uso comercial da captura não oficial (estende ADR-006) | **Proposto — aguarda o dono** |
-| [P07](./adr-p07-executavel-portatil.md) | Portátil primeiro: um `.exe` sem instalação; o instalador do P04 vem depois | Aceito |
+| [P07](./adr-p07-executavel-portatil.md) | Um programa de verdade (Electron), portátil primeiro; o instalador do P04 vem depois | Aceito |

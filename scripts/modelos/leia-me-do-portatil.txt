@@ -1,8 +1,8 @@
 KORA STREAM GAMES — versão portátil
 ===================================
 
-Não tem instalação. A pasta inteira é o programa: copie para onde quiser
-(inclusive um pendrive) e dê duplo clique em KoraStreamGames.exe.
+Não tem instalação. O KoraStreamGames.exe é o programa inteiro: copie para
+onde quiser (inclusive um pendrive) e dê duplo clique.
 
 
 COMEÇANDO
@@ -15,25 +15,21 @@ COMEÇANDO
    programa novo que ainda não tem assinatura digital comprada. Clique em
    "Mais informações" e depois em "Executar assim mesmo".
 
-2. Uma janela preta abre e fica aberta. É o motor. NÃO FECHE enquanto
-   estiver ao vivo — fechar ali desliga o jogo.
+   A primeira abertura demora alguns segundos a mais que as seguintes.
 
-3. O painel abre numa JANELA PRÓPRIA, com ícone na barra de tarefas e sem
-   barra de endereço. Ela usa o Chrome (ou o Edge) que já está na máquina,
-   só que em modo aplicativo — não é uma aba, e fechá-la não desliga nada.
+2. O programa abre. É uma janela normal do Windows, com ícone próprio na
+   barra de tarefas. Fechar a janela desliga o jogo — deixe aberta
+   enquanto estiver ao vivo.
 
-   Se ela não abrir, o endereço está escrito na janela preta:
-   http://127.0.0.1:8788
-
-4. No painel, informe o @ da sua conta da TikTok e monte o seu preset.
+3. Informe o @ da sua conta da TikTok e monte o seu preset.
 
 
 O QUE PRECISA ESTAR INSTALADO NA MÁQUINA (uma vez só)
 -----------------------------------------------------
 
-O jogo roda dentro do Roblox Studio, na sua máquina, como já roda hoje.
-Estes dois programas são de terceiros e têm instalador próprio — o
-KoraStreamGames.exe não instala nada por você:
+O jogo roda dentro do Roblox Studio, na sua máquina. Estes dois programas
+são de terceiros e têm instalador próprio — o KoraStreamGames.exe não
+instala nada por você:
 
   * Roblox Studio
       https://create.roblox.com/  ->  "Start Creating"
@@ -47,20 +43,20 @@ KoraStreamGames.exe não instala nada por você:
       Sem winget, baixe em https://github.com/rojo-rbx/rojo/releases
       e ponha o rojo.exe numa pasta que esteja no PATH.
 
-Com os dois instalados, o painel tem o botão "Abrir o jogo no Studio", que
-monta o lugar e abre o Studio nele. Só sobra dar Play. Se faltar o Rojo, o
-próprio painel avisa e repete o comando acima.
+Com os dois instalados, a aba "Jogo" tem o botão "Abrir o jogo no Studio",
+que monta o lugar e abre o Studio nele. Só sobra dar Play. Se faltar o
+Rojo, o próprio programa avisa e repete o comando acima.
 
 
 O QUE APARECE NA PASTA DEPOIS DO PRIMEIRO USO
 ----------------------------------------------
 
-  .env      as suas configurações e o seu token. É desta instalação:
-            não copie para outra máquina.
-  data/     tudo que é seu — presets, acervo, histórico das lives.
-  game/     a fonte do jogo, que o Rojo monta dentro do Studio.
-  janela/   a janela do painel guarda o tamanho e o idioma aqui.
-            Pode apagar: nasce de novo.
+  .env       as suas configurações e o seu token. É desta instalação:
+             não copie para outra máquina.
+  data/      tudo que é seu — presets, acervo, histórico das lives.
+  game/      a fonte do jogo, que o Rojo monta dentro do Studio.
+  kora.log   o que aconteceu na última vez que o programa abriu.
+             É o primeiro lugar a olhar quando algo dá errado.
 
 FAZER BACKUP = copiar a pasta data/. É só isso.
 
@@ -68,20 +64,18 @@ FAZER BACKUP = copiar a pasta data/. É só isso.
 TROCANDO POR UMA VERSÃO NOVA
 -----------------------------
 
-Substitua o KoraStreamGames.exe pelo novo, na mesma pasta. O data/ e o .env
-continuam onde estão e nada se perde. A pasta game/ é atualizada sozinha
-para casar com a versão nova do exe.
+Substitua o KoraStreamGames.exe pelo novo, na mesma pasta. O data/ e o
+.env continuam onde estão e nada se perde. A pasta game/ é atualizada
+sozinha para casar com a versão nova.
 
 
 DEU ERRADO
 ----------
 
-A janela preta é onde está escrito o motivo. Se ela sumir rápido demais,
-abra o PowerShell na pasta e rode:
+Se o programa não abrir, ele mostra uma caixa com o motivo. O detalhe
+completo fica em kora.log, na mesma pasta.
 
-    .\KoraStreamGames.exe
+"Já existe um Kora Stream Games rodando": abra o Gerenciador de Tarefas e
+encerre o que estiver rodando, ou reinicie a máquina.
 
-Assim a mensagem fica na tela.
-
-"Porta já ocupada": sobrou um KoraStreamGames de antes. Abra o Gerenciador
-de Tarefas e encerre o que estiver rodando, ou reinicie a máquina.
+A tela travou: aperte F5 para recarregar.

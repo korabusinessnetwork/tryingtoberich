@@ -12,10 +12,11 @@
  * apagar sem perceber, e que ficaria velha quando ele trocasse o exe por uma
  * versão nova. Dentro do exe, painel e ponte não têm como ficar dessincronizados.
  *
- * Não importa `node:fs`: o conteúdo vem do blob do executável (ADR-003).
+ * Não importa `node:fs`: recebe os arquivos já lidos (ADR-003). Quem os lê do
+ * disco é o `aplicativo.mjs`, uma vez, no arranque — são 500 KB, e servir de
+ * memória tira o disco do caminho de toda navegação do painel.
  */
 
-import { embutido, indiceEmbutido } from "../empacotamento.mjs";
 
 const TIPOS = {
   ".html": "text/html; charset=utf-8",
@@ -56,14 +57,15 @@ export function resolverChave(caminhoDaUrl, chaves) {
 }
 
 /**
- * Monta o painel embutido. Sem nada embutido (rodando do repositório), não monta
- * nada e o Vite continua sendo quem serve a tela.
+ * Monta o painel embutido a partir de um `Map<caminho, Buffer>`.
+ *
+ * Sem mapa (rodando do repositório), não monta nada e o Vite continua sendo
+ * quem serve a tela.
  */
-export function montarPainelEmbutido(app) {
-  const { painel } = indiceEmbutido();
-  if (!painel?.length) return false;
+export function montarPainelEmbutido(app, arquivos = null) {
+  if (!arquivos?.size) return false;
 
-  const chaves = new Set(painel);
+  const chaves = new Set(arquivos.keys());
 
   app.get(/.*/, (req, res, proximo) => {
     // `/api` e os overlays já foram montados antes; o que chega aqui e começa
@@ -77,7 +79,7 @@ export function montarPainelEmbutido(app) {
     const chave = resolverChave(req.path, chaves) ?? (req.accepts("html") ? "index.html" : null);
     if (!chave) return proximo();
 
-    const conteudo = embutido(`painel/${chave}`);
+    const conteudo = arquivos.get(chave);
     if (!conteudo) return proximo();
 
     res.setHeader("Content-Type", tipoDoArquivo(chave));

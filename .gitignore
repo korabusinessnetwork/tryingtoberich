@@ -2,13 +2,9 @@
 node_modules/
 dist/
 
-# Intermediarios do `npm run empacotar`: o pacote fundido, o blob e a config
-# do executavel. Sao subprodutos do build, refeitos do zero a cada vez.
+# Intermediarios do `npm run empacotar`: a ponte fundida, o icone, a semente
+# reunida e o que o electron-builder cospe. Refeitos do zero a cada build.
 build/
-
-# Perfil do navegador que abre o painel como aplicativo (ADR-P07). E do
-# navegador mesmo: cache, cookie e preferencia de janela. Nada de codigo.
-janela/
 
 # Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
 data/sessoes/*

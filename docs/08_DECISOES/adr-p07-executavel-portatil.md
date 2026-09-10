@@ -1,4 +1,4 @@
-# ADR-P07 — Portátil primeiro, instalador depois
+# ADR-P07 — Um programa de verdade, portátil primeiro
 
 **Status**: Aceito · **Data**: 2026-09-10 · **Decisores**: Matheus Bonato
 **Depende de**: ADR-P04 · **Relacionado**: ADR-001, ADR-003, ADR-P05
@@ -16,98 +16,128 @@ Hoje subir o produto exige, na ordem: instalar o Node, clonar o repositório,
 `openssl`, `npm run gerar`, e então dois terminais. **Nada disso é vendável**, e
 mais da metade nem é entendível para quem faz live.
 
-Ao mesmo tempo, um instalador de verdade — MSI ou NSIS, escrita no registro,
-Adicionar/Remover Programas, atualizador — é trabalho que só compensa depois que
-o produto estiver de pé na máquina de alguém. E, pedido pelo dono em 2026-09-10:
+O dono pediu, em 2026-09-10:
 
 > "Eu gostaria que inicialmente, pra gente ir testando, ele fosse um exe
 > portable, e depois a gente transicionasse pra um aplicativo instalável."
+
+E, olhando as duas primeiras tentativas de entregar isso:
+
+> "Ele tá abrindo na web, quero que ele abra em formato de aplicativo."
+>
+> "Mas eu não quero que ele seja aberto por navegador, eu quero que ele seja um
+> programa, um programa de verdade."
+
+Essa última frase é o requisito. **A embalagem não é detalhe de entrega: é parte
+do que está sendo vendido.** Quem paga por mês não abre uma aba.
 
 ---
 
 ## Decisão
 
-**O primeiro pacote é um executável portátil: um `.exe` só, sem instalação, sem
-Node na máquina e sem terminal. Ele é a MESMA ponte e o MESMO painel — o que
-muda é a embalagem, não o produto.** O instalador continua sendo o destino
-(ADR-P04) e vem depois, sobre este mesmo executável.
+**O produto é um aplicativo Windows de verdade — janela nativa, ícone próprio,
+sem console e sem navegador à vista — entregue como um `.exe` portátil, sem
+instalação.** O instalador continua sendo o destino (ADR-P04) e vem depois,
+sobre este mesmo aplicativo.
 
     npm run empacotar   ->   dist/KoraStreamGames/
-                               KoraStreamGames.exe   94 MB
+                               KoraStreamGames.exe   96 MB
                                LEIA-ME.txt
 
-O cliente copia a pasta para onde quiser, dá duplo clique, e o painel abre numa
-janela de aplicativo. O primeiro arranque escreve, ao lado do exe:
+O cliente copia para onde quiser, dá duplo clique, e o programa abre. O primeiro
+uso escreve, ao lado do exe:
 
-    .env      config da instalação, com um BRIDGE_TOKEN sorteado na hora
-    data/     o que é do streamer: presets, acervo, histórico
-    game/     a fonte que o Rojo monta dentro do Studio
-    janela/   perfil da janela do painel; descartável
+    .env       config da instalação, com um BRIDGE_TOKEN sorteado na hora
+    data/      o que é do streamer: presets, acervo, histórico
+    game/      a fonte que o Rojo monta dentro do Studio
+    kora.log   o que aconteceu na última abertura
 
-### Como é feito, com o que o Node já traz
+### Como é feito, em quatro peças
 
-1. **Um arquivo só.** A ponte são dezenas de módulos ESM mais `express`, `ajv` e
-   o `tiktok-live-connector`; o executável só aceita um arquivo CommonJS. O
-   `rolldown` funde tudo (`scripts/empacotar.mjs`).
-2. **O blob.** `node --experimental-sea-config` junta esse arquivo com os
-   anexos — o painel construído e a semente de `data/` e `game/`.
-3. **A cola.** O `postject` grava o blob dentro de uma cópia do `node.exe`.
+1. **O painel** é construído pelo Vite, como sempre.
+2. **A ponte** — dezenas de módulos ESM mais `express`, `ajv` e o
+   `tiktok-live-connector` — é fundida num arquivo CommonJS pelo `rolldown`, que
+   o Vite já trazia. É isso que dispensa levar `node_modules` para o cliente.
+3. **O Electron** dá a janela nativa e o runtime. O processo principal
+   (`app/principal.cjs`) sobe a ponte e abre a janela apontada para ela.
+4. **O `electron-builder`** monta o executável portátil, com ícone, nome e
+   versão gravados no binário.
 
-`rolldown` e `postject` são MIT e só de desenvolvimento: não vão para a máquina
-do cliente e não custam nada (CLAUDE.md, Custo). O `rolldown` já estava em
-`node_modules` — é o empacotador que o Vite usa por dentro.
+Tudo MIT, gratuito e só de desenvolvimento — nada é comprado, e nada vai para a
+máquina do cliente além do executável (CLAUDE.md, Custo).
 
-### O que fica DENTRO do exe e o que fica FORA
+### Por que Electron, depois de duas tentativas mais magras
 
-| Dentro (programa) | Fora, ao lado do exe (do streamer) |
+Não foi a primeira escolha. As duas primeiras foram descartadas **pelo dono
+olhando o resultado**, e ficam registradas porque o motivo vale para a próxima:
+
+| Tentativa | O que dava | Por que não bastou |
+|---|---|---|
+| Node SEA (`--experimental-sea-config` + `postject`) | um exe de 94 MB que subia a ponte e abria o navegador padrão | o produto virava uma aba, com barra de endereço e `127.0.0.1:8788` em cima |
+| Chromium em modo `--app` | janela sem barra, ícone próprio | continuava sendo o navegador do streamer, dependia de ele ter Chrome, e a janela preta do console continuava lá |
+
+O que faltava nas duas era a mesma coisa: **não pareciam um programa.** O custo
+de resolver isso é o Chromium embutido — e o número que decidiu foi este: o SEA
+saía com 94 MB, o Electron sai com 96. **Dois megabytes.** O runtime do Node já
+custava quase tudo; o resto do Chromium, comprimido, custa quase nada.
+
+Não havia alternativa mais magra ao alcance: a máquina não tem Rust (Tauri) nem
+.NET (WebView2 com casca própria), e adotar um segundo ecossistema de build para
+economizar 85 MB é caro no lugar errado — a manutenção.
+
+### O que fica DENTRO do aplicativo e o que fica FORA
+
+| Dentro (programa, não editável) | Fora, ao lado do exe (do streamer) |
 |---|---|
-| ponte, painel construído, runtime do Node | `data/` inteiro |
-| semente de `data/` e `game/` | `.env` |
-| — | `game/`, extraído, porque o Rojo precisa dele em disco |
+| ponte, painel construído, runtime | `data/` inteiro |
+| semente de `data/` e `game/` | `.env`, `kora.log` |
+| ícone | `game/`, extraído, porque o Rojo precisa dele em disco |
 
-A linha é "de quem é o arquivo". O que é programa é reescrito a cada arranque —
+A linha é "de quem é o arquivo". O que é programa é reescrito a cada abertura —
 schema, catálogo de tradução, tabela de animações, fonte do jogo — porque tem de
-casar com a versão do exe: é isso que faz "substitua o exe pelo novo" funcionar
-sem migração. O que é do streamer nasce uma vez e nunca mais é tocado.
+casar com a versão instalada: é isso que faz "substitua o exe pelo novo"
+funcionar sem migração. O que é do streamer nasce uma vez e nunca mais é tocado.
 
-O painel é o único programa que **não** é extraído: ele é servido de dentro do
-exe, na mesma porta da `/api`. Extrair criaria uma cópia editável que envelhece
-sozinha; servindo de dentro, painel e ponte não têm como dessincronizar — e de
-quebra some o CORS, porque painel e API passam a ser a mesma origem.
+O painel é o único programa que **não** é extraído: é servido de dentro do
+pacote, em memória, na mesma porta da `/api`. Some o CORS que o proxy do Vite
+existia para resolver, e painel e ponte não têm como ficar em versões diferentes.
 
-### O painel abre como aplicativo, não como aba
+**A pasta do streamer nunca é o diretório temporário.** O portátil roda a partir
+de uma cópia que se descompacta no `%TEMP%`, e ali `process.execPath` aponta
+para o temporário — que o Windows apaga. Quem diz onde o exe realmente está é
+`PORTABLE_EXECUTABLE_DIR`, e é ela que manda.
 
-Abrir o navegador padrão numa aba entrega o produto com barra de endereço,
-favoritos, as outras vinte abas do streamer e um `127.0.0.1:8788` no topo — tudo
-dizendo "isto é uma página", quando o que a pessoa comprou foi um programa.
+### A janela
 
-**A janela é aberta com `--app=URL` num Chromium que já esteja instalado**
-(Chrome, Edge ou Brave, nessa ordem — `bridge/src/janela.mjs`). É o mesmo
-mecanismo dos "aplicativos web" que o próprio Chrome instala: janela sem barra
-nenhuma, ícone próprio na barra de tarefas, redimensionável, fechável sem
-desligar a ponte.
+- Sem barra de menu. "Arquivo / Editar / Ajuda" é vocabulário de navegador.
+- Fundo `#111111` desde o primeiro frame, o mesmo do painel: sem isso a janela
+  pisca branco antes de carregar, que é o tique que denuncia navegador.
+- Só aparece quando está pronta.
+- Link externo (documentação, `create.roblox.com`) abre no navegador do
+  streamer, nunca dentro da janela — o produto não é um navegador ruim.
+- A página roda sem Node, isolada e em sandbox (`docs/11_SEGURANCA`).
+- Dois atalhos sobrevivem à falta de menu: **F5** recarrega, e
+  **Ctrl+Shift+I** abre as ferramentas de desenvolvedor — é como se lê um erro
+  na máquina do cliente sem pedir para ele instalar nada.
+- Uma instância só. O segundo duplo clique traz a janela existente para a
+  frente, em vez de morrer disputando a porta 8787.
+- Fechar a janela encerra a sessão de verdade antes de sair, que é o que
+  descarta o dado de espectador (F5, `docs/11_SEGURANCA`).
 
-Junto vai `--user-data-dir=janela/`, ao lado do exe. É o que separa a janela do
-navegador do streamer: perfil próprio, ícone que não fica agrupado com as abas
-dele, e o idioma escolhido no painel guardado **com o produto**, não misturado
-ao histórico pessoal. A pasta é descartável — apagar só perde o tamanho da
-janela.
+### Sem console, e o que entrou no lugar
 
-Sem Chromium nenhum, cai no navegador padrão e diz isso na tela. Feio, mas o
-streamer nunca fica sem painel.
+Não existe janela preta. Em compensação, um erro que impede subir não teria para
+onde ir — então:
 
-O mesmo caminho vale para o `npm start --abrir` do atalho da área de trabalho:
-o atalho não pode abrir uma coisa e o exe outra.
-
-**O que isto não resolve:** a janela preta do console continua aparecendo — ela
-é o motor, e é onde a mensagem de erro aparece quando algo não sobe. Escondê-la
-exige virar o executável para o subsistema GUI, e aí uma falha de arranque vira
-"clico e não acontece nada". Fica para quando houver um log em arquivo para onde
-mandar o erro.
+- todo `console.log` da ponte vai para **`kora.log`**, ao lado do exe, truncado
+  a cada abertura para não crescer sem fim;
+- todo erro que impede abrir vira **caixa de diálogo**, com texto que diz o que
+  fazer. Porta ocupada, que é o caso mais provável e o pior explicado pelo Node,
+  tem mensagem própria.
 
 ### Roblox Studio e Rojo continuam sendo instalação separada
 
-O executável **não instala nada na máquina do cliente** — é o que separa um
+O aplicativo **não instala nada na máquina do cliente** — é o que separa um
 portátil de um instalador. Os dois programas de terceiros de que o produto
 depende têm instalador próprio e ficam documentados:
 
@@ -120,61 +150,76 @@ Onde isso está escrito: no `LEIA-ME.txt` que acompanha o exe
 sozinho: o botão "Abrir o jogo no Studio" responde com o comando do `winget`
 quando não acha o Rojo (`bridge/src/roblox/estudio.mjs`).
 
+### O ícone é desenhado por código
+
+`scripts/gerar-icone.mjs` escreve o `.ico` inteiro à mão — PNG por PNG, sete
+tamanhos — com as cores de faixa do `data/tokens.json`. São três degraus
+subindo, que é o que o jogo faz.
+
+Gerado, e não desenhado num editor, por dois motivos: no dia em que a paleta
+mudar, o ícone muda junto; e um `.ico` binário versionado é um arquivo que
+ninguém consegue revisar num diff. Sem dependência: o `deflate` vem do
+`node:zlib` e o resto é cabeçalho.
+
 ---
 
 ## Consequências
 
 ### Boas
 
-- Instalar deixou de ser sete passos e virou "copiar uma pasta".
+- Instalar deixou de ser sete passos e virou "copiar um arquivo".
 - Não há Node, npm nem `git` na máquina do cliente, e nada é escrito fora da
-  pasta: no registro, no `Program Files`, no `AppData`, nada. Desinstalar é
-  apagar a pasta.
+  pasta: registro, `Program Files`, `AppData` — nada. Desinstalar é apagar.
 - Backup do cliente = copiar `data/`.
-- O `BRIDGE_TOKEN` é sorteado por instalação. Um token embutido no executável
+- O `BRIDGE_TOKEN` é sorteado por instalação. Um token embutido no programa
   seria o mesmo em todo cliente, e ele é a única coisa entre a porta pública do
   jogo e quem passar por ela (`docs/11_SEGURANCA`).
-- O portátil é a base do instalador: o MSI vai empacotar este exe, não outro.
+- **Painel e ponte viram um processo só**, o que fecha a última pergunta em
+  aberto do ADR-P04.
+- O portátil é a base do instalador: o mesmo `electron-builder` troca o alvo
+  `portable` por `nsis` e sai um instalador, sem reescrever nada.
 
 ### Ruins, e assumidas
 
-- **94 MB.** O runtime do Node inteiro vai junto. É o preço de não pedir
-  instalação prévia, e é uma vez só.
-- **O SmartScreen avisa na primeira execução.** Executável sem assinatura digital
-  toma a tela azul do "O Windows protegeu o computador". Um certificado de
-  assinatura de código custa **US$ 200 a 400 por ano** — investimento, e o
-  projeto é bootstrap gratuito (CLAUDE.md, Custo). **Adiado por padrão**: enquanto
-  o cliente for o dono e os primeiros testadores, o `LEIA-ME.txt` explica o
-  aviso e o caminho ("Mais informações" → "Executar assim mesmo"). Reavaliar
-  quando começar a vender para desconhecido: aí o aviso deixa de ser
+- **96 MB.** O Chromium e o Node inteiros vão junto. É o preço de não pedir
+  instalação prévia nem depender do navegador do cliente — e são só 2 MB a mais
+  que o executável sem janela.
+- **A primeira abertura é mais lenta.** O portátil se descompacta antes de
+  rodar; as seguintes reaproveitam.
+- **O SmartScreen avisa na primeira execução.** Executável sem assinatura
+  digital toma a tela azul do "O Windows protegeu o computador". Um certificado
+  de assinatura de código custa **US$ 200 a 400 por ano** — investimento, e o
+  projeto é bootstrap gratuito (CLAUDE.md, Custo). **Adiado por padrão**:
+  enquanto o cliente for o dono e os primeiros testadores, o `LEIA-ME.txt`
+  explica o aviso e o caminho ("Mais informações" → "Executar assim mesmo").
+  Reavaliar quando começar a vender para desconhecido: aí o aviso deixa de ser
   inconveniência e vira perda de venda.
-  - O que **foi** feito de graça: a assinatura da Node.js Foundation é removida
-    do binário antes da colagem. Assinatura corrompida é lida por antivírus como
-    binário adulterado; sem assinatura é só o aviso normal.
-- **O `LEIA-ME.txt` está em português.** O ADR-P03 traduziu o painel para pt/es/
-  en, mas o console do operador é PT sempre. Vender para streamer de língua
-  inglesa exige a versão EN deste arquivo — item aberto, não bloqueante enquanto
-  os testadores forem daqui.
+- **O `LEIA-ME.txt` está em português.** O ADR-P03 traduziu o painel para
+  pt/es/en, mas o console do operador é PT sempre. Vender para streamer de
+  língua inglesa exige a versão EN deste arquivo — item aberto, não bloqueante
+  enquanto os testadores forem daqui.
 - **Só Windows, por ora.** O `npm run empacotar` gera para a plataforma em que
-  roda. Como o Roblox Studio é Windows e macOS, o portátil de macOS é possível e
+  roda. Como o Roblox Studio é Windows e macOS, o pacote de macOS é possível e
   ninguém pediu.
+- **Uma dependência de peso a mais.** O Electron precisa acompanhar atualização
+  de segurança do Chromium. Não é código nosso e não entra no caminho crítico do
+  presente, mas passa a existir.
 
 ---
 
 ## Alternativas descartadas
 
-**Instalador MSI/NSIS agora.** É o destino (ADR-P04), mas custa semanas e pede
-decisões — pasta de instalação, atualizador, desinstalação — que ficam melhores
-depois de o produto ter rodado na máquina de alguém que não é o dono.
+**Instalador MSI/NSIS agora.** É o destino (ADR-P04), mas pede decisões — pasta
+de instalação, atualizador, desinstalação — que ficam melhores depois de o
+produto ter rodado na máquina de alguém que não é o dono. E o caminho até lá
+ficou barato: é trocar o alvo no `electron-builder`.
 
-**`pkg` ou `nexe`.** Fazem a mesma coisa que o SEA e ficaram para trás quando o
-Node adotou SEA oficialmente. Dependência a mais para resolver o que já vem na
-caixa.
+**Tauri.** Daria o mesmo aplicativo em ~10 MB, usando o WebView2 que já vem no
+Windows. Exige a toolchain de Rust na máquina de build — um segundo ecossistema
+inteiro para manter, por causa de 85 MB que o cliente baixa uma vez.
 
-**Pasta com `node.exe` e um `.bat`.** Gratuito e trivial, mas a coisa que o
-cliente clica passa a ser um arquivo de texto que abre um terminal preto. O
-produto é vendido; a porta de entrada precisa ser um exe.
+**WebView2 com casca própria em C#.** Mesma ideia, mesmo problema: exige o SDK
+do .NET e transforma o projeto em dois idiomas de build.
 
-**Electron.** Resolveria a janela, mas troca 94 MB por 200 MB e traz um Chromium
-inteiro para exibir uma tela que o navegador do cliente já exibe — e o `--app`
-do Chromium instalado dá a mesma janela por zero byte.
+**`pkg` ou `nexe`.** Resolviam o empacotamento, nunca a janela. E ficaram para
+trás quando o Node adotou SEA oficialmente.

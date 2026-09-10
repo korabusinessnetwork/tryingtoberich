@@ -61,7 +61,7 @@ export function criarAppDoJogo(nucleo, { token }) {
  * Nunca sai da máquina. Sem autenticação de propósito: o que a protege é o bind
  * em 127.0.0.1 e o fato de o túnel não conhecer esta porta.
  */
-export function criarAppDoPainel(nucleo) {
+export function criarAppDoPainel(nucleo, { painel = null } = {}) {
   const app = baseComum(nucleo);
   app.use("/api", rotasDoPainel(nucleo));
   //[[ O overlay fica FORA de `/api` de propósito.
@@ -73,11 +73,11 @@ export function criarAppDoPainel(nucleo) {
   montarOverlay(app);
   // O segundo overlay, o HUD da live (ADR-015). Mesma porta, mesmo motivo.
   montarOverlayHud(app);
-  //[[ E, POR ÚLTIMO, a tela do painel — só no executável portátil.
+  //[[ E, POR ÚLTIMO, a tela do painel — só no aplicativo empacotado.
   //
   // Por último porque ela é a única coisa aqui que responde a qualquer caminho:
   // montada antes, engoliria `/api` e os overlays. Rodando do repositório ela
   // não monta nada, e quem serve a tela continua sendo o Vite. ]]
-  montarPainelEmbutido(app);
+  montarPainelEmbutido(app, painel);
   return fecharComTratamentoDeErro(app);
 }
