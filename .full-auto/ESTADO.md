@@ -9,7 +9,7 @@ status: EXECUTANDO
 - **Branch:** `claude/camada-de-produto-e-fase-0` (ver D01, não é `full-auto/<slug>`)
 - **Início:** 2026-09-10
 - **Fase atual:** Fase 2, onda 2 em execução
-- **Tarefa atual:** C01 a C04 (frente console) e P01 a P03 (frente produto), em paralelo
+- **Tarefa atual:** P04 (maestro, trilha ponte), enquanto as frentes console e produto rodam
 - **Próximo passo:** esperar as duas frentes da onda 2, integrar uma por vez
   com verificação completa depois de cada merge, e então despachar a onda 3
   (C05 a C08 no console, P04 na ponte)

@@ -52,7 +52,9 @@ export async function salvarSessao(sessao) {
   const { validar } = await criarValidador();
   const problemas = validar("sessao", sessao);
   if (problemas.length) {
-    throw new ErroDeDominio("sessao_invalida", `Sessão fora do contrato: ${problemas.join("; ")}`);
+    throw new ErroDeDominio("sessao_invalida", `Sessão fora do contrato: ${problemas.join("; ")}`, {
+      detalhe: { problemas: problemas.join("; ") },
+    });
   }
   await escreverJsonAtomico(arquivo(sessao.sessaoId), sessao);
   return sessao;

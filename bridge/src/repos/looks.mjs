@@ -20,7 +20,9 @@ export async function salvarLook(look) {
   const { validar } = await criarValidador();
   const problemas = validar("look", look);
   if (problemas.length) {
-    throw new ErroDeDominio("look_invalido", `Look fora do contrato: ${problemas.join("; ")}`);
+    throw new ErroDeDominio("look_invalido", `Look fora do contrato: ${problemas.join("; ")}`, {
+      detalhe: { problemas: problemas.join("; ") },
+    });
   }
   const comCarimbo = { ...look, atualizadoEm: new Date().toISOString() };
   await escreverJsonAtomico(arquivo(look.lookId), comCarimbo);

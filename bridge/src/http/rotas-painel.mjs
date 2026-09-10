@@ -42,7 +42,10 @@ export function rotasDoPainel(nucleo) {
 
   rotas.get("/presets/:id", async (req, res) => {
     const preset = await carregarPreset(req.params.id);
-    if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${req.params.id}".`, { status: 404 });
+    if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${req.params.id}".`, {
+      status: 404,
+      detalhe: { presetId: req.params.id },
+    });
     res.json(preset);
   });
 
@@ -116,7 +119,10 @@ export function rotasDoPainel(nucleo) {
   rotas.post("/mapas/:id/formato", async (req, res) => {
     const formato = String(req.body?.formato ?? "");
     if (formato !== "disco" && formato !== "laje") {
-      throw new ErroDeDominio("formato_invalido", `Formato "${formato}" não existe. Use "disco" ou "laje".`, { status: 400 });
+      throw new ErroDeDominio("formato_invalido", `Formato "${formato}" não existe. Use "disco" ou "laje".`, {
+      status: 400,
+      detalhe: { formato },
+    });
     }
     res.json(await nucleo.converterFormatoDoMapa(req.params.id, formato));
   });
@@ -140,7 +146,10 @@ export function rotasDoPainel(nucleo) {
     // de mensagem legível.
     const formato = String(req.body?.formato ?? "disco");
     if (formato !== "disco" && formato !== "laje") {
-      throw new ErroDeDominio("formato_invalido", `Formato "${formato}" não existe. Use "disco" ou "laje".`, { status: 400 });
+      throw new ErroDeDominio("formato_invalido", `Formato "${formato}" não existe. Use "disco" ou "laje".`, {
+      status: 400,
+      detalhe: { formato },
+    });
     }
     res.json(await nucleo.gerarMapa(descricao, formato));
   });

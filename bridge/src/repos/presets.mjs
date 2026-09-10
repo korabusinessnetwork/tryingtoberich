@@ -22,7 +22,9 @@ export async function salvarPreset(preset) {
 
   const problemas = validar("preset", preset);
   if (problemas.length) {
-    throw new ErroDeDominio("preset_invalido", `Preset fora do contrato: ${problemas.join("; ")}`);
+    throw new ErroDeDominio("preset_invalido", `Preset fora do contrato: ${problemas.join("; ")}`, {
+      detalhe: { problemas: problemas.join("; ") },
+    });
   }
 
   const repetidos = presentesRepetidos(preset);
@@ -30,6 +32,7 @@ export async function salvarPreset(preset) {
     throw new ErroDeDominio(
       "presente_repetido",
       `O mesmo presente está em mais de um slot: ${repetidos.join(", ")}. Ver regra R1.4.`,
+      { detalhe: { repetidos: repetidos.join(", ") } },
     );
   }
 
@@ -43,6 +46,7 @@ export async function salvarPreset(preset) {
       "posicao_repetida",
       `Duas caixas de presente na mesma posição: ${posicoes.join(", ")}. ` +
         `Cada slot ocupa uma posição só, e é por ela que a sessão grava o que disparou. Ver regra R1.`,
+      { detalhe: { posicoes: posicoes.join(", ") } },
     );
   }
 
@@ -61,7 +65,10 @@ export async function salvarPreset(preset) {
 export async function apagarPreset(presetId) {
   const caminho = arquivo(presetId);
   if (!(await existe(caminho))) {
-    throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, { status: 404 });
+    throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, {
+      status: 404,
+      detalhe: { presetId },
+    });
   }
   await apagar(caminho);
   return { presetId };

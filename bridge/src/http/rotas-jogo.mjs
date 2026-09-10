@@ -89,7 +89,10 @@ export function rotasDoJogo(nucleo) {
 
     const skin = await nucleo.skins.buscarSkin(nick);
     if (!skin) {
-      throw new ErroDeDominio("skin_nao_encontrada", `Não achei o usuário "${nick}" no Roblox.`, { status: 404 });
+      throw new ErroDeDominio("skin_nao_encontrada", `Não achei o usuário "${nick}" no Roblox.`, {
+        status: 404,
+        detalhe: { nick },
+      });
     }
     res.json(skin);
   });

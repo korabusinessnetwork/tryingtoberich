@@ -10,16 +10,21 @@
  * atravessa até o painel dentro de `ErroDaPonte`. Traduzir é olhar o código
  * num catálogo, não reescrever a resposta.
  *
- * ## O que fica de fora, e por quê
+ * ## Os erros que carregam valor
  *
- * Metade dos erros da ponte carrega um VALOR na frase — `Não achei o mapa
- * "{id}"`, `Preset fora do contrato: {problemas}`. O valor não viaja separado
- * do texto, então o painel não consegue remontá-lo em outro idioma. Esses
- * continuam chegando em português, e a lista deles é mantida por
- * `test/erros-traduzidos.test.mjs` para que ninguém pense que estão resolvidos.
+ * Metade deles tem um valor dentro da frase: "Não achei o mapa X", "Preset fora
+ * do contrato: Y". Enquanto o valor vinha grudado no texto em português, o
+ * painel não tinha como remontar a frase em outro idioma, e esses 26 erros
+ * apareciam em português para quem usa o painel em inglês.
  *
- * Traduzi-los exige a ponte mandar `detalhe` estruturado junto — mudança de
- * contrato, e rodada própria.
+ * A ponte passou a mandar os valores separados, em `detalhe` (`docs/07_APIS`),
+ * e aqui eles viram os parâmetros da chave: `panel.error.mapaNaoEncontrado` é
+ * "Não achei o mapa {mapaId}", e o `{mapaId}` vem do `detalhe`. Os nomes dos
+ * campos do `detalhe` e os dos parâmetros da chave são o mesmo acordo, e
+ * `test/erros-traduzidos.test.mjs` lê os dois lados para garantir isso.
+ *
+ * Parâmetro que falta não some da tela: `traduzir` deixa o `{nome}` visível, o
+ * que é feio e diz exatamente o que faltou, em vez de uma frase mutilada.
  */
 
 import { traduzir } from "./traduzir.js";
@@ -50,7 +55,7 @@ export function mensagemDoErro(falha, padrao = "Algo falhou.") {
   if (!codigo) return original;
 
   const chave = `${PREFIXO}${emSlug(codigo)}`;
-  const traduzida = traduzir(chave);
+  const traduzida = traduzir(chave, falha?.detalhe ?? undefined);
 
   // `traduzir` devolve a própria chave quando não há tradução. É assim que se
   // distingue "não existe no catálogo" de "existe e é assim mesmo".

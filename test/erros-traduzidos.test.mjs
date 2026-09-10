@@ -11,16 +11,21 @@
  * É a lição do BUG-001: contrato entre processos só é contrato se algum teste
  * ler os DOIS lados.
  *
- * ## A metade que ficou de fora, e por quê
+ * ## Os erros que carregam valor
  *
- * Metade dos erros carrega um VALOR dentro da frase — `Não achei o mapa
- * "{id}"`, `Preset fora do contrato: {problemas}`. O valor não viaja separado
- * do texto no corpo da resposta, então o painel não tem como remontar a frase
- * em outro idioma.
+ * Metade deles tem um valor dentro da frase: "Não achei o mapa X", "Preset fora
+ * do contrato: Y". Durante um tempo esses 26 ficaram sem tradução, e a lista
+ * deles morava aqui como dívida registrada, porque o valor vinha grudado no
+ * texto em português e o painel não tinha como remontar a frase.
  *
- * Eles continuam chegando em português. A lista abaixo existe para que isso
- * seja uma decisão registrada, e não um esquecimento: traduzi-los exige a ponte
- * mandar `detalhe` estruturado, que é mudança de contrato e rodada própria.
+ * A ponte passou a mandar os valores separados, em `detalhe`, e a dívida virou
+ * contrato: agora este arquivo COBRA que cada um tenha chave, e que cada
+ * `{parametro}` da chave seja um campo que a ponte realmente manda.
+ *
+ * A cobrança é pela INTERSEÇÃO dos pontos de lançamento, não pela união. Um
+ * mesmo código sai de lugares diferentes do código, e um parâmetro que só
+ * existe em um deles apareceria cru na tela, como `{colecao}`, exatamente no
+ * outro. Foi por isso que a interseção virou a regra.
  */
 
 import test from "node:test";
@@ -32,6 +37,8 @@ import { RAIZ, caminhoDeDados, lerJson } from "../bridge/src/repos/arquivo.mjs";
 import { emSlug } from "../panel/src/i18n/erro.js";
 
 const pt = (await lerJson(caminhoDeDados("i18n", "pt.json"))).chaves;
+const es = (await lerJson(caminhoDeDados("i18n", "es.json"))).chaves;
+const en = (await lerJson(caminhoDeDados("i18n", "en.json"))).chaves;
 
 /** Todo arquivo `.mjs` da ponte, para varrer os erros de domínio. */
 async function fontesDaPonte(dir = path.join(RAIZ, "bridge", "src")) {
@@ -51,6 +58,39 @@ async function fontesDaPonte(dir = path.join(RAIZ, "bridge", "src")) {
  * `${` na frase significa valor interpolado: a frase muda a cada ocorrência, e
  * o código sozinho não a reconstrói.
  */
+/** A chamada inteira, do `ErroDeDominio(` até o parêntese que o fecha. */
+function chamadaInteira(fonte, inicio) {
+  let profundidade = 0;
+  for (let i = inicio; i < fonte.length; i += 1) {
+    if (fonte[i] === "(") profundidade += 1;
+    else if (fonte[i] === ")") {
+      profundidade -= 1;
+      if (profundidade === 0) return fonte.slice(inicio, i + 1);
+    }
+  }
+  return fonte.slice(inicio);
+}
+
+/**
+ * Os campos que a chamada manda em `detalhe`.
+ *
+ * Lê tanto `{ id, colecao }` quanto `{ presetId: req.params.id }`. O espalhamento
+ * (`...detalhe`) é ignorado de propósito: não dá para saber daqui o que ele
+ * traz, e chutar transformaria este teste em adivinhação.
+ */
+function camposDoDetalhe(chamada) {
+  const achado = /detalhe:\s*\{([^{}]*)\}/.exec(chamada);
+  if (!achado) return /\bdetalhe\b/.test(chamada) ? null : new Set();
+
+  const campos = new Set();
+  for (const parte of achado[1].split(",")) {
+    const limpo = parte.trim();
+    if (!limpo || limpo.startsWith("...")) continue;
+    campos.add(limpo.split(":")[0].trim());
+  }
+  return campos;
+}
+
 async function codigosDaPonte() {
   const estaticos = new Map();
   const dinamicos = new Map();
@@ -61,13 +101,29 @@ async function codigosDaPonte() {
     const fonte = await readFile(caminho, "utf8");
     for (const achado of fonte.matchAll(padrao)) {
       const [, codigo, , frase] = achado;
-      const alvo = frase.includes("${") ? dinamicos : estaticos;
-      if (!alvo.has(codigo)) alvo.set(codigo, frase.trim());
+      if (!frase.includes("${")) {
+        if (!estaticos.has(codigo)) estaticos.set(codigo, frase.trim());
+        continue;
+      }
+
+      const campos = camposDoDetalhe(chamadaInteira(fonte, achado.index));
+      const anterior = dinamicos.get(codigo);
+
+      // Interseção: parâmetro que só um dos pontos manda apareceria cru no outro.
+      const comuns = anterior
+        ? new Set([...(anterior.campos ?? [])].filter((c) => campos?.has(c)))
+        : (campos ?? new Set());
+
+      dinamicos.set(codigo, {
+        frase: anterior?.frase ?? frase.trim(),
+        campos: comuns,
+        pontos: (anterior?.pontos ?? 0) + 1,
+      });
     }
   }
 
   // Um código pode aparecer nos dois lados: se QUALQUER ocorrência é dinâmica,
-  // ele é dinâmico — traduzir pelo código perderia o valor naquela ocorrência.
+  // ele é dinâmico — traduzir sem os valores perderia o miolo naquela ocorrência.
   for (const codigo of dinamicos.keys()) estaticos.delete(codigo);
 
   return { estaticos, dinamicos };
@@ -115,22 +171,70 @@ test("a tradução diz a MESMA coisa que a ponte diz", () => {
   assert.deepEqual(divergentes, [], `tradução em PT diferente da frase da ponte:\n  ${divergentes.join("\n  ")}`);
 });
 
-test("os erros com valor na frase continuam sem tradução, e isso é registrado", () => {
-  // Este teste não cobra tradução — ele cobra que a lista seja conhecida. Se um
-  // dinâmico ganhar chave, ótimo, mas aí a chave precisa de parâmetro e este
-  // teste vira o lugar de decidir isso.
+test("todo erro com valor na frase também tem tradução", () => {
+  // Esta era a dívida registrada do retrofit de i18n: 26 erros que chegavam em
+  // português para quem usa o painel em inglês. Agora é contrato.
   assert.ok(dinamicos.size > 0, "se não há mais erro dinâmico, esta decisão pode ser revisitada");
 
-  const traduzidosPorEngano = [...dinamicos.keys()]
-    .filter((codigo) => pt[`panel.error.${emSlug(codigo)}`] !== undefined)
+  const semTraducao = [...dinamicos.keys()]
+    .filter((codigo) => pt[`panel.error.${emSlug(codigo)}`] === undefined)
     .sort();
 
   assert.deepEqual(
-    traduzidosPorEngano,
+    semTraducao,
     [],
-    `código com valor na frase ganhou chave fixa — a tradução vai APAGAR o valor ` +
-      `(o id, o motivo, a lista de problemas): ${traduzidosPorEngano.join(", ")}`,
+    `${semTraducao.length} erro(s) com valor na frase sem chave panel.error.*: ` +
+      `aparecem em português para quem usa o painel em outro idioma — ${semTraducao.join(", ")}`,
   );
+});
+
+test("todo erro com valor na frase manda o valor separado, em detalhe", () => {
+  // Sem `detalhe`, a chave traduzida APAGA o valor: "Não achei o mapa" sem
+  // dizer qual mapa é pior que a frase em português, porque some a informação
+  // que resolve o problema.
+  const semDetalhe = [...dinamicos]
+    .filter(([, dado]) => dado.campos === null || dado.campos.size === 0)
+    .map(([codigo]) => codigo)
+    .sort();
+
+  // `gemini_indisponivel` é o único cuja frase traduzida não usa parâmetro: os
+  // dois pontos de lançamento contam coisas diferentes (status HTTP num,
+  // tentativas no outro) e nenhuma delas muda o que o streamer faz.
+  const aceitos = new Set(["gemini_indisponivel"]);
+  const faltando = semDetalhe.filter((codigo) => !aceitos.has(codigo));
+
+  assert.deepEqual(faltando, [], `erro com valor na frase e sem detalhe: ${faltando.join(", ")}`);
+});
+
+test("os parâmetros da tradução são os campos que a ponte manda, nos TRÊS idiomas", () => {
+  // O acordo é: `{mapaId}` na chave só funciona se a ponte mandar `mapaId` no
+  // detalhe. Errar o nome não quebra nada em teste de unidade e nem no build:
+  // aparece um `{mapaId}` cru na tela do streamer, em produção.
+  const catalogos = { pt, es, en };
+  const quebrados = [];
+
+  for (const [codigo, dado] of dinamicos) {
+    const chave = `panel.error.${emSlug(codigo)}`;
+
+    for (const [idioma, catalogo] of Object.entries(catalogos)) {
+      const texto = catalogo[chave];
+      if (texto === undefined) continue;
+
+      for (const [, parametro] of texto.matchAll(/\{(\w+)\}/g)) {
+        if (dado.campos === null) {
+          quebrados.push(`${chave} (${idioma}) usa {${parametro}}, mas não dá para saber o que a ponte manda`);
+        } else if (!dado.campos.has(parametro)) {
+          const manda = [...dado.campos].join(", ") || "nada";
+          quebrados.push(
+            `${chave} (${idioma}) usa {${parametro}}, mas a ponte manda ${manda}` +
+              (dado.pontos > 1 ? ` em TODOS os ${dado.pontos} pontos onde lança ${codigo}` : ""),
+          );
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(quebrados, [], `parâmetro sem valor correspondente:\n  ${quebrados.join("\n  ")}`);
 });
 
 test("o painel traduz pelo código e cai na frase da ponte quando não conhece", async () => {

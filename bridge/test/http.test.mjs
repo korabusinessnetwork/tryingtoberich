@@ -622,8 +622,12 @@ test("PUT com layout fora do contrato responde o contrato de erro, sem stack tra
   const corpo = await resposta.json();
 
   assert.equal(resposta.status, 400);
-  assert.deepEqual(Object.keys(corpo).sort(), ["erro", "mensagem"]);
+  assert.deepEqual(Object.keys(corpo).sort(), ["detalhe", "erro", "mensagem"]);
   assert.equal(corpo.erro, "layout_invalido");
+  // O `detalhe` é o que permite o painel montar a frase em espanhol ou inglês:
+  // o valor viaja separado do texto em português.
+  assert.equal(typeof corpo.detalhe.problemas, "string");
+  assert.ok(corpo.detalhe.problemas.length > 0, "o motivo tem que vir, senão a frase traduzida fica sem miolo");
   assert.equal(JSON.stringify(corpo).includes("at "), false, "nada de stack trace na resposta");
 });
 
@@ -654,8 +658,9 @@ test("erro de domínio vira o contrato de erro, sem stack trace", async () => {
   const corpo = await resposta.json();
 
   assert.equal(resposta.status, 404);
-  assert.deepEqual(Object.keys(corpo).sort(), ["erro", "mensagem"]);
+  assert.deepEqual(Object.keys(corpo).sort(), ["detalhe", "erro", "mensagem"]);
   assert.equal(corpo.erro, "preset_nao_encontrado");
+  assert.deepEqual(corpo.detalhe, { presetId: "nao-existe" }, "o id viaja separado da frase");
   assert.equal(JSON.stringify(corpo).includes("at "), false, "nada de stack trace na resposta");
 });
 

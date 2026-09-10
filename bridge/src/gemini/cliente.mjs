@@ -106,7 +106,7 @@ export async function chamarGemini({ chave, modelo, system, usuario, buscar = fe
       throw new ErroDeDominio(
         "gemini_indisponivel",
         `A API do Gemini respondeu ${resposta.status}. Tente de novo em alguns segundos.`,
-        { status: 502, detalhe },
+        { status: 502, detalhe: { ...detalhe, status: resposta.status } },
       );
     }
 
@@ -117,7 +117,7 @@ export async function chamarGemini({ chave, modelo, system, usuario, buscar = fe
   throw new ErroDeDominio(
     "gemini_indisponivel",
     `A API do Gemini não respondeu depois de ${ESPERAS_MS.length + 1} tentativas (${ultimoProblema?.motivo ?? "sem detalhe"}).`,
-    { status: 502 },
+    { status: 502, detalhe: { tentativas: ESPERAS_MS.length + 1, motivo: ultimoProblema?.motivo ?? null } },
   );
 }
 
@@ -202,7 +202,7 @@ export class ClienteGemini {
         throw new ErroDeDominio(
           "mapa_invalido",
           `O Gemini devolveu um mapa fora das regras duas vezes: ${problemas.join("; ")}`,
-          { status: 422 },
+          { status: 422, detalhe: { problemas: problemas.join("; ") } },
         );
       }
       usuario = montarPromptDeCorrecao(descricao, oferecivel, problemas, formato);

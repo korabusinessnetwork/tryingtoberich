@@ -20,7 +20,9 @@ export async function salvarMapa(mapa) {
   const { validar } = await criarValidador();
   const problemas = validar("mapa", mapa);
   if (problemas.length) {
-    throw new ErroDeDominio("mapa_invalido", `Mapa fora do contrato: ${problemas.join("; ")}`);
+    throw new ErroDeDominio("mapa_invalido", `Mapa fora do contrato: ${problemas.join("; ")}`, {
+      detalhe: { problemas: problemas.join("; ") },
+    });
   }
   await escreverJsonAtomico(arquivo(mapa.mapaId), mapa);
   return mapa;
@@ -30,7 +32,10 @@ export async function salvarMapa(mapa) {
 export async function apagarMapa(mapaId) {
   const caminho = arquivo(mapaId);
   if (!(await existe(caminho))) {
-    throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, { status: 404 });
+    throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, {
+      status: 404,
+      detalhe: { mapaId },
+    });
   }
   await apagar(caminho);
   return { mapaId };

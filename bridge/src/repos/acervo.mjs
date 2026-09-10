@@ -30,7 +30,9 @@ export async function salvarAcervo(acervo) {
   const { validar } = await criarValidador();
   const problemas = validar("acervo", acervo);
   if (problemas.length) {
-    throw new ErroDeDominio("acervo_invalido", `Acervo fora do contrato: ${problemas.join("; ")}`);
+    throw new ErroDeDominio("acervo_invalido", `Acervo fora do contrato: ${problemas.join("; ")}`, {
+      detalhe: { problemas: problemas.join("; ") },
+    });
   }
   await escreverJsonAtomico(arquivo(), acervo);
   return acervo;
@@ -52,14 +54,17 @@ export async function anotarItemDoAcervo(colecao, id, { assetId, status }) {
     throw new ErroDeDominio(
       "colecao_invalida",
       `Só "skybox" e "texturas" passam por moderação. "${colecao}" não.`,
-      { status: 400 },
+      { status: 400, detalhe: { colecao } },
     );
   }
 
   const acervo = await carregarAcervo();
   const item = (acervo[colecao] ?? []).find((i) => i.id === id);
   if (!item) {
-    throw new ErroDeDominio("item_inexistente", `Não achei "${id}" em acervo.${colecao}.`, { status: 404 });
+    throw new ErroDeDominio("item_inexistente", `Não achei "${id}" em acervo.${colecao}.`, {
+      status: 404,
+      detalhe: { id, colecao },
+    });
   }
 
   const novoStatus = status ?? item.status;
@@ -71,7 +76,7 @@ export async function anotarItemDoAcervo(colecao, id, { assetId, status }) {
     throw new ErroDeDominio(
       "aprovado_sem_asset",
       `"${id}" não pode ficar aprovado sem assetId: o mapa referenciaria um item que o jogo não consegue aplicar.`,
-      { status: 400 },
+      { status: 400, detalhe: { id } },
     );
   }
 

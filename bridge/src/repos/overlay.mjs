@@ -85,7 +85,7 @@ export async function salvarLayout(mudancas = {}, { streamerId } = {}) {
     throw new ErroDeDominio(
       "layout_invalido",
       `Layout fora do contrato: ${problemas.join("; ")}`,
-      { status: 400 },
+      { status: 400, detalhe: { problemas: problemas.join("; ") } },
     );
   }
 

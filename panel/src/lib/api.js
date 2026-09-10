@@ -28,11 +28,18 @@ const BASE = import.meta.env?.VITE_BRIDGE_URL ?? "";
 
 /** Erro com o código curto do contrato de erro de `docs/07_APIS`. */
 export class ErroDaPonte extends Error {
-  constructor(codigo, mensagem, status) {
+  /**
+   * `detalhe` são os valores que a frase da ponte carrega, mandados separados
+   * do texto (`docs/07_APIS`). É com eles que `i18n/erro.js` monta a frase no
+   * idioma do streamer: sem eles, "Não achei o mapa X" só existiria em
+   * português, porque o X vinha grudado no texto.
+   */
+  constructor(codigo, mensagem, status, detalhe = null) {
     super(mensagem);
     this.name = "ErroDaPonte";
     this.codigo = codigo;
     this.status = status;
+    this.detalhe = detalhe;
   }
 }
 
@@ -73,6 +80,7 @@ async function chamar(caminho, opcoes = {}) {
       corpo?.erro ?? "erro_desconhecido",
       corpo?.mensagem ?? traduzir("panel.api.bridgeStatus", { status: resposta.status }),
       resposta.status,
+      corpo?.detalhe ?? null,
     );
   }
 

@@ -79,7 +79,7 @@ export async function salvarConfiguracao(mudancas = {}, semente = "") {
       throw new ErroDeDominio(
         "usuario_placeholder",
         `"${PLACEHOLDER}" é o exemplo do .env.example, não uma conta. Digite o seu @.`,
-        { status: 400 },
+        { status: 400, detalhe: { exemplo: PLACEHOLDER } },
       );
     }
     proxima.usuarioTiktok = usuario;
@@ -112,7 +112,7 @@ export async function salvarConfiguracao(mudancas = {}, semente = "") {
     throw new ErroDeDominio(
       "configuracao_invalida",
       `Configuração fora do contrato: ${problemas.join("; ")}`,
-      { status: 400 },
+      { status: 400, detalhe: { problemas: problemas.join("; ") } },
     );
   }
 

@@ -378,7 +378,10 @@ export class Nucleo {
     if (this.#sessao) throw new ErroDeDominio("sessao_em_andamento", "Já existe uma sessão rodando. Pare antes de começar outra.", { status: 409 });
 
     const preset = await carregarPreset(presetId);
-    if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, { status: 404 });
+    if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, {
+        status: 404,
+        detalhe: { presetId },
+      });
 
     await this.carregarAnimacoesNaMemoria();
     // O catálogo antes do preset: é dele que a tabela de movimento tira o valor
@@ -727,7 +730,7 @@ export class Nucleo {
       throw new ErroDeDominio(
         "animacao_desconhecida",
         `Não existe animação com id "${animacaoId}". O índice sai de \`npm run gerar\`.`,
-        { status: 400 },
+        { status: 400, detalhe: { animacaoId } },
       );
     }
 
@@ -964,7 +967,10 @@ export class Nucleo {
 
   async definirPresetAtivo(presetId) {
     const preset = await carregarPreset(presetId);
-    if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, { status: 404 });
+    if (!preset) throw new ErroDeDominio("preset_nao_encontrado", `Não achei o preset "${presetId}".`, {
+        status: 404,
+        detalhe: { presetId },
+      });
 
     const anterior = this.#preset;
     // R7 — trocar de preset no meio da sessão vale a partir do próximo evento.
@@ -1056,7 +1062,10 @@ export class Nucleo {
   /** ADR-004 — a prontidão de um mapa já salvo. Ela muda com o ACERVO, não com o mapa. */
   async prontidaoDoMapa(mapaId) {
     const mapa = await carregarMapa(mapaId);
-    if (!mapa) throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, { status: 404 });
+    if (!mapa) throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, {
+        status: 404,
+        detalhe: { mapaId },
+      });
     return { mapaId, ...ClienteGemini.prontidao(mapa, await carregarAcervo()) };
   }
 
@@ -1077,12 +1086,18 @@ export class Nucleo {
    */
   async converterFormatoDoMapa(mapaId, formato) {
     const mapa = await carregarMapa(mapaId);
-    if (!mapa) throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, { status: 404 });
+    if (!mapa) throw new ErroDeDominio("mapa_nao_encontrado", `Não achei o mapa "${mapaId}".`, {
+        status: 404,
+        detalhe: { mapaId },
+      });
 
     const convertido = comFormato(mapa, formato);
     const problemas = problemasDeJogabilidade(convertido);
     if (problemas.length) {
-      throw new ErroDeDominio("mapa_invalido", `A conversão saiu fora das regras: ${problemas.join("; ")}`, { status: 422 });
+      throw new ErroDeDominio("mapa_invalido", `A conversão saiu fora das regras: ${problemas.join("; ")}`, {
+        status: 422,
+        detalhe: { problemas: problemas.join("; ") },
+      });
     }
 
     await salvarMapa(convertido);
@@ -1116,7 +1131,7 @@ export class Nucleo {
       throw new ErroDeDominio(
         "mapa_em_uso",
         `Este mapa está em uso por ${presos.join(", ")}. Escolha outro mapa nesses presets antes de apagar.`,
-        { status: 409 },
+        { status: 409, detalhe: { presets: presos.join(", ") } },
       );
     }
 
@@ -1158,7 +1173,7 @@ export class Nucleo {
       throw new ErroDeDominio(
         "catalogo_indisponivel",
         `Não consegui buscar os presentes na TikTok: ${erro.message}`,
-        { status: 502 },
+        { status: 502, detalhe: { motivo: erro.message } },
       );
     }
   }
@@ -1180,13 +1195,16 @@ export class Nucleo {
     const acharPeca = (colecao, id, rotulo) => {
       const item = (acervo[colecao] ?? []).find((i) => i.id === id);
       if (!item) {
-        throw new ErroDeDominio("peca_inexistente", `Não achei ${rotulo} "${id}" no acervo.`, { status: 400 });
+        throw new ErroDeDominio("peca_inexistente", `Não achei ${rotulo} "${id}" no acervo.`, {
+          status: 400,
+          detalhe: { rotulo, id },
+        });
       }
       if (item.status !== "aprovado" || !Number.isInteger(item.assetId)) {
         throw new ErroDeDominio(
           "peca_nao_aprovada",
           `"${item.nome}" ainda não foi aprovada pelo Roblox: o jogo não conseguiria aplicá-la.`,
-          { status: 409 },
+          { status: 409, detalhe: { nome: item.nome } },
         );
       }
       return item;
@@ -1211,7 +1229,10 @@ export class Nucleo {
 
     const problemas = problemasDeJogabilidade(mundo);
     if (problemas.length) {
-      throw new ErroDeDominio("mundo_invalido", `O mundo saiu fora das regras: ${problemas.join("; ")}`, { status: 422 });
+      throw new ErroDeDominio("mundo_invalido", `O mundo saiu fora das regras: ${problemas.join("; ")}`, {
+        status: 422,
+        detalhe: { problemas: problemas.join("; ") },
+      });
     }
 
     await salvarMapa(mundo);
@@ -1240,14 +1261,17 @@ export class Nucleo {
       throw new ErroDeDominio(
         "colecao_invalida",
         `Só "skybox" e "texturas" têm imagem. "${colecao}" não.`,
-        { status: 400 },
+        { status: 400, detalhe: { colecao } },
       );
     }
 
     const acervo = await carregarAcervo();
     const item = (acervo[colecao] ?? []).find((i) => i.id === id);
     if (!item) {
-      throw new ErroDeDominio("item_inexistente", `Não achei "${id}" em acervo.${colecao}.`, { status: 404 });
+      throw new ErroDeDominio("item_inexistente", `Não achei "${id}" em acervo.${colecao}.`, {
+        status: 404,
+        detalhe: { id, colecao },
+      });
     }
 
     //[[ O ARQUIVO do streamer manda, quando existe.

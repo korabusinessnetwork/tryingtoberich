@@ -164,7 +164,7 @@ export async function abrirNoStudio({ urlDaPonte, token } = {}) {
     throw new ErroDeDominio(
       "place_nao_montado",
       `O Rojo não conseguiu montar o lugar: ${String(erro.stderr || erro.message).trim()}`,
-      { status: 500 },
+      { status: 500, detalhe: { motivo: String(erro.stderr || erro.message).trim() } },
     );
   }
 

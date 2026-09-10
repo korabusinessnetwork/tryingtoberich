@@ -374,4 +374,32 @@ Nunca no painel, nunca no Roblox.
 ```json
 { "erro": "codigo_curto", "mensagem": "Explicação em português para o streamer." }
 ```
-Nada de stack trace na resposta. Detalhe vai para o log local.
+Com valor dentro da frase, vem também o `detalhe`, com os valores separados:
+```json
+{
+  "erro": "mapa_nao_encontrado",
+  "mensagem": "Não achei o mapa \"torre-azul\".",
+  "detalhe": { "mapaId": "torre-azul" }
+}
+```
+Nada de stack trace na resposta. Detalhe técnico vai para o log local.
+
+**Para que serve o `detalhe`:** traduzir. Enquanto o valor vinha grudado no
+texto em português, o painel não tinha como remontar a frase em outro idioma, e
+26 erros apareciam em português para quem usa o painel em inglês (ADR-P03).
+Separando os valores, o painel monta a frase dele
+(`panel/src/i18n/erro.js`).
+
+Regras, e elas não são estilo:
+
+- **Só valor, nunca frase pronta.** Frase pronta nasceria em português e
+  voltaria ao problema que o campo resolve.
+- **Nada de dado de espectador, caminho de disco, stack trace ou segredo.**
+  Isto vai para a tela e para o navegador (`docs/11_SEGURANCA`).
+- **Os nomes dos campos são os nomes dos parâmetros da chave de i18n.** É esse
+  acordo que `test/erros-traduzidos.test.mjs` lê dos dois lados, e ele cobra
+  pela INTERSEÇÃO dos pontos onde o código é lançado: parâmetro que só um deles
+  manda apareceria cru na tela, como `{colecao}`, exatamente no outro.
+
+O campo é **opcional**: a `mensagem` continua vindo inteira, e continua sendo o
+que o painel mostra quando não conhece o código.

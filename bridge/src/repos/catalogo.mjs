@@ -85,7 +85,9 @@ export async function salvarColeta(coletados, agora = new Date().toISOString(), 
   const { validar } = await criarValidador();
   const problemas = validar("catalogo-presentes", catalogo);
   if (problemas.length) {
-    throw new ErroDeDominio("catalogo_invalido", `Coleta fora do contrato: ${problemas.join("; ")}`);
+    throw new ErroDeDominio("catalogo_invalido", `Coleta fora do contrato: ${problemas.join("; ")}`, {
+      detalhe: { problemas: problemas.join("; ") },
+    });
   }
 
   await escreverJsonAtomico(ARQUIVO_REAL, catalogo);
