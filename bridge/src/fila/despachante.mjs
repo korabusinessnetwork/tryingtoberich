@@ -197,7 +197,13 @@ export class Despachante {
     // Presente da tabela de movimento (ADR-016) não tem slot e fica fora: o
     // gráfico é sobre os slots escolhidos.
     if (disparo.slot != null) {
-      this.aoCasar({ slot: disparo.slot, repeticoes: disparo.repeticoes, presenteId: disparo.presenteId });
+      this.aoCasar({
+        slot: disparo.slot,
+        repeticoes: disparo.repeticoes,
+        presenteId: disparo.presenteId,
+        // Repassado para quem conta decidir: presente de teste não é plateia.
+        deTeste: evento.deTeste === true,
+      });
     }
 
     const liberadoEm = this.#cooldowns.get(disparo.slot) ?? 0;

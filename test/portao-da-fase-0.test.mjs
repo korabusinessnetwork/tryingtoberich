@@ -172,3 +172,74 @@ test("o contador por slot não vaza para a raiz da sessão gravada", async () =>
   assert.equal(reduzida.recebidosPorSlot, undefined, "a raiz é additionalProperties: false");
   assert.deepEqual(validar("sessao", reduzida), []);
 });
+
+// -------------------------------- a fiação: despachante → aoCasar → sessão
+
+test("o despachante avisa o casamento ANTES do combate engolir o presente", async () => {
+  // O vão entre teste de unidade e realidade. `registrarCasado` tem teste
+  // próprio, e `aoCasar` existe no despachante — mas nada garantia que um
+  // chamasse o outro com a forma certa. Foi um vão desses que escondeu o
+  // BUG-008 atrás de 504 testes verdes.
+  const { Despachante } = await import("../bridge/src/fila/despachante.mjs");
+  const { indexarAnimacoes } = await import("../bridge/src/repos/animacoes.mjs");
+  const { carregarExemplo } = await import("../bridge/src/repos/fixtures.mjs");
+
+  const T0 = 1_756_742_620_000;
+  const animacoes = indexarAnimacoes((await carregarExemplo("../animacoes")).animacoes);
+  const sessao = novaSessao();
+
+  const despachante = new Despachante({
+    animacoes,
+    aoCasar: (casado) => {
+      if (!casado.deTeste) sessao.registrarCasado(casado);
+    },
+  });
+  despachante.definirPreset({
+    presetId: "fiacao", streamerId: "local", nome: "Fiação", modalidade: "escalada",
+    slots: [{ posicao: 1, presenteId: "popular", animacaoId: "sub_cometa", delta: 40, intensidade: 3 }],
+  });
+
+  // Quatro do mesmo slot em rajada: o primeiro dispara, os três seguintes caem
+  // no combate e viram parte de um despacho só. Todos os quatro CHEGARAM.
+  for (let i = 0; i < 4; i += 1) {
+    despachante.receber(
+      { presenteId: "popular", presenteNome: "Popular", repeticoes: 1, recebidoEm: T0 + i * 50 },
+      T0 + i * 50,
+    );
+  }
+
+  const { resumo } = reduzirAoResumo(sessao.instantaneo, new Date().toISOString());
+  assert.equal(resumo.presentesPorSlot["1"], 4, "os quatro que chegaram, não o único que animou");
+});
+
+test("presente do painel move o boneco mas não entra na estatística", async () => {
+  // As duas contagens do resumo precisam concordar sobre o que é plateia.
+  // `presentesRecebidos` já ignorava o teste; sem a marca, o gráfico por slot
+  // o contaria — e o mesmo resumo diria duas coisas sobre a mesma live.
+  const { Despachante } = await import("../bridge/src/fila/despachante.mjs");
+  const { indexarAnimacoes } = await import("../bridge/src/repos/animacoes.mjs");
+  const { carregarExemplo } = await import("../bridge/src/repos/fixtures.mjs");
+
+  const T0 = 1_756_742_620_000;
+  const animacoes = indexarAnimacoes((await carregarExemplo("../animacoes")).animacoes);
+  const sessao = novaSessao();
+
+  const despachante = new Despachante({
+    animacoes,
+    aoCasar: (casado) => {
+      if (!casado.deTeste) sessao.registrarCasado(casado);
+    },
+  });
+  despachante.definirPreset({
+    presetId: "fiacao", streamerId: "local", nome: "Fiação", modalidade: "escalada",
+    slots: [{ posicao: 1, presenteId: "popular", animacaoId: "sub_cometa", delta: 40, intensidade: 3 }],
+  });
+
+  despachante.receber(
+    { presenteId: "popular", presenteNome: "Popular", repeticoes: 1, recebidoEm: T0, deTeste: true },
+    T0,
+  );
+
+  const { resumo } = reduzirAoResumo(sessao.instantaneo, new Date().toISOString());
+  assert.deepEqual(resumo.presentesPorSlot, {}, "o teste do painel fica fora da conta");
+});

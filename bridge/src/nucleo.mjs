@@ -140,7 +140,11 @@ export class Nucleo {
       },
       aoDescartar: (d) => log.info("presente_descartado", { slot: d.slot, motivo: d.motivo }),
       // O que a plateia mandou por slot, antes de o combate juntar (ADR-012).
-      aoCasar: (casado) => this.#sessao?.registrarCasado(casado),
+      // Só presente da LIVE conta no gráfico por slot, igual ao número do
+      // portão. Teste do painel move o boneco e não entra em estatística.
+      aoCasar: (casado) => {
+        if (!casado.deTeste) this.#sessao?.registrarCasado(casado);
+      },
     });
   }
 
@@ -568,6 +572,15 @@ export class Nucleo {
         rajadaEncerrada: true,
         nomeDoador: "Teste do painel",
         recebidoEm: agora,
+        //[[ Marca de teste, e ela existe por coerência de CONTAGEM.
+        //
+        // `presentesRecebidos` só conta o que vem da live, porque é o número do
+        // portão da Fase 0 e presente de teste não é plateia. Sem esta marca, o
+        // gráfico "Presentes por slot" contaria os testes — e as duas contas do
+        // mesmo resumo diriam coisas diferentes sobre a mesma live.
+        //
+        // Não vai para o jogo: `registro.mjs` recorta o que atravessa. ]]
+        deTeste: true,
       };
       return this.#despachante.receber(evento, agora);
     });
