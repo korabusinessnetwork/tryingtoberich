@@ -1,14 +1,16 @@
 /**
- * O aplicativo portátil (ADR-P07, `scripts/empacotar.mjs`, `app/principal.cjs`).
+ * O aplicativo nas suas duas formas, portátil e instalada (ADR-P07, ADR-P04,
+ * `scripts/empacotar.mjs`, `app/principal.cjs`, `app/atualizador.cjs`).
  *
  * O que se testa aqui é o que só falharia NA MÁQUINA DO CLIENTE, onde ninguém
  * está olhando: a semente escrita por cima do trabalho do streamer, o `.env`
  * saindo com o token do molde, o painel embutido engolindo a resposta de erro
- * da `/api`, e a pasta do streamer indo parar num temporário que o Windows
- * apaga.
+ * da `/api`, a pasta do streamer indo parar num temporário que o Windows apaga
+ * ou numa pasta que o desinstalador leva junto, e a atualização automática
+ * reiniciando o programa no meio de uma live.
  *
- * O executável em si não cabe em teste: montá-lo leva um minuto e 96 MB. As
- * peças que decidem o comportamento dele cabem, e são estas.
+ * O executável em si não cabe em teste: montá-lo leva uns dois minutos e 200 MB.
+ * As peças que decidem o comportamento dele cabem, e são estas.
  */
 
 import test from "node:test";
@@ -21,7 +23,7 @@ import { RAIZ, listarArquivosRecursivo } from "../bridge/src/repos/arquivo.mjs";
 import { EMPACOTADO, RECURSOS } from "../bridge/src/empacotamento.mjs";
 import { carregarPainel, eDoPrograma, montarEnv, semear } from "../bridge/src/aplicativo.mjs";
 import { cacheDoArquivo, resolverChave, tipoDoArquivo } from "../bridge/src/http/painel-embutido.mjs";
-import { listarSemente } from "../scripts/empacotar.mjs";
+import { IDIOMA_PADRAO, LEIA_ME, configDoBuilder, escolherIdioma, listarSemente } from "../scripts/empacotar.mjs";
 import { desenhar, montarIco, montarPng } from "../scripts/gerar-icone.mjs";
 
 const temporario = () => mkdtemp(path.join(os.tmpdir(), "kora-portatil-"));
@@ -62,18 +64,126 @@ test("importar o arranque do aplicativo não sobe ponte nenhuma", async () => {
   assert.ok(!/^iniciar\(\)/m.test(fonte), "aplicativo.mjs só exporta; quem chama é o app/principal.cjs");
 });
 
+const lerPrincipal = () => readFile(path.join(RAIZ, "app", "principal.cjs"), "utf8");
+const lerAtualizador = () => readFile(path.join(RAIZ, "app", "atualizador.cjs"), "utf8");
+const acharRaizDoFonte = (fonte) => /function acharRaiz\(\) \{[\s\S]*?\n\}/.exec(fonte)[0];
+
 test("a pasta do streamer nunca é o diretório temporário da extração", async () => {
   // O portátil roda a partir de uma cópia extraída no %TEMP%, e o Windows apaga
   // aquilo. `process.execPath` ali dentro apontaria para o temporário, e o
   // `data/` do streamer iria junto na próxima faxina do sistema.
-  const fonte = await readFile(path.join(RAIZ, "app", "principal.cjs"), "utf8");
-  const acharRaiz = /function acharRaiz\(\) \{[\s\S]*?\n\}/.exec(fonte)[0];
+  const acharRaiz = acharRaizDoFonte(await lerPrincipal());
 
   assert.match(acharRaiz, /PORTABLE_EXECUTABLE_DIR/, "é esta variável que aponta para a pasta do exe clicado");
   assert.ok(
     acharRaiz.indexOf("PORTABLE_EXECUTABLE_DIR") < acharRaiz.indexOf("getPath"),
     "e ela tem que ser consultada ANTES do caminho do executável",
   );
+});
+
+test("na versão instalada a pasta do streamer não é a pasta do programa", async () => {
+  // `PORTABLE_EXECUTABLE_DIR` NÃO existe no instalador, e ali a regra antiga
+  // (`path.dirname(app.getPath("exe"))`) apontaria para a pasta de instalação:
+  // somente leitura numa instalação por máquina, e apagada pelo desinstalador
+  // em qualquer uma. O `userData` é escrita garantida e o desinstalador não
+  // encosta nele (`deleteAppDataOnUninstall: false`).
+  const acharRaiz = acharRaizDoFonte(await lerPrincipal());
+
+  assert.match(acharRaiz, /getPath\("userData"\)/, "a versão instalada guarda o dado do streamer no userData");
+  assert.ok(!/getPath\("exe"\)/.test(acharRaiz), "a pasta do executável nunca pode ser a pasta do streamer");
+});
+
+test("quem vem do portátil não perde o data/ ao instalar", async () => {
+  // As duas metades da migração: o portátil deixa um bilhete dizendo onde roda,
+  // e a versão instalada, se nascer vazia, lê o bilhete e traz os arquivos. Sem
+  // as duas, o streamer instala e vê a lista de presets vazia.
+  const fonte = await lerPrincipal();
+
+  assert.match(fonte, /function anotarPastaDoPortatil\(\)/);
+  assert.match(fonte, /function trazerDoPortatil\(\)/);
+  assert.match(fonte, /BILHETE_DO_PORTATIL/);
+
+  const trazer = /function trazerDoPortatil\(\) \{[\s\S]*?\n\}/.exec(fonte)[0];
+  assert.match(trazer, /existsSync\(path\.join\(RAIZ, "data"\)\)/, "só migra quando ainda não há data/ próprio");
+  for (const item of ['"data"', '"game"', '"\\.env"']) {
+    assert.match(trazer, new RegExp(item), `a migração precisa levar ${item}`);
+  }
+});
+
+test("a atualização automática nunca reinicia sozinha nem vira tela de erro", async () => {
+  // Uma atualização que trava o programa no dia da live é pior que não ter
+  // atualização. As três regras que este teste guarda: não reinicia, não abre
+  // caixa de diálogo, e não roda no portátil (onde o exe não pode se trocar
+  // enquanto está aberto).
+  const fonte = await lerAtualizador();
+
+  assert.ok(!/quitAndInstall/.test(fonte), "reiniciar no meio da live é o pior resultado possível");
+  assert.ok(!/showErrorBox|showMessageBox/.test(fonte), "falha de atualização é linha de log, nunca tela");
+  assert.match(fonte, /autoInstallOnAppQuit = true/, "a instalação acontece quando o streamer já fechou o programa");
+  assert.match(fonte, /!process\.env\.PORTABLE_EXECUTABLE_DIR/, "o portátil se atualiza trocando o arquivo, à mão");
+  assert.match(fonte, /setTimeout\(/, "a checagem não pode estar no caminho do arranque");
+});
+
+test("o atualizador some sozinho quando não há com o que falar", async () => {
+  // Build sem o `electron-updater`, release sem `latest.yml`, máquina sem rede:
+  // os três têm de acabar em `catch`. Um `require` no topo transformaria o
+  // primeiro numa tela de erro na máquina do cliente.
+  const fonte = await lerAtualizador();
+
+  assert.ok(!/^const .*require\("electron-updater"\)/m.test(fonte), "o require não pode ser de topo");
+  assert.match(fonte, /try \{\s*\(\{ autoUpdater \} = require\("electron-updater"\)\);\s*\} catch/);
+  assert.match(fonte, /checkForUpdates\(\)\.catch\(/, "a checagem não pode rejeitar para o vazio");
+  assert.match(fonte, /autoUpdater\.on\("error"/, "e o evento de erro precisa de dono");
+});
+
+test("o instalador não pede administrador e não apaga o trabalho do streamer", () => {
+  const { nsis, win, publish } = configDoBuilder();
+
+  assert.deepEqual(win.target, ["portable", "nsis"], "as duas formas saem do mesmo build");
+
+  // Por usuário: o produto não instala driver nem escreve serviço, então UAC
+  // seria pedir uma permissão que não vai ser usada.
+  assert.equal(nsis.perMachine, false);
+  assert.equal(nsis.allowElevation, false);
+
+  // Com assistente, e a pasta é escolhida.
+  assert.equal(nsis.oneClick, false);
+  assert.equal(nsis.allowToChangeInstallationDirectory, true);
+
+  // Atalho nos dois lugares, senão o programa some depois de instalado.
+  assert.equal(nsis.createDesktopShortcut, true);
+  assert.equal(nsis.createStartMenuShortcut, true);
+
+  // "Desinstale e instale de novo" é o primeiro conselho de qualquer suporte.
+  // Se ele apagar presets e histórico, o conselho vira dano irreversível.
+  assert.equal(nsis.deleteAppDataOnUninstall, false);
+
+  // O atualizador precisa do endereço gravado no pacote, e ele é gratuito.
+  assert.equal(publish[0].provider, "github");
+  assert.ok(publish[0].owner && publish[0].repo);
+});
+
+test("o LEIA-ME existe nos dois idiomas, e o nome do arquivo muda junto", async () => {
+  assert.equal(IDIOMA_PADRAO, "pt", "quem recebe o pacote hoje é o dono e os testadores daqui");
+  assert.equal(escolherIdioma([], {}), "pt");
+  assert.equal(escolherIdioma(["--idioma=en"], {}), "en");
+  assert.equal(escolherIdioma([], { KORA_IDIOMA: "EN" }), "en", "a linha de comando e o ambiente valem igual");
+  assert.throws(() => escolherIdioma(["--idioma=tlh"], {}), /não existe/);
+
+  // `LEIA-ME.txt` na pasta de quem lê inglês é um arquivo que não se abre.
+  assert.notEqual(LEIA_ME.pt.nome, LEIA_ME.en.nome);
+
+  for (const [idioma, { modelo }] of Object.entries(LEIA_ME)) {
+    const texto = await readFile(path.join(RAIZ, "scripts", "modelos", modelo), "utf8");
+    assert.ok(texto.length > 500, `${idioma} está vazio demais para ser um LEIA-ME`);
+    // O aviso do SmartScreen é a primeira coisa que o cliente vê, e o texto tem
+    // que ser o que está NA TELA dele, não uma tradução do nosso.
+    const aviso = idioma === "en" ? /Windows protected your PC/ : /O Windows protegeu o computador/;
+    assert.match(texto, aviso, `${idioma} precisa do aviso do SmartScreen com o texto oficial`);
+    assert.match(texto, idioma === "en" ? /Run anyway/ : /Executar assim mesmo/);
+    // E os dois têm de dizer onde o dado do streamer mora na versão instalada.
+    assert.match(texto, /%APPDATA%\\Kora Stream Games/, `${idioma} não diz onde ficam os arquivos`);
+  }
 });
 
 test("o que é do programa é reescrito; o que é do streamer, nunca", () => {

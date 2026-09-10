@@ -1,35 +1,49 @@
-KORA STREAM GAMES — versão portátil
-===================================
+KORA STREAM GAMES
+=================
 
-Não tem instalação. O KoraStreamGames.exe é o programa inteiro: copie para
-onde quiser (inclusive um pendrive) e dê duplo clique.
+Vêm dois arquivos na pasta, e eles são o MESMO programa:
+
+  KoraStreamGames.exe             a versão portátil, sem instalação
+  KoraStreamGames-Setup-<v>.exe   o instalador
+
+QUAL USAR? Se é para usar de verdade, use o instalador: ele cria os
+atalhos e é o único que se atualiza sozinho. O portátil serve para
+experimentar sem mexer na máquina, e para levar num pendrive.
+
+(O latest.yml que está aqui do lado é do atualizador automático. Você não
+precisa dele para instalar, e pode ignorar.)
 
 
 COMEÇANDO
 ---------
 
-1. Duplo clique em KoraStreamGames.exe.
+1. Duplo clique no arquivo que você escolheu.
 
    Na primeira vez o Windows pode mostrar uma tela azul dizendo
    "O Windows protegeu o computador". Isso NÃO é vírus: acontece com todo
    programa novo que ainda não tem assinatura digital comprada. Clique em
    "Mais informações" e depois em "Executar assim mesmo".
 
-   A primeira abertura demora alguns segundos a mais que as seguintes.
+2. Se for o instalador, ele pergunta a pasta e instala. Não pede senha de
+   administrador, porque instala só para o seu usuário. No fim ele já abre
+   o programa, e deixa atalho na área de trabalho e no menu iniciar.
 
-2. O programa abre. É uma janela normal do Windows, com ícone próprio na
-   barra de tarefas. Fechar a janela desliga o jogo — deixe aberta
+   Se for o portátil, o programa abre direto. A primeira abertura demora
+   alguns segundos a mais que as seguintes.
+
+3. O programa abre numa janela normal do Windows, com ícone próprio na
+   barra de tarefas. Fechar a janela desliga o jogo, então deixe aberta
    enquanto estiver ao vivo.
 
-3. Informe o @ da sua conta da TikTok e monte o seu preset.
+4. Informe o @ da sua conta da TikTok e monte o seu preset.
 
 
 O QUE PRECISA ESTAR INSTALADO NA MÁQUINA (uma vez só)
 -----------------------------------------------------
 
 O jogo roda dentro do Roblox Studio, na sua máquina. Estes dois programas
-são de terceiros e têm instalador próprio — o KoraStreamGames.exe não
-instala nada por você:
+são de terceiros e têm instalador próprio. O Kora Stream Games não
+instala nenhum dos dois por você:
 
   * Roblox Studio
       https://create.roblox.com/  ->  "Start Creating"
@@ -48,32 +62,62 @@ que monta o lugar e abre o Studio nele. Só sobra dar Play. Se faltar o
 Rojo, o próprio programa avisa e repete o comando acima.
 
 
-O QUE APARECE NA PASTA DEPOIS DO PRIMEIRO USO
-----------------------------------------------
+ONDE FICAM OS SEUS ARQUIVOS
+---------------------------
 
   .env       as suas configurações e o seu token. É desta instalação:
              não copie para outra máquina.
-  data/      tudo que é seu — presets, acervo, histórico das lives.
+  data/      tudo que é seu, presets, acervo, histórico das lives.
   game/      a fonte do jogo, que o Rojo monta dentro do Studio.
   kora.log   o que aconteceu na última vez que o programa abriu.
              É o primeiro lugar a olhar quando algo dá errado.
 
+NA VERSÃO PORTÁTIL eles nascem na mesma pasta do KoraStreamGames.exe.
+
+NA VERSÃO INSTALADA eles ficam no seu perfil, fora da pasta do programa,
+para que desinstalar nunca apague o seu trabalho. Para chegar lá, copie a
+linha abaixo, cole na barra de endereço do Explorador de Arquivos e dê
+Enter:
+
+    %APPDATA%\Kora Stream Games
+
 FAZER BACKUP = copiar a pasta data/. É só isso.
 
+Se você já usava a versão portátil e passou a usar a instalada, o programa
+traz os seus arquivos sozinho, na primeira abertura. Não apague a pasta
+antiga antes de conferir que está tudo lá.
 
-TROCANDO POR UMA VERSÃO NOVA
------------------------------
 
-Substitua o KoraStreamGames.exe pelo novo, na mesma pasta. O data/ e o
-.env continuam onde estão e nada se perde. A pasta game/ é atualizada
-sozinha para casar com a versão nova.
+ATUALIZAÇÃO
+-----------
+
+NA VERSÃO INSTALADA é automático. O programa procura versão nova pouco
+depois de abrir, baixa em segundo plano e instala QUANDO VOCÊ FECHA o
+programa. Nunca no meio da live, nunca interrompendo nada. Da próxima vez
+que você abrir, já é a versão nova.
+
+Se a máquina estiver sem internet, nada acontece e nada aparece na tela.
+
+NA VERSÃO PORTÁTIL é manual: substitua o KoraStreamGames.exe pelo novo, na
+mesma pasta. O data/ e o .env continuam onde estão e nada se perde. A
+pasta game/ é atualizada sozinha para casar com a versão nova.
+
+
+DESINSTALANDO
+-------------
+
+Versão instalada: Configurações do Windows -> Aplicativos -> Kora Stream
+Games -> Desinstalar. Os seus presets, acervo e histórico NÃO são
+apagados; eles continuam em %APPDATA%\Kora Stream Games.
+
+Versão portátil: apague a pasta. Não há nada em outro lugar.
 
 
 DEU ERRADO
 ----------
 
 Se o programa não abrir, ele mostra uma caixa com o motivo. O detalhe
-completo fica em kora.log, na mesma pasta.
+completo fica em kora.log, junto dos seus arquivos (veja acima).
 
 "Já existe um Kora Stream Games rodando": abra o Gerenciador de Tarefas e
 encerre o que estiver rodando, ou reinicie a máquina.

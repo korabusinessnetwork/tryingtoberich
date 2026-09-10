@@ -32,9 +32,9 @@ três dívidas conhecidas do ADR-P03.
 
 ## Fase 2: o que falta do produto
 
-- [~] P01 Instalador do ADR-P04 | trilha: produto | depende: nenhum | pronto quando: `npm run empacotar -- --instalador` produz um instalador NSIS além do portátil, e ele instala e desinstala numa pasta de teste
-- [~] P02 Atualização automática | trilha: produto | depende: P01 | pronto quando: o `electron-updater` está fiado e configurado, com o servidor de publicação escolhido e o passo do Matheus anotado
-- [~] P03 `LEIA-ME.txt` em inglês | trilha: produto | depende: nenhum | pronto quando: o pacote leva o LEIA-ME no idioma certo e o `npm run empacotar` escolhe qual
+- [x] P01 Instalador do ADR-P04 | trilha: produto | depende: nenhum | pronto quando: `npm run empacotar -- --instalador` produz um instalador NSIS além do portátil, e ele instala e desinstala numa pasta de teste
+- [x] P02 Atualização automática | trilha: produto | depende: P01 | pronto quando: o `electron-updater` está fiado e configurado, com o servidor de publicação escolhido e o passo do Matheus anotado
+- [x] P03 `LEIA-ME.txt` em inglês | trilha: produto | depende: nenhum | pronto quando: o pacote leva o LEIA-ME no idioma certo e o `npm run empacotar` escolhe qual
 - [x] P04 Os 26 erros dinâmicos traduzidos | trilha: ponte | depende: nenhum | pronto quando: a ponte manda `detalhe` estruturado, o painel monta a frase nos três idiomas, e o teste que hoje guarda a lista dos não traduzidos vira zero
 
 ## Fase 3: integração e fechamento (maestro)

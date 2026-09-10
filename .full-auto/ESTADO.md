@@ -8,12 +8,12 @@ status: EXECUTANDO
   em `docs/08_DECISOES` (001 a 016 de fundação, P01 a P08 de produto)
 - **Branch:** `claude/camada-de-produto-e-fase-0` (ver D01, não é `full-auto/<slug>`)
 - **Início:** 2026-09-10
-- **Fase atual:** Fase 2, onda 2 em execução
-- **Tarefa atual:** P04 (maestro, trilha ponte), enquanto as frentes console e produto rodam
-- **Próximo passo:** esperar as duas frentes da onda 2, integrar uma por vez
-  com verificação completa depois de cada merge, e então despachar a onda 3
-  (C05 a C08 no console, P04 na ponte)
-- **Progresso:** 2 de 17 tarefas concluídas, 7 em andamento
+- **Fase atual:** Fase 2, onda 2 integrada; onda 3 a despachar
+- **Tarefa atual:** nenhuma, montando a onda 3 (C05 a C08 no console)
+- **Próximo passo:** despachar a onda 3, uma frente só desta vez, com C05 a C08
+  no console (logs, saúde de conexão, edição de plano e faturamento). O resto
+  das trilhas já fechou.
+- **Progresso:** 9 de 17 tarefas concluídas
 
 ## O que já estava pronto antes desta execução
 
@@ -25,3 +25,4 @@ conserto dos seis slots vermelhos na instalação limpa. 607 testes verdes.
 ## Motivo da parada (só se AGUARDANDO_MATHEUS ou PAUSADO)
 
 <vazio>
+- **Vigia de limite:** parou em 2026-09-10 16:11:37 por erro que não é de limite, ver .full-auto/vigia.log

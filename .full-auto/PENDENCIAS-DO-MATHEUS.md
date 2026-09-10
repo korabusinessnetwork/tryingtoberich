@@ -114,7 +114,28 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
   Lemon Squeezy e veja a linha aparecer em `faturamento`. A aba Faturamento do
   console sai do dado de exemplo.
 
-## P06 A carência da licença: 14 dias serve? [prioridade: baixa]
+## P06 Publicar o primeiro release, para a atualização automática funcionar [prioridade: média]
+
+- **Por quê:** a versão instalada procura versão nova no GitHub Releases. Sem
+  release publicado ela não acha nada, escreve uma linha no `kora.log` e segue,
+  que é o comportamento certo, mas ninguém nunca atualiza.
+- **Contorno atual:** trocar o exe à mão, que é o que o portátil faz de qualquer
+  jeito.
+- **Passo a passo:**
+  1. `npm run empacotar`
+  2. Criar um release no GitHub com a tag `v0.1.0`.
+  3. Subir **os dois arquivos**: o `KoraStreamGames-Setup-0.1.0.exe` e o
+     `latest.yml`. O `latest.yml` é o índice; sem ele o atualizador não sabe que
+     existe versão nova, e é o erro mais comum aqui.
+- **Como confirmar que funcionou:** suba a versão seguinte, abra a instalada e
+  espere um minuto. O `kora.log` diz "Atualização X disponível, baixando em
+  segundo plano".
+
+> Se o repositório de release deixar de ser o do código, mude
+> `KORA_RELEASE_DONO` e `KORA_RELEASE_REPO` no ambiente do build. Não precisa
+> tocar em código.
+
+## P07 A carência da licença: 14 dias serve? [prioridade: baixa]
 
 - **Por quê:** licença ativa que não pôde ser reconfirmada continua valendo por
   14 dias (ADR-P08). Trocar é uma constante.
@@ -124,7 +145,7 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
   offline vira a forma mais barata de usar o produto.
 - **Onde colar o resultado:** só me diga o número.
 
-## P07 `assetId` × `faces.ft` no skybox [prioridade: baixa]
+## P08 `assetId` × `faces.ft` no skybox [prioridade: baixa]
 
 - **Por quê:** o painel pode dessincronizar os dois. **Não está acontecendo
   hoje**, os 10 skybox têm `assetId` igual a `faces.ft`.
@@ -134,7 +155,7 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
   em vez de improvável, e não pede tela nova.
 - **Onde colar o resultado:** só o número.
 
-## P08 Assinatura de código [prioridade: baixa, custa dinheiro]
+## P09 Assinatura de código [prioridade: baixa, custa dinheiro]
 
 - **Por quê:** sem ela o Windows mostra "O Windows protegeu o computador" na
   primeira execução.
@@ -143,12 +164,10 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
 - **Quando reavaliar:** ao começar a vender para desconhecido, quando o aviso
   deixa de ser inconveniência e vira venda perdida.
 
-## P09 `LEIA-ME.txt` em inglês [prioridade: baixa]
+## ~~P10 `LEIA-ME.txt` em inglês~~ FEITA
 
-- **Por quê:** o funil da Fase 1 é em inglês (ADR-P03) e o arquivo que acompanha
-  o executável está em português.
-- **Contorno atual:** estou traduzindo e fazendo o empacotador escolher o
-  idioma, então isto deve sair desta lista sozinho.
+O pacote sai com o texto no idioma escolhido: `npm run empacotar` para o
+português, `npm run empacotar -- --idioma=en` para o inglês.
 
 ---
 

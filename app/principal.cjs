@@ -22,17 +22,37 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 /**
- * A pasta do streamer.
+ * O bilhete que a versão portátil deixa dizendo em que pasta ela roda.
  *
- * No pacote portátil o Windows executa uma cópia extraída num diretório
- * temporário, e `process.execPath` aponta para LÁ — usar isso deixaria o `data/`
- * do streamer num temporário que o Windows apaga. O empacotador resolve isso
- * publicando `PORTABLE_EXECUTABLE_DIR`, que é a pasta onde está o exe que a
- * pessoa clicou. É essa que vale.
+ * Ele mora no `userData`, que é o MESMO caminho nas duas formas do programa
+ * (portátil e instalada), porque o Electron o deriva do `productName`. É esse
+ * detalhe que faz a migração do item seguinte ser possível: sem ele, o
+ * instalador não teria como adivinhar onde estava a pasta do portátil.
+ */
+const BILHETE_DO_PORTATIL = "pasta-do-portatil.txt";
+
+/**
+ * A pasta do streamer, que guarda `data/`, `game/`, `.env` e `kora.log`.
+ * São três casos, e cada um por um motivo diferente:
+ *
+ *   1. **Portátil.** O Windows executa uma cópia extraída num diretório
+ *      temporário, e `process.execPath` aponta para LÁ, e usar isso deixaria o
+ *      `data/` do streamer num temporário que o Windows apaga. O empacotador
+ *      resolve publicando `PORTABLE_EXECUTABLE_DIR`, a pasta do exe que a
+ *      pessoa clicou. É essa que vale, e por isso ela vem primeiro.
+ *
+ *   2. **Instalado.** Aqui `PORTABLE_EXECUTABLE_DIR` NÃO EXISTE, e a pasta do
+ *      executável é a pasta de instalação, que é o pior lugar possível para o
+ *      dado do streamer: numa instalação por máquina ela fica dentro do
+ *      `Program Files`, somente leitura para quem não é administrador, e em
+ *      qualquer instalação ela é apagada pelo desinstalador. O `userData` é
+ *      escrita garantida, é por usuário, e o desinstalador não encosta nele.
+ *
+ *   3. **Repositório.** `node`, sem pacote nenhum: a pasta do projeto.
  */
 function acharRaiz() {
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
-  if (app.isPackaged) return path.dirname(app.getPath("exe"));
+  if (app.isPackaged) return app.getPath("userData");
   return path.resolve(__dirname, "..", "..", ".."); // rodando de `build/app/` no repositório
 }
 
@@ -57,6 +77,10 @@ process.env.KORA_RECURSOS = RECURSOS;
 function abrirLog() {
   let fluxo = null;
   try {
+    // A raiz da versão instalada é o `userData`, que pode ainda não existir na
+    // primeira abertura. Sem esta linha, o log da primeira abertura, o único
+    // que interessa quando a primeira abertura dá errado, se perderia.
+    fs.mkdirSync(RAIZ, { recursive: true });
     fluxo = fs.createWriteStream(path.join(RAIZ, "kora.log"), { flags: "w" });
   } catch {
     return; // pasta somente-leitura (pendrive travado): seguir sem log
@@ -72,6 +96,54 @@ function abrirLog() {
         /* log nunca derruba o programa */
       }
     };
+  }
+}
+
+//[[ A ponte entre as duas formas do programa: portátil e instalada.
+//
+// Quem usa o portátil hoje tem `data/` ao lado do exe, com preset, acervo e
+// histórico de live. No dia em que ele trocar pelo instalador, a versão
+// instalada procura em `userData`, que é outro lugar, e encontraria uma pasta
+// vazia. O dado não some do disco, mas some da tela, que dá na mesma para
+// quem está olhando.
+//
+// A solução tem duas metades e nenhuma delas custa nada em tempo de abertura:
+// o portátil ANOTA onde roda, e a versão instalada, se nascer vazia, LÊ essa
+// anotação e traz a mudança. Depois disso o bilhete é ignorado para sempre,
+// porque a condição de migrar é "ainda não tenho `data/` meu". ]]
+
+/** Metade 1: o portátil anota onde está, toda abertura, para o dia da mudança. */
+function anotarPastaDoPortatil() {
+  try {
+    const perfil = app.getPath("userData");
+    fs.mkdirSync(perfil, { recursive: true });
+    fs.writeFileSync(path.join(perfil, BILHETE_DO_PORTATIL), RAIZ, "utf8");
+  } catch {
+    /* migração é conveniência; nunca pode impedir o programa de abrir */
+  }
+}
+
+/** Metade 2: a versão instalada traz `data/`, `game/` e `.env` do portátil. */
+function trazerDoPortatil() {
+  try {
+    if (fs.existsSync(path.join(RAIZ, "data"))) return; // já tem vida própria
+
+    const bilhete = path.join(RAIZ, BILHETE_DO_PORTATIL);
+    if (!fs.existsSync(bilhete)) return;
+
+    const origem = fs.readFileSync(bilhete, "utf8").trim();
+    if (!origem || path.resolve(origem) === path.resolve(RAIZ)) return;
+    if (!fs.existsSync(path.join(origem, "data"))) return;
+
+    for (const item of ["data", "game", ".env"]) {
+      const de = path.join(origem, item);
+      if (fs.existsSync(de)) fs.cpSync(de, path.join(RAIZ, item), { recursive: true });
+    }
+    console.log(`Trouxe os seus arquivos da versão portátil: ${origem}`);
+  } catch (erro) {
+    // Falhar aqui custa os presets antigos, não a abertura. A pasta do portátil
+    // continua intacta no disco, e o motivo fica no log.
+    console.error(`Não consegui trazer os arquivos da versão portátil: ${erro?.message ?? erro}`);
   }
 }
 
@@ -186,6 +258,9 @@ async function arrancar() {
 
   console.log(`Kora Stream Games — pasta: ${RAIZ}`);
 
+  if (process.env.PORTABLE_EXECUTABLE_DIR) anotarPastaDoPortatil();
+  else if (app.isPackaged) trazerDoPortatil();
+
   const iniciada = await require("./ponte.cjs").iniciar();
   ponte = iniciada;
 
@@ -194,6 +269,16 @@ async function arrancar() {
   console.log(`Painel em ${iniciada.url}`);
 
   await criarJanela(iniciada.url);
+
+  // Depois da janela, e nunca antes: a atualização é a última coisa que este
+  // programa faz, e a única que pode falhar sem ninguém ficar sabendo. O
+  // try/catch é sobre o `require`: um erro aqui cairia no `morrer()` e viraria
+  // caixa de erro por causa de uma funcionalidade que o cliente nem pediu.
+  try {
+    require("./atualizador.cjs").ligarAtualizacao();
+  } catch (erro) {
+    console.warn(`Atualização: não consegui carregar o atualizador. ${erro?.message ?? erro}`);
+  }
 }
 
 //[[ Uma instância só.
