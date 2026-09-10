@@ -15,3 +15,5 @@
 - 2026-09-10T16:01:50.041Z limite de uso atingido (rate_limit), vigia ligado
 2026-09-10 · P01 a P03 · instalador, atualizador e README em ingles; instalado, rodado e desinstalado numa pasta de teste · 715 testes verdes
 2026-09-10 · maratona · medido que a camada da Kora nao entrou no caminho critico: p95 de 2ms num orcamento de 1000ms
+2026-09-10 · conferencia · varri os 16 ADRs de fundacao contra o codigo. Todos tem implementacao, e o ADR-009 e o unico cuja garantia nao esta em codigo e sim no validador de contratos, que recusa mapa nao jogavel sem presente. A afirmacao que eu tinha escrito em TAREFAS ("001 a 016 ja estao feitos") se confirma, e agora foi checada em vez de assumida.
+
