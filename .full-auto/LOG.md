@@ -20,3 +20,4 @@
 
 - 2026-09-10T17:21:52.716Z hook: liberou a parada após 3 bloqueios sem progresso
 2026-09-10 · C05 a C08 e M03 · console v1 completo e integrado; exercitado contra o Postgres de verdade, incluindo a busca e a troca de plano · 764 testes verdes
+2026-09-10 · M04 e M05 · os dois executaveis montados do zero e o portatil aberto; relatorio final escrito · 764 testes verdes

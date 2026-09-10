@@ -40,8 +40,8 @@ três dívidas conhecidas do ADR-P03.
 ## Fase 3: integração e fechamento (maestro)
 
 - [x] M03 Integração das ondas | trilha: base | depende: todas | pronto quando: as branches das frentes estão integradas, `npm test`, `npm run validar` e `npm run luau` verdes
-- [ ] M04 Verificação final de verdade | trilha: base | depende: M03 | pronto quando: o executável é montado, aberto, e eu passo pelo fluxo principal na tela, mais o console aberto no navegador
-- [ ] M05 Relatório final | trilha: base | depende: M04 | pronto quando: `.full-auto/RELATORIO-FINAL.md` escrito e `ESTADO.md` em `CONCLUIDO`
+- [x] M04 Verificação final de verdade | trilha: base | depende: M03 | pronto quando: o executável é montado, aberto, e eu passo pelo fluxo principal na tela, mais o console aberto no navegador
+- [x] M05 Relatório final | trilha: base | depende: M04 | pronto quando: `.full-auto/RELATORIO-FINAL.md` escrito e `ESTADO.md` em `CONCLUIDO`
 
 ---
 

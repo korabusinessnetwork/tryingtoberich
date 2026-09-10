@@ -1,6 +1,6 @@
 # Estado do Full Automático
 
-status: EXECUTANDO
+status: CONCLUIDO
 <!-- valores: EXECUTANDO | AGUARDANDO_MATHEUS | PAUSADO | CONCLUIDO -->
 
 - **Projeto:** Kora Stream Games
@@ -8,17 +8,11 @@ status: EXECUTANDO
   em `docs/08_DECISOES` (001 a 016 de fundação, P01 a P08 de produto)
 - **Branch:** `claude/camada-de-produto-e-fase-0` (ver D01, não é `full-auto/<slug>`)
 - **Início:** 2026-09-10
-- **Fase atual:** Fase 2, onda 2 integrada; onda 3 a despachar
-- **Tarefa atual:** C05 a C08, na frente `console` da onda 3, em worktree própria
-- **Próximo passo:** esperar a frente `console` da onda 3 fechar, integrar a
-  branch dela com verificação completa, e então M03, M04 e M05.
+- **Fase atual:** concluída. Relatório em `RELATORIO-FINAL.md`.
+- **Tarefa atual:** nenhuma.
+- **Próximo passo:** as pendências do dono, em `PENDENCIAS-DO-MATHEUS.md`. O ADR-P06 e a sessão no Studio são as duas que mudam o rumo.
 
-  **Todo o trabalho de maestro que não colide com ela já foi feito**, e está
-  commitado: os 26 erros traduzidos, o webhook do faturamento, os aprendizados
-  em `memory/learnings.md`, a higiene do backlog, o ledger em `specs/_loop.md`,
-  a nota de implementação do ADR-P04 e o `CLAUDE.md` dizendo quatro processos em
-  vez de três. O que resta depende da frente.
-- **Progresso:** 9 de 17 tarefas concluídas
+- **Progresso:** 17 de 17 tarefas concluídas
 
 ## O que já estava pronto antes desta execução
 
