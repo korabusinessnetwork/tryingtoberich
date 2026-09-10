@@ -79,6 +79,23 @@ estiver torto, a live não começa.
 SSE chegar.
 **Estimativa:** uma hora, se nada estiver errado.
 
+**FEITO em 2026-09-09** (rodada 6, `specs/f0-3-painel-e-ponte-juntos.md`).
+Painel e ponte subiram juntos e conversaram de verdade: as 14 rotas do painel
+responderam 200, inclusive o SSE (`/api/sessao/stream`). As páginas Ao vivo,
+Presentes e Configurar renderizam nos três idiomas, sem chave crua na tela e
+sem erro no console, e os 6 slots seguem lado a lado (grade medida: 6 colunas
+iguais de 196,8px).
+
+**Achou dois defeitos**, os dois corrigidos:
+- **BUG-008** — trocar de idioma marcava o botão e não trocava a tela. Estava no
+  `TraducaoProvider`, e **os 504 testes passavam**: todos são estáticos e nenhum
+  renderiza.
+- 54px de rolagem horizontal na página Configurar, em todos os idiomas — lista
+  de ids de textura sem espaço, que o navegador trata como palavra só.
+
+O que **não** foi feito aqui: iniciar sessão de live real, que depende de uma
+live no ar.
+
 ---
 
 ## Riscos de travar no meio da live

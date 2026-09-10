@@ -155,3 +155,32 @@
   classifica.** É o mesmo formato do BUG-002: um mecanismo de proteção (lá o rate
   limit, aqui o backoff) derrubando o próprio jogo. Toda proteção com crescimento
   exponencial precisa responder "o que acontece se o caso NORMAL cair aqui?".
+
+### BUG-008 — trocar de idioma marcava o botão e não trocava a tela
+- **Sintoma:** clicar em ES no seletor de idioma deixava o botão marcado
+  (`aria-pressed="true"`) e a tela inteira continuava em português. Recarregar a
+  página funcionava — o idioma gravado era respeitado —, mas a troca ao vivo não.
+- **Reprodução:** abrir o painel, clicar em ES. Só visível no navegador.
+- **Causa raiz:** em `panel/src/i18n/TraducaoProvider.jsx`, o idioma inicial era
+  calculado no CORPO do componente e o módulo era sincronizado com ele:
+
+      const inicial = normalizarIdioma(idiomaGravado ?? idiomaDoNavegador());
+      if (idiomaAtivo() !== inicial) definirIdioma(inicial);
+
+  O corpo roda a cada render. Logo depois de `trocarIdioma("es")` mudar o
+  estado, o render seguinte recalculava `inicial` a partir de
+  `navigator.language` — ainda "pt" — e **devolvia o módulo para português**. O
+  estado do React ficava em "es" (por isso o botão marcava) e `traduzir()`, que
+  lê o módulo, respondia em "pt".
+- **Correção:** o inicial passou para o inicializador preguiçoso do `useState`,
+  que roda uma vez, e o módulo passou a ESPELHAR o estado:
+  `if (idiomaAtivo() !== idioma) definirIdioma(idioma);`
+- **Status:** corrigido em 2026-09-09, com teste de regressão em
+  `test/i18n.test.mjs` que falha na versão antiga (verificado).
+- **A lição:** **os 504 testes passavam.** Todos estáticos — paridade de chave,
+  chave órfã, chave morta, string cravada. Nenhum renderiza. Um retrofit de 627
+  chaves em 31 arquivos foi dado por bom por análise estática, e o defeito estava
+  no arquivo que eu mesmo escrevi à mão, não nos 31 das agentes.
+  **Estado que vive em dois lugares precisa de uma fonte da verdade declarada,
+  e o outro lugar só espelha.** Aqui a fonte é o estado do React; o módulo
+  espelha. A versão com bug tinha duas fontes e a última a escrever ganhava.

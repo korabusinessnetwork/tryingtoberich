@@ -302,6 +302,50 @@ test("rótulo de presente do HUD cabe em 8 caracteres nos três idiomas", () => 
   assert.deepEqual(estourou, [], `rótulo de presente acima de 8 caracteres: ${estourou.join("; ")}`);
 });
 
+// -------------------------------------------------- BUG-008: o provider
+
+/**
+ * O idioma inicial é calculado UMA vez, e o módulo espelha o ESTADO.
+ *
+ * O BUG-008 nasceu do contrário disso: `inicial` era recalculado no corpo do
+ * componente, que roda a cada render, e o módulo era sincronizado com ele. Logo
+ * depois de trocar para espanhol, o render seguinte recalculava `inicial` a
+ * partir de `navigator.language` — ainda "pt" — e devolvia tudo para português.
+ *
+ * O sintoma era cruel: o botão do idioma ficava marcado (estado do React mudou)
+ * e a tela inteira continuava em português (o módulo tinha voltado).
+ *
+ * **Os 504 testes da suíte passavam.** Todos são estáticos: paridade de chave,
+ * chave órfã, chave morta, string cravada. Nenhum renderiza. O bug só apareceu
+ * ao abrir o painel no navegador, no F0-3 — e por isso este teste existe.
+ */
+test("o idioma inicial é calculado uma vez, e o módulo espelha o estado", async () => {
+  const provider = await readFile(
+    path.join(RAIZ, "panel", "src", "i18n", "TraducaoProvider.jsx"),
+    "utf8",
+  );
+
+  // O cálculo do inicial precisa estar DENTRO do inicializador preguiçoso.
+  assert.match(
+    provider,
+    /useState\(\(\)\s*=>\s*\n?\s*normalizarIdioma\(idiomaGravado \?\? idiomaDoNavegador\(\)\)/,
+    "calcular o inicial fora do useState(() => …) faz ele rodar a cada render — é o BUG-008",
+  );
+
+  // E o espelho tem que comparar com o ESTADO, nunca com um valor recalculado.
+  assert.match(
+    provider,
+    /if \(idiomaAtivo\(\) !== idioma\) definirIdioma\(idioma\)/,
+    "o módulo espelha o estado; espelhar um `inicial` recalculado é o BUG-008 de volta",
+  );
+
+  // A forma exata que causou o bug não pode reaparecer.
+  assert.ok(
+    !/const inicial = normalizarIdioma/.test(provider),
+    "`const inicial` no corpo do componente é a linha que causou o BUG-008",
+  );
+});
+
 // ------------------------------------------------------- locale do número
 
 /**

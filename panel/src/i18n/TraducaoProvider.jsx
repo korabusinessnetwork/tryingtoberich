@@ -15,10 +15,27 @@ import { definirIdioma, idiomaAtivo, idiomaDoNavegador, normalizarIdioma, traduz
  * sem hook. `definirIdioma` mantém os dois em sincronia.
  */
 export function TraducaoProvider({ idiomaGravado, aoTrocarIdioma, children }) {
-  const inicial = normalizarIdioma(idiomaGravado ?? idiomaDoNavegador());
-  if (idiomaAtivo() !== inicial) definirIdioma(inicial);
+  //[[ BUG-008: o idioma inicial precisa ser calculado UMA vez.
+  //
+  // A primeira versão calculava `inicial` no corpo do componente e sincronizava
+  // o módulo com ele. O corpo roda a CADA render — então, logo depois de
+  // `trocarIdioma("es")` mudar o estado, o próximo render recalculava
+  // `inicial` a partir de `idiomaGravado ?? navigator.language`, que continua
+  // "pt", e devolvia o módulo para português.
+  //
+  // O efeito era cruel de depurar: o botão do idioma ficava marcado (estado do
+  // React mudou) e a tela inteira continuava em português (o módulo tinha
+  // voltado). Nenhum teste desta suíte via isso — todos são estáticos. Só
+  // apareceu ao abrir o painel no navegador, no F0-3.
+  //
+  // Agora: o inicializador preguiçoso do `useState` roda uma vez, e o módulo
+  // ESPELHA o estado, que é a fonte da verdade. ]]
+  const [idioma, definirEstado] = useState(() =>
+    normalizarIdioma(idiomaGravado ?? idiomaDoNavegador()),
+  );
 
-  const [idioma, definirEstado] = useState(inicial);
+  if (idiomaAtivo() !== idioma) definirIdioma(idioma);
+
   const [trocandoIdioma, definirTrocando] = useState(false);
 
   const trocarIdioma = useCallback(

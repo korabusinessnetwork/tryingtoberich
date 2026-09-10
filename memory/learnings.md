@@ -417,3 +417,36 @@ ela deve aparecer. O assert certo persegue a reconstrução do caminho
 
 Padrão que já custou três rodadas: **quando um teste afirma "X não acontece",
 escrever o que X é em código, não a palavra que X usa.**
+
+---
+
+## Rodada 6 do ciclo — o painel aberto no navegador (2026-09-09)
+
+### Testar a própria recomendação antes de segui-la
+O ledger da rodada 5 recomendava PARAR o ciclo: tudo que sobrava seria da sessão
+no Studio. Estava errado por omissão — **F0-3 é bloqueador da Fase 0 e precisa
+de navegador, não do Studio.** Conferir a recomendação custou uma consulta ao
+backlog e destravou a rodada que achou o BUG-008.
+
+### Análise estática deu 504 testes verdes sobre uma tela quebrada
+O retrofit de i18n da rodada 1 trocou 627 strings em 31 arquivos, com 25 dos 31
+auditores mortos no limite de sessão. O que garantiu o resultado foi teste
+estático. **Abrir o painel uma vez achou um bug que 504 testes não viam**, e ele
+estava no arquivo que eu escrevi à mão, não nos 31 das agentes. Ver BUG-008.
+
+Regra: **retrofit em massa validado só por análise estática não está validado.**
+Uma renderização vale as três levas de auditoria.
+
+### Quase reportei dois bugs que não existiam
+O leitor de acessibilidade do navegador achatava `<strong>` aninhado e truncava
+texto longo, e eu li `"In , the same unit"` e `"breaks the po."` como
+placeholders vazios. O DOM real trazia `"In floors of push, the same unit…"`,
+correto. **Conferir no DOM antes de acusar** — a ferramenta de leitura é uma
+fonte, não a verdade.
+
+### Nem todo defeito na tela é do que você acabou de mexer
+A página Configurar tinha 54px de rolagem horizontal. Parecia tradução longa
+demais. Medindo em português: **o mesmo excesso** — era uma lista de ids de
+textura separados por vírgula sem espaço, que o navegador trata como palavra só.
+Defeito pré-existente, consertado com duas linhas de CSS. Confirmar no idioma
+original antes de culpar a tradução.

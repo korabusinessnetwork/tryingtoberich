@@ -132,6 +132,18 @@
   font-size: 12px;
 }
 
+/* A lista de peças é id separado por vírgula, SEM espaço — "textura_gelo,
+   textura_arcade,textura_cyber,…". Sem oportunidade de quebra, o navegador
+   trata tudo como uma palavra só e ela empurra a página inteira: 54px de
+   rolagem horizontal, medidos com 10 texturas, nos três idiomas.
+
+   `min-width: 0` porque item de flex não encolhe abaixo do conteúdo sem isso,
+   e aí o `overflow-wrap` nunca chega a ser consultado. */
+.previa-de-mapa-cenario > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* ------------------------------------------------------------------ */
 /* Stats — leitura de canto de olho: rótulo pequeno, valor grande.     */
 /* ------------------------------------------------------------------ */
