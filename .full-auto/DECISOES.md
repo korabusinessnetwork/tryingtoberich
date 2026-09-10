@@ -32,6 +32,12 @@ Uma entrada por decisão. Ele revisa no final e pode reverter qualquer uma.
 > foi recusada pelo classificador do modo automático, porque instalar hook é
 > mudar configuração e deixar script rodando sozinho. Ele autorizou depois.
 
+## D03 O ciclo foi feito à mão, sem a skill `/ciclo` (resolvido em 2026-09-10)
+
+> **Resolvido.** O dono autorizou renomear, e a skill agora se chama `ciclo`.
+> A partir da próxima sessão as tarefas passam pela skill de verdade. O que está
+> abaixo fica registrado porque explica como esta execução foi conduzida.
+
 ## D03 O ciclo é feito à mão, sem a skill `/ciclo`
 
 - **Contexto:** o adendo obrigatório manda executar toda tarefa pela `/ciclo`.

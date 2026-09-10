@@ -25,12 +25,14 @@ minhas e ainda não existem**: o termo de uso do cliente e a política de quebra
 Estou escrevendo as duas, e o próprio ADR diz por quê: são elas que transformam
 uma quebra técnica em chargeback.
 
-## P02 A sessão no Roblox Studio [prioridade: alta]
+## P02 A sessão no Roblox Studio [prioridade: alta] — ADIADA pelo dono em 2026-09-10
 
 - **Por quê:** destrava o resto da Fase 0 e responde se o Cloudflare Tunnel some
   do produto, e com ele a única exposição do sistema à internet e um terço do
   orçamento de latência.
-- **Contorno atual:** nenhum possível. Exige alguém abrindo o Studio.
+- **Contorno atual:** nenhum possível. Exige alguém abrindo o Studio, e o dono
+  adiou. Continua sendo **a única coisa que separa o produto de provado ponta a
+  ponta**: nada do que foi construído até aqui rodou dentro do Studio.
 - **Passo a passo:** o roteiro completo está em
   `docs/09_BACKLOG/roteiro-da-sessao-no-studio.md`. Uma hora, começando por
   `npm run vistoria`.
@@ -66,18 +68,16 @@ nada. Fechado com um trigger de comando, e provado que agora é recusado.
    assinante `matheus` com o seu e-mail, e a chave `KORA-TESTE-AAAA-BBBB-CCCC`
    ativa por 30 dias. Ela é sua, funciona, e dá para trocar quando quiser.
 
-## P04 Instalar o `/ciclo` com nome invocável [prioridade: média]
+## ~~P04 Instalar o `/ciclo` com nome invocável~~ FEITA
 
-- **Por quê:** a skill Full Automático manda executar toda tarefa pela `/ciclo`.
-  A que existe nesta máquina chama-se `loop-spec-build-review` e não aparece
-  como invocável, então estou fazendo o ciclo à mão (especificar, construir,
-  revisar contra o critério, corrigir até passar).
-- **Contorno atual:** ciclo manual. Funciona, só não é a skill.
-- **Passo a passo:** renomear a pasta para `~/.claude/skills/ciclo/` ou pôr
-  `name: ciclo` no frontmatter dela, e conferir que não tem
-  `disable-model-invocation: true`.
-- **Como confirmar que funcionou:** `/ciclo` aparece na lista de skills da
-  sessão.
+Feita por mim em 2026-09-10, a seu pedido. A pasta
+`~/.claude/skills/loop-spec-build-review/` virou `~/.claude/skills/ciclo/`, e o
+campo `name:` do `SKILL.md` virou `ciclo`, que é o que a invocação usa. Os
+comandos `/spec`, `/build` e `/review` continuam intactos.
+
+**Ela só aparece na próxima sessão**, porque a lista de skills é lida no
+arranque. Se algo dela sumir, o caminho de volta é um `mv` e trocar o `name:`
+de novo.
 
 ## P05 Criar a conta na Lemon Squeezy [prioridade: média, depende da P01]
 
