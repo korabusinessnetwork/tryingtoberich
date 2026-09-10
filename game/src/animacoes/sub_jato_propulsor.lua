@@ -176,6 +176,10 @@ return {
 			-- turbina parecer girar sem nenhuma peça girar de verdade.
 			local boca = Efeitos.anexo(pivo, "JatoBoca", Vector3.new(0, 0, calibre * 2.8))
 			Efeitos.particula(boca, {
+				-- O nome vem do catálogo (`shared/texturas.lua`), nunca o id. Enquanto
+				-- a sprite não existir isto resolve para "sem textura" e o bocal
+				-- desenha como sempre desenhou.
+				textura = "chama",
 				Color = Efeitos.sequenciaDeCor(COR_NUCLEO, COR_CHAMA),
 				Transparency = Efeitos.sequenciaDeNumero(0.1, 1),
 				Size = Efeitos.sequenciaDeNumero(2.4 * fator, 0.4),
@@ -188,6 +192,7 @@ return {
 			}, intensidade, INICIO_DO_SUMICO)
 
 			Efeitos.particula(boca, {
+				textura = "brilho",
 				Color = Efeitos.sequenciaDeCor(COR_CALOR, COR_CHAMA),
 				Transparency = Efeitos.sequenciaDeNumero(0.35, 1),
 				Size = Efeitos.sequenciaDeNumero(1.8 * fator, 6 * fator),
@@ -200,6 +205,7 @@ return {
 			}, intensidade, INICIO_DO_SUMICO)
 
 			Efeitos.particula(boca, {
+				textura = "fumaca",
 				Color = Efeitos.sequenciaDeCor(COR_FUMACA),
 				Transparency = Efeitos.sequenciaDeNumero(0.45, 1),
 				Size = Efeitos.sequenciaDeNumero(2.4 * fator, 9 * fator),

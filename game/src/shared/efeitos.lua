@@ -21,6 +21,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Eventos = require(script.Parent.eventos)
+local Texturas = require(script.Parent.texturas)
 local Tipos = require(script.Parent.tipos)
 
 local Efeitos = {}
@@ -161,10 +162,38 @@ end
 	ParticleEmitter já parented e com limpeza agendada.
 	`intensidade` multiplica taxa e tamanho, nunca duração.
 ]]
+--[[
+	Traduz `textura = "faisca"` em `Texture = "rbxassetid://..."`.
+
+	As animações pedem a textura pelo NOME do catálogo, nunca pelo id. É o que
+	permite trocar uma sprite reprovada pela moderação num lugar só, em vez de
+	caçar o número em 32 módulos. Ver `texturas.lua`.
+
+	Enquanto o catálogo estiver vazio isto resolve para string vazia, que é o
+	"sem textura" da engine, e tudo desenha exatamente como desenha hoje.
+]]
+local function resolverTextura(props)
+	if not props or props.textura == nil then
+		return props
+	end
+
+	local copia = {}
+	for chave, valor in pairs(props) do
+		if chave ~= "textura" then
+			copia[chave] = valor
+		end
+	end
+	copia.Texture = Texturas.de(props.textura)
+	return copia
+end
+
+Efeitos.resolverTextura = resolverTextura
+
 function Efeitos.particula(pai, props, intensidade, duracao)
 	if not pai then
 		return nil
 	end
+	props = resolverTextura(props)
 	local emissor = Instance.new("ParticleEmitter")
 	local fator = Efeitos.escala(intensidade)
 
@@ -188,6 +217,7 @@ function Efeitos.trilha(anexoA, anexoB, props, duracao)
 	if not anexoA or not anexoB then
 		return nil
 	end
+	props = resolverTextura(props)
 	local trilha = Instance.new("Trail")
 	trilha.Attachment0 = anexoA
 	trilha.Attachment1 = anexoB
@@ -202,6 +232,7 @@ function Efeitos.feixe(anexoA, anexoB, props, duracao)
 	if not anexoA or not anexoB then
 		return nil
 	end
+	props = resolverTextura(props)
 	local feixe = Instance.new("Beam")
 	feixe.Attachment0 = anexoA
 	feixe.Attachment1 = anexoB

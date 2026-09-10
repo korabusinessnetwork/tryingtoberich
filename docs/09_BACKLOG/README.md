@@ -197,6 +197,20 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
 
 ### Registrado e não executado
 
+- [ ] **As sprites de VFX das animações.** As 32 animações fazem geometria,
+      hélice, onda, tremor e esteira, e **nenhuma usa textura**: partícula,
+      feixe e trilha saem no borrão redondo padrão do Roblox. É a última coisa
+      grande que separa o efeito de "engine" do impacto de anime, e a mais
+      barata, porque toda a estrutura já está montada.
+      O encaixe está pronto e testado (`game/src/shared/texturas.lua`): treze
+      nomes de domínio, todos vazios, que as animações já pedem pelo nome. Falta
+      **gerar as imagens**, 512x512 com fundo preto e forma clara, subir pelo
+      acervo e esperar a moderação (ADR-004). Preenchido o catálogo, a sprite
+      aparece em toda animação que a pede, sem tocar em módulo nenhum.
+      **Restrição registrada:** estilo de anime é livre, personagem de anime não
+      é. Asset de terceiro derruba a conta do Roblox de que o produto depende.
+
+
 - [ ] **Refatoração do layout do painel**, pedida pelo dono em 2026-09-10.
       Nove abas em ordem cronológica, não de uso; a aba "Ao vivo" empilha o
       editor inteiro acima do que se opera durante a live; o único alarme do

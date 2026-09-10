@@ -161,6 +161,9 @@ return {
 			-- Brasas e fumaça saindo da rocha o caminho inteiro.
 			local rastro = Efeitos.anexo(pivo, "MeteoroRastro", Vector3.new(0, 0, raio * 0.5))
 			Efeitos.particula(rastro, {
+				-- Brasa quer forma de faísca, não borrão redondo: é o que separa
+				-- rastro de meteoro de fumaça colorida. Ver `shared/texturas.lua`.
+				textura = "faisca",
 				Color = Efeitos.sequenciaDeCor(COR_LAVA, COR_BRASA),
 				Transparency = Efeitos.sequenciaDeNumero(0.1, 1),
 				Size = Efeitos.sequenciaDeNumero(2.6 * fator, 0.3),
@@ -174,6 +177,7 @@ return {
 			}, intensidade, INICIO_DO_SUMICO)
 
 			Efeitos.particula(rastro, {
+				textura = "fumaca",
 				Color = Efeitos.sequenciaDeCor(COR_FUMACA),
 				Transparency = Efeitos.sequenciaDeNumero(0.35, 1),
 				Size = Efeitos.sequenciaDeNumero(3 * fator, 11 * fator),
