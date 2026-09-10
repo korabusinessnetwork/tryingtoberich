@@ -64,6 +64,13 @@ export function carregarConfig(env = process.env) {
     // falta em vez de quebrar, e o resto do produto não depende disso.
     chaveRoblox: env.ROBLOX_API_KEY ?? "",
     criadorRoblox: env.ROBLOX_CREATOR_ID ?? "",
+    // A base da Kora: licença, telemetria e saúde de conexão (ADR-P02).
+    // OPCIONAIS de propósito. Sem elas o produto roda inteiro em modo local: a
+    // licença fica `indeterminada`, a telemetria fica na máquina, e nada
+    // quebra. A chave é anônima e quem separa um streamer do outro é o RLS —
+    // ver data/supabase/001-esquema.sql.
+    supabaseUrl: env.SUPABASE_URL ?? "",
+    supabaseChave: env.SUPABASE_ANON_KEY ?? "",
     longpollTimeoutMs: inteiro(env.LONGPOLL_TIMEOUT_MS, 20_000),
     combateMaxMs: inteiro(env.COMBATE_MAX_MS, REGRAS.COMBATE_MAX_MS),
   };

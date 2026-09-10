@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/telemetria.schema.json",
+  "title": "Evento de telemetria",
+  "description": "O que a instalação reporta para a Kora (ADR-P02). É o que alimenta a saúde de conexão e a ficha do assinante do console v1 (ADR-P05, itens 2 e 6) — e só isso: 'presentes por modalidade' e 'tempo em live' são console v2 e não têm campo aqui. Este schema é a fronteira de privacidade do produto: `additionalProperties: false` com uma lista curta e fixa é o que impede alguém acrescentar nickname, id de espectador ou qualquer dado de terceiro num payload que SAI da máquina (CLAUDE.md, Segurança, e docs/11_SEGURANCA camada 4). Evento que não passa aqui é descartado, nunca enviado.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["streamerId", "tipo", "em"],
+  "properties": {
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "tipo": {
+      "description": "O que aconteceu. `instalacao` é o cartão de visita do arranque, e é dele que saem versão e idioma. `conexao` e `desconexao` delimitam uma live. `queda` é a live caindo sozinha — é o alarme de quando a TikTok quebra o acesso, que é o risco nº 1 do produto (ADR-006).",
+      "enum": ["instalacao", "conexao", "queda", "desconexao"]
+    },
+    "em": {
+      "description": "Quando aconteceu, no relógio da máquina do streamer.",
+      "$ref": "comuns.schema.json#/$defs/instante"
+    },
+    "versaoInstalada": {
+      "description": "Versão do aplicativo que reportou. Exigida pelo ADR-P04 e mostrada na ficha do console (ADR-P05, item 2).",
+      "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 20 }, { "type": "null" }]
+    },
+    "idioma": {
+      "description": "O idioma do perfil (ADR-P03), como o streamer o escolheu no painel. Nulo enquanto ele não escolheu.",
+      "oneOf": [{ "type": "string", "enum": ["pt", "es", "en"] }, { "type": "null" }]
+    },
+    "modalidade": {
+      "description": "Qual modalidade estava rodando. Nulo fora de uma live — o arranque não tem modalidade.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/modalidade" }, { "type": "null" }]
+    },
+    "motivo": {
+      "description": "Código estável do porquê, quando houver. Mesmo formato dos motivos da licença: código, nunca frase pronta.",
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 60, "pattern": "^[a-z0-9_]+$" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

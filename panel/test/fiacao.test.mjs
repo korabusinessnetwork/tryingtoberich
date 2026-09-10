@@ -51,7 +51,10 @@ test("todo componente do painel é montado por alguém", async () => {
   // os cartões de slot, e o cartão monta o aviso de curva. O que este teste
   // proíbe é componente que ninguém monta — código morto que passa no build.
   const arquivos = (await readdir(COMPONENTES)).filter((f) => f.endsWith(".jsx"));
-  assert.equal(arquivos.length, 29, "o 06_COMPONENTES lista os 29 componentes do painel");
+  // 30 desde a tela de licença do ADR-P02. O número está aqui, e não só no
+  // 06_COMPONENTES, porque componente novo sem linha no doc é a forma como a
+  // documentação deste projeto envelhece: o teste é quem obriga a atualizar.
+  assert.equal(arquivos.length, 30, "o 06_COMPONENTES lista os 30 componentes do painel");
 
   const app = await readFile(path.join(PAINEL, "src", "App.jsx"), "utf8");
   const fontes = await Promise.all(arquivos.map(lerComponente));

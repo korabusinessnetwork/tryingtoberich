@@ -1,0 +1,154 @@
+/* PainelDeLicenca — o veredito da Kora sobre esta instalação (ADR-P02).
+
+   Nenhuma cor literal: tom de estado vem de `.pastilha-*` do base.css, que sai
+   dos tokens gerados. A tela é de leitura calma — ninguém lê licença de canto
+   de olho no meio da live —, então aqui a hierarquia é de TEXTO: veredito no
+   topo, o que fazer logo abaixo, os fatos em lista, e a ação por último. */
+
+.licenca {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco);
+  /* Linha de leitura, não largura de tela: frase de 2000px não se lê. */
+  max-width: 720px;
+  padding: var(--espaco);
+  background: var(--painel-superficie);
+  border: var(--borda);
+  border-radius: var(--raio);
+}
+
+.licenca-topo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.licenca-titulo {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Pastilha do base.css com texto de frase inteira: o ponto de estado alinha
+   com a primeira linha em vez de esticar junto com o parágrafo. */
+.licenca-frase {
+  align-items: flex-start;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--raio);
+  line-height: 1.35;
+}
+
+.licenca-frase::before {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
+/* O próximo passo. Corpo de texto normal, não secundário: é a linha que o
+   streamer precisa ler quando algo não está ativo. */
+.licenca-conselho {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.licenca-motivo {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ---- os fatos: plano, validade, última confirmação -------------------- */
+
+.licenca-fatos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px var(--espaco);
+  margin: 0;
+  padding: var(--espaco);
+  background: var(--painel-fundo);
+  border-radius: var(--raio);
+}
+
+.licenca-fato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.licenca-fato-rotulo {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.licenca-fato-valor {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---- colar a chave ---------------------------------------------------- */
+
+.licenca-forma {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.licenca-campo-rotulo {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.licenca-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A chave é longa e vem colada do e-mail: o campo cresce, o botão não. */
+.licenca-campo {
+  flex: 1 1 260px;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.licenca-ativar {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.licenca-nota {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ---- desativar nesta máquina ------------------------------------------ */
+
+/* Ação destrutiva com peso visual baixo, como o "Limpar" do cartão de slot:
+   alvo cheio de 40px (vem do base.css), mas vermelho só no hover, quando já é
+   intenção. Aqui o custo do clique errado é a live parar. */
+.licenca-saida {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--espaco);
+  border-top: var(--borda);
+}
+
+.licenca-desativar {
+  align-self: flex-start;
+  background: transparent;
+  color: var(--painel-texto-secundario);
+}
+
+.licenca-desativar:hover,
+.licenca-desativar:focus-visible {
+  color: var(--estado-erro);
+  border-color: var(--estado-erro);
+}

@@ -281,7 +281,19 @@ data: { "nome": "kelvyn_ttv" }
 
 event: naoMapeado
 data: { "presenteNome": "Rose", "presenteId": "7934", "moedas": 1, "contagem": 7 }
+
+event: licenca
+data: { "streamerId": "local", "estado": "ativa", "plano": "mensal",
+        "validaAte": "2026-10-08T00:00:00.000Z", "verificadaEm": "2026-09-10T14:02:00.000Z",
+        "carenciaAte": null, "motivo": null, "versaoInstalada": "0.1.0" }
 ```
+
+O evento `licenca` chega uma vez na abertura da conexão, com o veredito da
+sessão, e de novo quando o streamer cola ou remove a chave. Ele é empurrado, e
+não perguntado de tempos em tempos, porque a licença é consultada UMA vez no
+arranque e vale a sessão inteira (ADR-P02, ADR-P08): nada da Kora encosta no
+caminho do presente. A forma completa está em `licenca-e-telemetria.md` e no
+`data/schemas/licenca.schema.json`.
 
 `presenteId` no `naoMapeado` existe para o painel vincular o presente a um slot
 em um clique, no meio da live (F2.4). Sem ele o contador só sabe lamentar.

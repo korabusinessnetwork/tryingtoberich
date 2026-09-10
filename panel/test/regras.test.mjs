@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 
 import {
   MOVIMENTO_PADRAO,
+  catalogoEhSemente,
   SLOTS_MAX,
   SLOTS_PADRAO,
   comExcecao,
@@ -805,4 +806,27 @@ test("primeiroPresenteLivre pula quem já está em slot E quem já está no plac
       ?.presenteId,
     6064,
   );
+});
+
+/* -------------------------------------------------------------- */
+/* Instalação limpa — o catálogo semente                           */
+/* -------------------------------------------------------------- */
+
+test("a semente é reconhecida pela ORIGEM, e catálogo sem origem conta como real", () => {
+  //[[ O que esta função decide na tela: com a semente em mãos, o cartão de slot
+  // deixa de dizer que o presente não existe. Ele não pode dizer — os ids da
+  // semente são inventados e o preset padrão aponta para ids reais da TikTok,
+  // então nenhum dos seis se encontra numa instalação nova.
+  //
+  // O lado perigoso é o contrário: calar o aviso quando ele é verdadeiro
+  // esconde um slot morto na véspera da live. Por isso ausência de `origem` —
+  // resposta truncada, arquivo velho, ponte mais nova — conta como REAL. ]]
+  assert.equal(catalogoEhSemente({ origem: "semente", presentes: [] }), true);
+
+  assert.equal(catalogoEhSemente({ origem: "live", presentes: [] }), false);
+  assert.equal(catalogoEhSemente({ origem: "publico", presentes: [] }), false);
+  assert.equal(catalogoEhSemente({ presentes: [] }), false, "sem origem, o aviso continua valendo");
+  assert.equal(catalogoEhSemente([]), false, "catálogo como array não tem envelope, então não é semente");
+  assert.equal(catalogoEhSemente(null), false);
+  assert.equal(catalogoEhSemente(undefined), false);
 });

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { traduzir } from "../i18n/traduzir.js";
 import { useTraducao } from "../i18n/useTraducao.js";
 import {
+  catalogoEhSemente,
   ehSlotExtra,
   listaDePresentes,
   presentesRepetidos,
@@ -92,6 +93,15 @@ export function EditorDePreset({
     [animacoes],
   );
 
+  //[[ Instalação nova: a ponte ainda responde a SEMENTE do catálogo.
+  //
+  // A semente tem ids inventados e o preset padrão aponta para ids reais da
+  // TikTok, então nenhum dos seis se encontra. A pastilha por cartão vira uma
+  // acusação falsa nos seis, na primeira tela da instalação — e o preset está
+  // certo. Aqui a informação vale UMA vez, acima da grade, dizendo o que fazer;
+  // lá embaixo o cartão só cala o julgamento que não sabe fazer. ]]
+  const semColeta = useMemo(() => catalogoEhSemente(catalogo), [catalogo]);
+
   // Os 6 do padrão mais os extras deste preset, com as posições vazias
   // incluídas (R1.1 e R1.3).
   const slots = useMemo(() => slotsDoPreset(preset), [preset]);
@@ -173,6 +183,15 @@ export function EditorDePreset({
         </p>
       )}
 
+      {/* Âmbar e não vermelho: nada está errado. Falta um passo, e a linha diz
+          qual — estado nunca é só uma cor, e aviso sem saída é aviso pela
+          metade (02_DESIGN_SYSTEM). */}
+      {semColeta && (
+        <p className="pastilha pastilha-atencao editor-preset-semente">
+          {t("panel.presetEditor.seedCatalog")}
+        </p>
+      )}
+
       <div className="editor-preset-slots">
         {slots.map((slot) => (
           <CartaoDeSlot
@@ -185,6 +204,7 @@ export function EditorDePreset({
             aoMudar={(camposParciais) => aoMudarSlot?.(slot.posicao, camposParciais)}
             aoLimpar={() => aoLimparSlot?.(slot.posicao)}
             ehExtra={ehSlotExtra(slot.posicao)}
+            catalogoNaoColetado={semColeta}
           />
         ))}
       </div>

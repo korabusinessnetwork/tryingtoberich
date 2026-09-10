@@ -93,8 +93,14 @@
 }
 
 /* Pastilha do base.css, adaptada para texto de uma frase: o ponto de estado
-   fica alinhado à primeira linha em vez de esticar junto com o texto. */
-.editor-preset-alerta {
+   fica alinhado à primeira linha em vez de esticar junto com o texto.
+
+   `-semente` compartilha o desenho porque é a mesma coisa na tela — uma frase
+   de estado acima da grade. O nome é outro porque o significado é outro: o
+   alerta acusa um preset que a ponte vai recusar, a semente avisa que o
+   catálogo ainda não foi coletado e o painel não tem o que julgar. */
+.editor-preset-alerta,
+.editor-preset-semente {
   align-items: flex-start;
   margin: 0;
   padding: 8px 12px;
@@ -102,7 +108,8 @@
   line-height: 1.35;
 }
 
-.editor-preset-alerta::before {
+.editor-preset-alerta::before,
+.editor-preset-semente::before {
   flex: 0 0 auto;
   margin-top: 5px;
 }

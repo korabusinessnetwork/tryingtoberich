@@ -38,3 +38,4 @@ decisão de fundação.
 | [P05](./adr-p05-console-do-operador.md) | Console do operador: a fronteira do v1, congelada em 6 itens | Aceito |
 | [P06](./adr-p06-uso-comercial-da-captura.md) | Uso comercial da captura não oficial (estende ADR-006) | **Proposto — aguarda o dono** |
 | [P07](./adr-p07-executavel-portatil.md) | Um programa de verdade (Electron), portátil primeiro; o instalador do P04 vem depois | Aceito |
+| [P08](./adr-p08-carencia-de-licenca.md) | Carência de 14 dias: licença ativa que não pôde ser reconfirmada continua valendo | Aceito |

@@ -63,6 +63,19 @@ export async function principal({ painel = null } = {}) {
   const servidorDoPainel = await escutar(criarAppDoPainel(nucleo, { painel }), config.portaPainel, config.host);
 
   log.info("ponte_no_ar", { host: config.host, portaJogo: config.portaJogo, portaPainel: config.portaPainel });
+
+  //[[ A licença é perguntada AQUI, e sem `await`.
+  //
+  // Depois das portas de propósito: o ADR-P02 manda validar a licença no start
+  // e o `CLAUDE.md` manda nada da Kora entrar no caminho do presente — as duas
+  // coisas juntas dizem "uma vez, no arranque, e fora do caminho de quem
+  // espera". Segurar a abertura das portas por uma Kora fora do ar deixaria o
+  // streamer sem painel, esperando por algo que ele nem sabe que existe.
+  //
+  // O veredito fica em memória no núcleo e vale a sessão inteira. O `.catch`
+  // é formalidade — `verificarLicenca` não lança —, mas uma promessa solta sem
+  // ele derrubaria o processo por `unhandledRejection` se um dia lançar. ]]
+  nucleo.reportarInstalacao().catch((erro) => log.aviso("arranque_da_kora_falhou", { motivo: erro.message }));
   console.log(`Jogo   http://${config.host}:${config.portaJogo}/jogo/*   exige X-Bridge-Token`);
   console.log(`       ↑ é ESTA porta que o túnel publica, e só ela`);
   console.log(`Painel http://${config.host}:${config.portaPainel}/api/*    nunca sai da máquina`);
@@ -87,6 +100,13 @@ export async function principal({ painel = null } = {}) {
     log.info("ponte_encerrando", { sinal });
     // Encerra a sessão de verdade: é o que descarta o dado de espectador (F5).
     if (nucleo.sessaoAtiva) await nucleo.encerrarSessao().catch(() => {});
+    // Última chance de a telemetria sair: o `desconexao` que a linha acima
+    // acabou de enfileirar é justamente o que fecha a saúde de conexão. Perder
+    // esse envio faria o console mostrar um cliente eternamente conectado.
+    // O `parar()` vem depois porque o relógio é `unref` e não segura ninguém,
+    // mas deixá-lo vivo num processo que está morrendo é lixo.
+    nucleo.telemetria.parar();
+    await nucleo.telemetria.descarregar().catch(() => {});
     servidorDoJogo.close();
 
     if (!sair) return new Promise((pronto) => servidorDoPainel.close(() => pronto()));

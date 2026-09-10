@@ -95,6 +95,7 @@ export function CartaoDeSlot({
   presente,
   animacao,
   ehExtra,
+  catalogoNaoColetado,
   aoEditarPresente,
   aoEditarAnimacao,
   aoMudar,
@@ -168,7 +169,20 @@ export function CartaoDeSlot({
   const faixa = presente ? (presente.faixa ?? faixaDeMoedas(presente.moedas)) : null;
   const estiloDaFaixa = faixa ? { "--faixa-do-slot": corDaFaixa(faixa) } : undefined;
 
-  const indisponivel = !presente || presente.ativo === false;
+  //[[ Com a SEMENTE em mãos, o cartão não julga o presente.
+  //
+  // Instalação nova: o catálogo real ainda não existe, a ponte responde a
+  // semente, e o preset padrão aponta para ids reais da TikTok. Nenhum dos seis
+  // é achado — e a tela dizia "Presente fora do catálogo" com a pastilha
+  // vermelha nos seis, na PRIMEIRA coisa que o cliente vê, com o preset certo.
+  //
+  // Não é um aviso ruim, é um aviso que o painel não tem como fazer: sem a
+  // coleta ele não sabe se o presente existe na live. O cartão passa a dizer o
+  // que sabe — o id — e quem explica o estado é a linha única acima da grade,
+  // no EditorDePreset. Com catálogo real nada muda: ali a pastilha é verdade, e
+  // é ela que impede o streamer de entrar ao vivo com um slot morto.
+  const naoDaParaJulgar = Boolean(catalogoNaoColetado) && !presente;
+  const indisponivel = (!presente || presente.ativo === false) && !naoDaParaJulgar;
   const temIcone = Boolean(presente?.iconeUrl ?? presente?.iconeLocal) && !iconeQuebrado;
 
   const avisos = [
@@ -257,11 +271,20 @@ export function CartaoDeSlot({
           )}
         </span>
         <span className="cartao-slot-presente-texto">
+          {/* Sem coleta, o id É o que se sabe do presente: ele identifica o
+              cartão sem afirmar nada sobre existir ou não na live. */}
           <span className="cartao-slot-nome">
-            {presente?.nome ?? t("panel.slotCard.giftMissing")}
+            {presente?.nome ??
+              (naoDaParaJulgar
+                ? t("panel.slotCard.giftById", { id: slot.presenteId })
+                : t("panel.slotCard.giftMissing"))}
           </span>
           <span className="cartao-slot-moedas secundario">
-            {presente ? textoDeMoedas(presente.moedas) : String(slot.presenteId)}
+            {presente
+              ? textoDeMoedas(presente.moedas)
+              : naoDaParaJulgar
+                ? t("panel.slotCard.giftFromLive")
+                : String(slot.presenteId)}
           </span>
         </span>
         {faixa ? (

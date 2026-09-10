@@ -381,6 +381,29 @@ export function listaDePresentes(catalogo) {
   return catalogo?.presentes ?? [];
 }
 
+/**
+ * O catálogo em mãos é a SEMENTE versionada, e não a coleta da live.
+ *
+ * Numa instalação nova `GET /api/catalogo` responde a semente, porque o
+ * arquivo real ainda não existe (`bridge/src/repos/catalogo.mjs`). Os ids dela
+ * são inventados de propósito — `sem-rose`, `sem-tiktok` — e nunca se misturam
+ * com a coleta real, senão um id de mentira ficaria marcado `ativo: false`
+ * sujando o seletor para sempre.
+ *
+ * A consequência na tela é o que esta função existe para consertar: o preset
+ * padrão aponta para ids REAIS da TikTok (`6064`, `5655`…), então até a
+ * primeira conexão na live NENHUM presente do preset é achado no catálogo. O
+ * painel não pode ler esse silêncio como "o presente não existe" — ele não
+ * tem como saber. Com a semente em mãos a resposta honesta é "ainda não sei",
+ * e é isso que os cartões passam a dizer.
+ *
+ * Ausência de `origem` conta como catálogo real: o campo é exigido pelo
+ * schema, e chutar "semente" calaria um aviso verdadeiro.
+ */
+export function catalogoEhSemente(catalogo) {
+  return catalogo?.origem === "semente";
+}
+
 /* ---------------------------------------------------------------- */
 /* ADR-016 — a tabela de movimento                                   */
 /* ---------------------------------------------------------------- */

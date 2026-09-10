@@ -37,6 +37,10 @@ import { carregarAnimacoes, indexarAnimacoes } from "./repos/animacoes.mjs";
 import { carregarAcervo, miniaturaDaPeca, resolverAssetsDoMapa } from "./repos/acervo.mjs";
 import { VIDA_PADRAO_DO_PORTAL, comFormato, problemasDeJogabilidade } from "./dominio/regras.mjs";
 import { carregarConfiguracao, salvarConfiguracao } from "./repos/configuracao.mjs";
+import { ClienteSupabase } from "./repos/supabase.mjs";
+import { Telemetria } from "./repos/telemetria.mjs";
+import { ativarLicenca, esquecerLicenca, verificarLicenca } from "./repos/licenca.mjs";
+import { VERSAO } from "./versao.mjs";
 import { carregarLayout, salvarLayout } from "./repos/overlay.mjs";
 import { LAYOUT_VAZIO } from "./dominio/overlay-layout.mjs";
 import { carregarCatalogo, salvarColeta } from "./repos/catalogo.mjs";
@@ -109,8 +113,21 @@ export class Nucleo {
   #ouvintes = new Set();
   #catalogoEmMemoria = null;
   #animacoesEmMemoria = null;
+  /**
+   * O veredito da licença e a promessa que o produziu (ADR-P02).
+   *
+   * A promessa é guardada, e não só o resultado, porque a consulta é ÚNICA: o
+   * arranque a dispara sem esperar — para o painel abrir na hora — e quem
+   * perguntar antes de ela voltar pendura no mesmo `await` em vez de abrir uma
+   * segunda consulta. Depois disso o veredito vale a sessão inteira, e presente
+   * chegando nunca encosta em nada disto (CLAUDE.md, Princípio nº 1).
+   */
+  #licenca = null;
+  #licencaPrometida = null;
+  /** O idioma do painel, em memória, só para a telemetria não ir ao disco. */
+  #idiomaDoStreamer = null;
 
-  constructor({ config, gemini, roblox, skins, publicador } = {}) {
+  constructor({ config, gemini, roblox, skins, publicador, kora } = {}) {
     this.config = config;
     // Injetável como os outros clientes externos: teste de acervo não pode
     // depender do Open Cloud estar de pé nem de haver chave na máquina.
@@ -123,6 +140,11 @@ export class Nucleo {
     this.skins = skins ?? new ClienteSkins();
     this.gemini = gemini ?? new ClienteGemini({ chave: config.chaveGemini });
     this.roblox = roblox ?? new ClienteRoblox();
+    // A base da Kora (ADR-P02). Desconfigurada por padrão: sem `SUPABASE_URL`
+    // no `.env` ela nunca sai da máquina, e é assim que o teste e a instalação
+    // que ninguém ativou rodam sem tocar rede nenhuma.
+    this.kora = kora ?? new ClienteSupabase({ url: config?.supabaseUrl, chave: config?.supabaseChave });
+    this.telemetria = new Telemetria({ cliente: this.kora, contexto: () => this.#contextoDaTelemetria() });
 
     this.#longpoll = new RegistroDeLongPoll({ timeoutMs: config.longpollTimeoutMs });
     this.#despachante = new Despachante({
@@ -311,6 +333,11 @@ export class Nucleo {
     // ela desenharia no padrão até o streamer salvar algo no estúdio, e o que
     // ele arrumou ontem só voltaria recarregando a fonte no programa de captura.
     ouvinte("layout", this.layoutDoOverlay);
+    // E a licença, quando já houver veredito. Só quando houver: o arranque
+    // pergunta sem esperar (ADR-P02), e mandar `null` faria a tela desenhar
+    // "sem licença" por um instante para quem tem licença — pior que não
+    // mandar nada, porque o GET logo em seguida contaria outra história.
+    if (this.#licenca) ouvinte("licenca", this.#licenca);
 
     // O log vai junto pelo mesmo fluxo: quando algo falha durante a live, o
     // streamer precisa ver no painel, não no terminal do Node atrás da janela.
@@ -388,6 +415,9 @@ export class Nucleo {
     this.#iniciarRelogio();
     await this.#conector.conectar();
     log.info("sessao_iniciada", { sessaoId: this.#sessao.id, presetId, cenario });
+    // Saúde de conexão (ADR-P05, item 6). Síncrono e sem `await`: põe na fila e
+    // volta. Vai depois do `conectar()` porque é conexão o que ele reporta.
+    this.telemetria.registrar("conexao", { modalidade: preset.modalidade ?? null });
     // Sessão que começa sem o Roblox pendurado no long-poll vai descartar tudo
     // (F7). A barra do painel já mostra "Jogo offline", mas o log é onde se
     // procura quando "o modo de teste não funcionou" — e uma linha aqui é o
@@ -424,14 +454,88 @@ export class Nucleo {
 
   /** A conta configurada, para o painel mostrar. `null` = ninguém configurou ainda. */
   async configuracao() {
-    return carregarConfiguracao(this.config.usuarioTiktok);
+    const configuracao = await carregarConfiguracao(this.config.usuarioTiktok);
+    this.#idiomaDoStreamer = configuracao.idioma ?? null;
+    return configuracao;
   }
 
   async definirConfiguracao(dados) {
     const salva = await salvarConfiguracao(dados, this.config.usuarioTiktok);
+    // O idioma vai junto na telemetria (ADR-P05, item 2). Guardado em memória
+    // porque despachar telemetria não pode virar leitura de disco.
+    this.#idiomaDoStreamer = salva.idioma ?? null;
     log.info("conta_da_live_definida", { streamerId: salva.streamerId });
     this.#publicar("estado", this.estado);
     return salva;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Licença e telemetria — a camada da Kora (ADR-P02)                 */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * O que a telemetria carimba em cada evento, no instante do envio.
+   *
+   * Função e não objeto montado no arranque: idioma e chave mudam com o
+   * streamer mexendo no painel, e uma cópia tirada na subida reportaria o
+   * idioma de ontem para sempre.
+   */
+  #contextoDaTelemetria() {
+    return {
+      streamerId: this.#licenca?.streamerId ?? REGRAS.STREAMER_ID,
+      versaoInstalada: VERSAO,
+      idioma: this.#idiomaDoStreamer,
+      chave: this.#licenca?.chave ?? null,
+    };
+  }
+
+  /**
+   * Consulta a Kora UMA vez e guarda o veredito pela sessão inteira (ADR-P02).
+   *
+   * Não é `await`-ada pelo arranque de propósito: o `.env` sem `SUPABASE_URL`
+   * responde na hora, mas uma Kora fora do ar leva até o teto do cliente, e
+   * segurar a abertura das portas por causa disso deixaria o streamer sem
+   * painel esperando por uma licença que ele nem sabe que existe.
+   */
+  licenca() {
+    this.#licencaPrometida ??= verificarLicenca({ cliente: this.kora })
+      .then((veredito) => {
+        this.#licenca = veredito;
+        log.info("licenca_verificada", { estado: veredito.estado, motivo: veredito.motivo });
+        this.#publicar("licenca", veredito);
+        return veredito;
+      });
+    return this.#licencaPrometida;
+  }
+
+  /** `POST /api/licenca` — o streamer colou a chave. Substitui o veredito da sessão. */
+  async ativarLicenca(chave) {
+    const veredito = await ativarLicenca({ cliente: this.kora, chave });
+    this.#licenca = veredito;
+    this.#licencaPrometida = Promise.resolve(veredito);
+    this.#publicar("licenca", veredito);
+    return veredito;
+  }
+
+  /** `DELETE /api/licenca` — esquece a chave nesta máquina. Não cancela nada. */
+  async esquecerLicenca() {
+    const veredito = await esquecerLicenca();
+    this.#licenca = veredito;
+    this.#licencaPrometida = Promise.resolve(veredito);
+    this.#publicar("licenca", veredito);
+    return veredito;
+  }
+
+  /**
+   * O cartão de visita do arranque: versão instalada e idioma (ADR-P05, item 2).
+   *
+   * Chamado depois de a licença voltar, porque é a chave dela que o RLS lê para
+   * saber quem está escrevendo. Antes disso o evento seria descartado na fila.
+   */
+  async reportarInstalacao() {
+    await this.configuracao().catch(() => null);
+    await this.licenca().catch(() => null);
+    this.telemetria.registrar("instalacao");
   }
 
   /**
@@ -462,6 +566,11 @@ export class Nucleo {
     this.#conector = null;
     this.#longpoll.fecharTodos();
     this.#despachante.limpar();
+
+    // Fecha o par `conexao`/`desconexao` da saúde de conexão (ADR-P05, item 6):
+    // é a diferença entre "está conectado agora" e "esteve em algum momento".
+    // Síncrono, sem `await` e sem `try`: por contrato não lança (ver telemetria).
+    this.telemetria.registrar("desconexao", { modalidade: this.#preset?.modalidade ?? null });
 
     //[[ A sessão é SOLTA antes do await que pode falhar.
     //
@@ -510,6 +619,18 @@ export class Nucleo {
   }
 
   #aoEstadoDaLive({ live }) {
+    //[[ A QUEDA, e por que ela é o evento mais importante da telemetria.
+    //
+    // O ADR-P05 chama a saúde de conexão de alarme de quando a TikTok quebra o
+    // acesso — o risco nº 1 do produto (ADR-006, ADR-P06). Sem esta linha, a
+    // Kora descobre a quebra pelo primeiro cliente irritado que escrever.
+    //
+    // Contada na TRANSIÇÃO para reconectando, e não enquanto ela dura: o
+    // backoff da ponte tenta seis vezes (R8), e reportar a cada tentativa
+    // transformaria uma queda em seis no gráfico de 24h.
+    if (live === ESTADO.RECONECTANDO && this.#estadoDaLive !== ESTADO.RECONECTANDO) {
+      this.telemetria.registrar("queda", { modalidade: this.#preset?.modalidade ?? null });
+    }
     this.#estadoDaLive = live;
     this.#publicar("estado", this.estado);
   }

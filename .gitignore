@@ -22,6 +22,12 @@ data/catalogo-presentes.json
 # Espelho gerado a partir do índice Luau, nunca editado à mão (04_MODELAGEM).
 data/animacoes.json
 
+# Espelho da licenca desta instalacao (ADR-P02). Guarda a CHAVE, que e segredo,
+# e e estado de maquina como o configuracao.json abaixo. A fonte da verdade da
+# licenca e o Supabase; este arquivo existe para o produto continuar de pe
+# quando a Kora nao responde, e nao pertence ao repositorio.
+data/licenca.json
+
 # Conta da live do streamer: configuração de INSTALAÇÃO, não do produto. Cada
 # máquina tem a sua, e o @ de quem instalou não pertence ao repositório. Mesma
 # lógica do catálogo coletado acima.

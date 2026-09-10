@@ -189,6 +189,10 @@ acima. Os blocos 0 a 3b continuam sendo a fundação e não mudam.
   [`instalacao-na-maquina-do-cliente.md`](./instalacao-na-maquina-do-cliente.md).
   Depois Supabase (ADR-P02), instalador (ADR-P04), console v1 (ADR-P05) e venda.
 
+> **O que depende de você e não de mim** está reunido num lugar só:
+> [`tarefas-do-dono.md`](./tarefas-do-dono.md) — decisão de negócio, dinheiro,
+> conta em serviço de terceiro e a sessão no Studio.
+
 ### O que falta no portátil
 
 - [ ] **Instalação limpa abre o painel com os seis slots em vermelho.** O preset

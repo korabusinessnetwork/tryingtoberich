@@ -207,6 +207,22 @@ export const api = {
    */
   salvarIdioma: (idioma) => chamar("/api/idioma", json("PUT", { idioma })),
 
+  /**
+   * A licença desta instalação (ADR-P02). As três respondem a MESMA forma —
+   * `data/schemas/licenca.schema.json` —, então a tela tem um desenho só para
+   * ler, venha o objeto de uma consulta, de uma ativação ou de uma desativação.
+   *
+   * Fora do caminho crítico do presente, sempre: o veredito é tomado no
+   * arranque da sessão e vale a live inteira (CLAUDE.md, princípio nº 1).
+   *
+   * A chave viaja no CORPO, nunca na URL: query string entra em log de
+   * servidor e em histórico de navegador, e ela é o que separa quem pagou de
+   * quem não pagou.
+   */
+  licenca: () => chamar("/api/licenca"),
+  ativarLicenca: (chave) => chamar("/api/licenca", json("POST", { chave })),
+  desativarLicenca: () => chamar("/api/licenca", { method: "DELETE" }),
+
   /** Espia a skin de um nick ANTES de acrescentar à galeria. Traz a miniatura. */
   espiarSkin: (nick) => chamar(`/api/skin?nick=${encodeURIComponent(nick)}`),
 

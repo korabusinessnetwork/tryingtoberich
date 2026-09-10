@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kora.local/kora-stream-games/licenca.schema.json",
+  "title": "Licença da instalação",
+  "description": "O que a Kora respondeu sobre esta instalação, guardado em disco (ADR-P02). A fonte da verdade é o Supabase, e este arquivo é ESPELHO: existe para o produto continuar funcionando quando a Kora está fora do ar. Uma licença que só vale online transformaria uma queda do Supabase em live cancelada do cliente — e nada da Kora pode entrar no caminho do presente (CLAUDE.md, Princípio nº 1). Por isso a checagem acontece UMA vez, no arranque, e o resultado vale a sessão inteira.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["streamerId", "estado", "verificadaEm"],
+  "properties": {
+    "streamerId": { "$ref": "comuns.schema.json#/$defs/streamerId" },
+    "estado": {
+      "description": "O veredito. `ativa` libera tudo. `expirada` e `cancelada` são respostas da Kora e travam o que for pago. `sem_licenca` é instalação que nunca foi ativada — é o estado de quem acabou de baixar, e não é erro. `indeterminada` é o único que NÃO é resposta da Kora: significa que não deu para perguntar, e nesse caso vale a carência (ver `carenciaAte`).",
+      "enum": ["ativa", "expirada", "cancelada", "sem_licenca", "indeterminada"]
+    },
+    "chave": {
+      "description": "A chave que o streamer colou no painel. Nula enquanto ele não ativou. Guardada para reperguntar no arranque seguinte sem incomodá-lo de novo.",
+      "oneOf": [{ "type": "string", "minLength": 8, "maxLength": 128 }, { "type": "null" }]
+    },
+    "plano": {
+      "description": "Nome do plano, como a Kora o chama. Só serve para exibir; nada do produto decide nada por ele na v1.",
+      "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 40 }, { "type": "null" }]
+    },
+    "validaAte": {
+      "description": "Até quando a Kora diz que esta licença vale. Nulo em `sem_licenca` e em `indeterminada`.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    },
+    "verificadaEm": {
+      "description": "Quando a Kora foi consultada pela última vez COM SUCESSO. É deste instante que a carência conta.",
+      "$ref": "comuns.schema.json#/$defs/instante"
+    },
+    "carenciaAte": {
+      "description": "Até quando uma licença `ativa` que não pôde ser reconfirmada continua valendo. Existe porque a alternativa é pior: sem carência, um streamer sem internet no dia da live fica sem produto, e ele pagou. Nulo quando não há carência a aplicar.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    },
+    "motivo": {
+      "description": "Código estável do porquê, para o painel traduzir (ADR-P03). Nunca frase pronta: frase pronta aqui nasceria em português e o funil da Fase 1 é em inglês.",
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 60, "pattern": "^[a-z0-9_]+$" },
+        { "type": "null" }
+      ]
+    },
+    "versaoInstalada": {
+      "description": "A versão do aplicativo que reportou por último. Exigida pelo ADR-P04 e mostrada na ficha do console (ADR-P05, item 2).",
+      "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 20 }, { "type": "null" }]
+    },
+    "atualizadoEm": {
+      "description": "Quando este arquivo foi escrito. Diferente de `verificadaEm`: o arquivo é reescrito também quando só a carência muda.",
+      "oneOf": [{ "$ref": "comuns.schema.json#/$defs/instante" }, { "type": "null" }]
+    }
+  }
+}

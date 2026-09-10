@@ -34,8 +34,9 @@ componente. Toda chamada de rede passa por `panel/src/lib/api.js`.
 | `PainelDeOverlay` | As URLs dos dois overlays para colar no OBS ou no TikTok LIVE Studio (cutscenes e HUD da live), os ajustes do HUD, os vídeos na pasta e se o escolhido pelo preset ativo está lá | `/api/overlay` |
 | `TabelaDeMovimento` | A página de presentes (ADR-016): a regra `moedas × multiplicador`, a animação de cada direção, e uma linha por presente do catálogo com o delta editável | preset + catálogo |
 | `EstudioDeOverlay` | Palco 9:16 com uma caixa por elemento do HUD, escala e visibilidade, salva o layout | `/api/overlay/layout` |
+| `PainelDeLicenca` | O estado da licença desta instalação, o campo da chave e o botão de desativar nesta máquina (ADR-P02) | `/api/licenca` |
 
-São **28 componentes**, e `panel/test/fiacao.test.mjs` conta os arquivos desta
+São **30 componentes**, e `panel/test/fiacao.test.mjs` conta os arquivos desta
 pasta contra este número e cobra que cada um seja montado por alguém. O número
 aparece nos dois lugares de propósito: componente que ninguém monta passa no
 build calado, e tabela que envelhece deixa de ser a lista.

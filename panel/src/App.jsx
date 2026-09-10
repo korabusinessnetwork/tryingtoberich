@@ -19,6 +19,7 @@ import { MonitorAoVivo } from "./components/MonitorAoVivo.jsx";
 import { NavegacaoDePaginas } from "./components/NavegacaoDePaginas.jsx";
 import { PainelDeOverlay } from "./components/PainelDeOverlay.jsx";
 import { PainelDeAcervo } from "./components/PainelDeAcervo.jsx";
+import { PainelDeLicenca } from "./components/PainelDeLicenca.jsx";
 import { PainelDeLogs } from "./components/PainelDeLogs.jsx";
 import { ResumoDaLive } from "./components/ResumoDaLive.jsx";
 import { PreviaDeMapa } from "./components/PreviaDeMapa.jsx";
@@ -91,6 +92,15 @@ function Painel() {
   // O resumo do F5, guardado do retorno do Stop. Some quando o streamer fecha
   // ou quando a próxima sessão começa — ele é sobre a live que acabou.
   const [resumoDaLive, definirResumoDaLive] = useState(null);
+  // ADR-P02 — a licença desta instalação. Carrega quando a aba abre, e não na
+  // carga inicial: ela não serve a nenhuma outra tela, e uma ponte sem a rota
+  // (versão antiga, atualização pela metade) derrubaria o painel INTEIRO para a
+  // tela de erro por causa de um dado que ninguém pediu para ver.
+  const [licenca, definirLicenca] = useState(null);
+  const [carregandoLicenca, definirCarregandoLicenca] = useState(false);
+  const [erroDeLicenca, definirErroDeLicenca] = useState(null);
+  const [ativandoLicenca, definirAtivandoLicenca] = useState(false);
+  const [desativandoLicenca, definirDesativandoLicenca] = useState(false);
   const [sessoes, definirSessoes] = useState(null);
   const [carregandoSessoes, definirCarregandoSessoes] = useState(false);
   const [sessaoEscolhida, definirSessaoEscolhida] = useState(null);
@@ -479,6 +489,57 @@ function Painel() {
     definirAtualizandoCatalogo(false);
   }, [executar]);
 
+  /**
+   * ADR-P02 — as três operações da licença respondem a MESMA forma, então a
+   * tela é atualizada de um jeito só, venha o objeto de uma consulta, de uma
+   * ativação ou de uma desativação.
+   *
+   * A falha fica NO BLOCO da licença, e nunca no aviso solto do topo: o aviso
+   * do topo é sobre a live, e esta tela é a única que o streamer abre justamente
+   * para entender por que a licença não está valendo.
+   */
+  const carregarLicenca = useCallback(async () => {
+    definirCarregandoLicenca(true);
+    const atual = await executar(() => api.licenca(), {
+      aoFalhar: (falha) => definirErroDeLicenca(mensagemDoErro(falha, t("common.state.error"))),
+    });
+    if (atual) {
+      definirLicenca(atual);
+      definirErroDeLicenca(null);
+    }
+    definirCarregandoLicenca(false);
+  }, [executar]);
+
+  //[[ A chave nunca vira log, nem estado guardado no painel.
+  //
+  // Ela vai no corpo do POST e o que sobra na tela é o que a ponte devolveu —
+  // que já vem com a chave mascarada pelo componente. O `executar` registra
+  // CÓDIGO e frase da falha no log de atividade, e é por isso que a chave não
+  // pode entrar em nenhuma mensagem construída aqui. ]]
+  const ativarLicenca = useCallback(async (chave) => {
+    definirAtivandoLicenca(true);
+    const atual = await executar(() => api.ativarLicenca(chave), {
+      aoFalhar: (falha) => definirErroDeLicenca(mensagemDoErro(falha, t("common.state.error"))),
+    });
+    if (atual) {
+      definirLicenca(atual);
+      definirErroDeLicenca(null);
+    }
+    definirAtivandoLicenca(false);
+  }, [executar]);
+
+  const desativarLicenca = useCallback(async () => {
+    definirDesativandoLicenca(true);
+    const atual = await executar(() => api.desativarLicenca(), {
+      aoFalhar: (falha) => definirErroDeLicenca(mensagemDoErro(falha, t("common.state.error"))),
+    });
+    if (atual) {
+      definirLicenca(atual);
+      definirErroDeLicenca(null);
+    }
+    definirDesativandoLicenca(false);
+  }, [executar]);
+
   const carregarAcervo = useCallback(async () => {
     const carregado = await executar(() => api.acervo(), {
       aoFalhar: (falha) => definirErroDeAcervo(falha?.message ?? "Não consegui ler o acervo."),
@@ -642,11 +703,19 @@ function Painel() {
     return () => { valeAinda = false; };
   }, [preset?.mapaId]);
 
-  /** O acervo e o histórico só carregam quando a página que os usa abre. */
+  /**
+   * O acervo, o histórico e a licença só carregam quando a página que os usa
+   * abre.
+   *
+   * Falhar deixa o estado em `null` e o efeito NÃO reentra: as dependências não
+   * mudaram, e as funções de carga são estáveis. Quem tenta de novo é o botão
+   * da própria tela.
+   */
   useEffect(() => {
     if (pagina === "configurar" && !acervo) carregarAcervo();
     if (pagina === "historico" && !sessoes) carregarSessoes();
-  }, [pagina, acervo, sessoes, carregarAcervo, carregarSessoes]);
+    if (pagina === "licenca" && !licenca && !erroDeLicenca) carregarLicenca();
+  }, [pagina, acervo, sessoes, licenca, erroDeLicenca, carregarAcervo, carregarSessoes, carregarLicenca]);
 
   /**
    * F2.4 — põe um presente não mapeado no primeiro slot livre.
@@ -772,6 +841,9 @@ function Painel() {
           // arruma o que aparece nela.
           { id: "estudio", rotulo: t("panel.nav.studio") },
           { id: "historico", rotulo: t("panel.nav.history") },
+          // Longe da Ao vivo, junto do que se resolve fora da live: licença é
+          // decisão de instalação, e ninguém a abre com a torre subindo.
+          { id: "licenca", rotulo: t("panel.nav.license") },
           { id: "log", rotulo: t("panel.nav.log"), contador: naoVistos },
         ]}
         atual={pagina}
@@ -1025,6 +1097,24 @@ function Painel() {
       {pagina === "estudio" ? (
         <div className="app-pagina">
           <EstudioDeOverlay />
+        </div>
+      ) : null}
+
+      {/* ADR-P02 — o veredito da Kora sobre esta instalação, e o campo para
+          colar a chave. Página própria porque não tem nada a ver com a live:
+          nem preset, nem sessão, nem jogo. */}
+      {pagina === "licenca" ? (
+        <div className="app-pagina">
+          <PainelDeLicenca
+            licenca={licenca}
+            carregando={carregandoLicenca}
+            erro={erroDeLicenca}
+            ativando={ativandoLicenca}
+            desativando={desativandoLicenca}
+            aoAtivar={ativarLicenca}
+            aoDesativar={desativarLicenca}
+            aoRecarregar={carregarLicenca}
+          />
         </div>
       ) : null}
 

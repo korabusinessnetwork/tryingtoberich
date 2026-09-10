@@ -157,6 +157,47 @@ export function rotasDoPainel(nucleo) {
     res.json(await nucleo.definirConfiguracao({ usuarioTiktok: req.body?.usuarioTiktok }));
   });
 
+  /* ---------------------------------------------------------------- */
+  /* Licença — a camada da Kora (ADR-P02)                              */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * O veredito da licença, na forma exata de `licenca.schema.json`.
+   *
+   * Não consulta a Kora: devolve o que o arranque já decidiu. É a regra do
+   * ADR-P02 — a licença é verificada UMA vez e vale a sessão inteira. Abrir o
+   * painel dez vezes não gera dez consultas, e nenhuma delas chega perto do
+   * caminho do presente (CLAUDE.md, Princípio nº 1).
+   *
+   * O `motivo` sai como CÓDIGO, nunca como frase: quem traduz é o painel
+   * (ADR-P03), porque o funil da Fase 1 é em inglês.
+   */
+  rotas.get("/licenca", async (req, res) => res.json(await nucleo.licenca()));
+
+  /**
+   * O streamer colou a chave. Pergunta à Kora e espelha o que ela responder.
+   *
+   * O corpo é validado aqui antes de chegar ao repositório: `{ chave }` e nada
+   * mais. Um corpo que não é objeto — `null`, array, texto solto de um cliente
+   * errado — vira 400 com mensagem, e não um `undefined` viajando para dentro.
+   */
+  rotas.post("/licenca", async (req, res) => {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      throw new ErroDeDominio("corpo_invalido", "Mande um objeto com a chave: { \"chave\": \"...\" }.", { status: 400 });
+    }
+    if (typeof req.body.chave !== "string") {
+      throw new ErroDeDominio("chave_obrigatoria", "Cole a chave que a Kora te mandou.", { status: 400 });
+    }
+    res.json(await nucleo.ativarLicenca(req.body.chave));
+  });
+
+  /**
+   * Esquece a chave NESTA MÁQUINA. Não cancela assinatura: cancelar é do
+   * faturamento, e o dinheiro é do Lemon Squeezy (ADR-P02). Isto é o botão de
+   * "vou instalar na outra máquina".
+   */
+  rotas.delete("/licenca", async (req, res) => res.json(await nucleo.esquecerLicenca()));
+
   /**
    * O idioma do produto: painel, HUD do jogo e overlay (ADR-P03).
    *
