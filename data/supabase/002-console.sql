@@ -123,6 +123,20 @@ create trigger log_admin_sem_update
   before update or delete on public.log_administrativo
   for each row execute function public.kora_recusar_alteracao();
 
+-- E o `truncate`, que NAO passa por trigger de linha.
+--
+-- Achado testando contra o banco de verdade: com so o trigger acima, um
+-- `truncate` apagava a tabela inteira sem levantar nada. Trigger de linha nao
+-- ve truncate, precisa ser de comando (`for each statement`).
+--
+-- Quem alcanca o truncate e o dono do schema e a chave de servico, que e a do
+-- console. Ou seja: exatamente quem teria motivo para sumir com a propria
+-- linha. O buraco era pequeno e estava no unico lugar onde importava.
+drop trigger if exists log_admin_sem_truncate on public.log_administrativo;
+create trigger log_admin_sem_truncate
+  before truncate on public.log_administrativo
+  for each statement execute function public.kora_recusar_alteracao();
+
 -- -----------------------------------------------------------------------------
 -- faturamento: espelho do que a Lemon Squeezy manda por webhook
 -- -----------------------------------------------------------------------------

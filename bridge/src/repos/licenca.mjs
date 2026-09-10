@@ -170,16 +170,22 @@ export async function ativarLicenca({ cliente, chave, agora = new Date().toISOSt
   const espelho = await lerEspelho();
   const licenca = await consultar({ cliente, espelho, chave: limpa, agora });
 
-  //[[ Chave recusada NÃO apaga a que já estava gravada.
+  //[[ Chave recusada NÃO derruba a que já estava valendo.
   //
-  // O caminho realista aqui é erro de digitação, e o preço de gravar seria
-  // desproporcional: um caractere trocado apagaria a licença boa de quem pagou,
-  // e ele só descobriria na próxima live. O painel recebe o veredito da chave
-  // que ele tentou — que é a resposta à pergunta que ele fez — e o disco
-  // continua com a licença que funciona. ]]
+  // O caminho realista aqui é erro de digitação, e o preço de aceitar a recusa
+  // seria desproporcional: um caractere trocado apagaria a licença boa de quem
+  // pagou, e ele só descobriria na próxima live.
+  //
+  // O que volta é a licença que CONTINUA VALENDO, com o motivo explicando o
+  // que aconteceu com a chave digitada. Uma versão anterior devolvia o veredito
+  // da recusa aqui, e o disco de fato ficava intacto, mas o núcleo adotava esse
+  // veredito como o estado da sessão: a tela passava a dizer "sem licença" até
+  // alguém reiniciar o programa. Ou seja, a proteção existia no arquivo e não
+  // existia para o streamer, que é para quem ela foi escrita. Achado testando
+  // contra o banco de verdade. ]]
   if (licenca.motivo === MOTIVOS.CHAVE_INVALIDA && espelho?.estado === "ativa") {
     log.aviso("licenca_chave_recusada", { manteveEspelho: true });
-    return licenca;
+    return { ...espelho, motivo: MOTIVOS.CHAVE_INVALIDA };
   }
 
   await espelhar(licenca);

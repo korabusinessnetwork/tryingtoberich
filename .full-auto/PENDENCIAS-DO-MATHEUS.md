@@ -44,29 +44,32 @@ depois de pronto.
 - **Como confirmar que funcionou:** a torre sobe no Play e o presente move o
   boneco.
 
-## P03 Rodar os dois SQL no Supabase [prioridade: alta, 2 minutos]
+## ~~P03 Rodar os dois SQL no Supabase~~ FEITA
 
-**Metade feita.** O projeto existe, e a URL e a chave anon já estão no `.env`
-desta máquina. Confirmei contra o servidor: ele responde. O que falta é criar
-as tabelas, sem elas o PostgREST responde `Could not find the table
-'public.licencas'`.
+Você me passou o token do CLI e eu rodei. As duas migrations estão aplicadas no
+projeto, e verifiquei contra o banco de verdade, não contra o meu próprio SQL:
 
-- **Por quê:** é o que faz a licença sair de `indeterminada` e o console mostrar
-  dado de verdade em vez de exemplo.
-- **Contorno atual:** a ponte roda inteira sem as tabelas e nada quebra. O
-  console usa um adaptador falso com dado de exemplo realista.
-- **Passo a passo:**
-  1. No SQL Editor do projeto, colar e rodar `data/supabase/001-esquema.sql`
-     inteiro.
-  2. Depois, colar e rodar `data/supabase/002-console.sql` inteiro. Nessa
-     ordem, o segundo depende de uma função criada pelo primeiro.
-  3. Em **Project Settings → API**, copiar a chave **`service_role`** e colar
-     **só no `.env` da máquina**, em `SUPABASE_SERVICE_KEY`. Ela ignora RLS,
-     então é do console e de mais ninguém: **não mande para mim e não ponha em
-     arquivo versionado.**
-- **Como confirmar que funcionou:** abra a aba Licença no painel. Ela sai de
-  "Não deu para confirmar" e passa a dizer "Sem licença", que é a resposta
-  correta de uma instalação que ainda não ativou nada.
+- a chave `anon`, que vai em toda instalação, é **negada** em `assinantes`,
+  `log_administrativo`, `faturamento`, `ficha_do_assinante` e `saude_de_conexao`;
+- ela também **não consegue escrever** em `licencas`;
+- ela lê a própria linha de licença e só ela, e sem o cabeçalho de identidade a
+  consulta volta vazia;
+- o log administrativo **recusa `update` e `delete`**, provado inserindo uma
+  linha e tentando as duas coisas.
+
+Testar achou um buraco que eu não tinha visto escrevendo: `truncate` não passa
+por trigger de linha, então a tabela inteira podia ser apagada sem levantar
+nada. Fechado com um trigger de comando, e provado que agora é recusado.
+
+**Duas coisas que sobraram para você:**
+
+1. **A chave `service_role`.** Ela é do console e ainda não existe aqui. Em
+   Project Settings → API, copie e cole **só no `.env` desta máquina**, em
+   `SUPABASE_SERVICE_KEY`. Ela ignora RLS: não mande para mim e não ponha em
+   arquivo versionado.
+2. **Semeei uma licença de teste** para poder verificar ponta a ponta:
+   assinante `matheus` com o seu e-mail, e a chave `KORA-TESTE-AAAA-BBBB-CCCC`
+   ativa por 30 dias. Ela é sua, funciona, e dá para trocar quando quiser.
 
 ## P04 Instalar o `/ciclo` com nome invocável [prioridade: média]
 

@@ -6,6 +6,11 @@ dist/
 # reunida e o que o electron-builder cospe. Refeitos do zero a cada build.
 build/
 
+# Copias de trabalho das frentes paralelas do Full Automatico. Sao repositorios
+# git proprios, criados e removidos pelo orquestrador. Commitar isto viraria
+# submodulo por acidente.
+.claude/worktrees/
+
 # Dado de sessão: efêmero e com dado de espectador. Nunca versionado (11_SEGURANCA).
 data/sessoes/*
 !data/sessoes/.gitkeep.md

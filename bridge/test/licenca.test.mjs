@@ -339,6 +339,27 @@ test("chave com erro de digitação NÃO apaga a licença que funciona", async (
   assert.equal(emDisco.chave, CHAVE);
 });
 
+test("e o que a ponte DEVOLVE também continua sendo a licença que funciona", async () => {
+  //[[ Este é o teste que faltava, e a falta custou um defeito de verdade.
+  //
+  // A versão anterior guardava o disco e devolvia o veredito da recusa. O disco
+  // ficava intacto, o teste acima passava, e mesmo assim o núcleo adotava a
+  // recusa como estado da sessão: a tela dizia "sem licença" até alguém
+  // reiniciar o programa. A proteção existia no arquivo e não existia para o
+  // streamer, que é para quem ela foi escrita.
+  //
+  // Achado abrindo a tela contra o banco de verdade, não em teste. Por isso ele
+  // existe agora. ]]
+  await escreverJsonAtomico(ARQUIVO, espelhoAtivo);
+
+  const veredito = await ativarLicenca({ cliente: koraQueResponde([]), chave: "KORA-ERRADA-999", agora: ARRANQUE });
+
+  assert.equal(veredito.estado, "ativa", "o estado devolvido é o que continua valendo");
+  assert.equal(veredito.chave, CHAVE, "e é a chave boa, não a que foi digitada errado");
+  assert.equal(veredito.plano, espelhoAtivo.plano);
+  assert.equal(veredito.motivo, MOTIVOS.CHAVE_INVALIDA, "o motivo explica o que houve com a chave digitada");
+});
+
 test("corpo inválido no ativar não chega a sair da máquina", async () => {
   let consultou = false;
   const kora = {
