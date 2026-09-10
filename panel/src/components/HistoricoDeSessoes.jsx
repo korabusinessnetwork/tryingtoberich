@@ -93,9 +93,29 @@ export function HistoricoDeSessoes({ sessoes, carregando, sessaoEscolhida, aoEsc
                     </span>
                   ) : (
                     <>
-                      <span className="historico-numero">
+                      {/*[[ Esta é a tela onde o portão da Fase 0 é julgado:
+                          cinco lives, lado a lado, e a pergunta "aumentou?".
+
+                          Até 2026-09-10 a linha mostrava `totalPresentes` sob o
+                          rótulo "{n} presentes" — e `totalPresentes` conta
+                          ANIMAÇÃO, não presente. Quem comparasse as lives aqui
+                          compararia o número errado, e ele erra mais na live
+                          com mais hype, que é quando mais presente coalesce.
+
+                          Agora o de cima é o do portão. A animação continua
+                          visível porque a distância entre os dois é informação:
+                          muita diferença é muito combate acontecendo. ]]*/}
+                      {Number.isFinite(resumo?.presentesRecebidos) && (
+                        <span className="historico-numero">
+                          {comNumeroEmDestaque(
+                            t("panel.sessionHistory.giftsReceived"),
+                            resumo.presentesRecebidos,
+                          )}
+                        </span>
+                      )}
+                      <span className="historico-numero historico-secundario">
                         {comNumeroEmDestaque(
-                          t("panel.sessionHistory.giftCount"),
+                          t("panel.sessionHistory.animationCount"),
                           resumo?.totalPresentes ?? 0,
                         )}
                       </span>

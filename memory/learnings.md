@@ -571,3 +571,19 @@ ela estava no código desde o Bloco 1.
 Ninguém errou ao escrever `totalPresentes`: ele conta o que diz, para quem sabe
 que "presente" ali significa "disparo". O erro seria de leitura, no dia mais
 caro. Agora o schema diz em texto o que cada um é, e um teste garante que diz.
+
+### O número certo tem que estar na tela CERTA
+Consertar `presentesRecebidos` no resumo pós-live não bastava. O portão é
+**comparativo** — cinco lives lado a lado — e a tela onde isso acontece é o
+**Histórico**, que continuava mostrando `totalPresentes` sob o rótulo
+"{n} presentes". Métrica consertada na fonte e errada na tela de decisão é
+métrica ainda errada.
+
+Medido ao verificar: uma rajada de **18 presentes** aparece como **2
+animações**. Nove vezes de diferença, na linha que decide o projeto.
+
+### E o portão tem duas medidas, não uma
+"Os presentes aumentam nas lives COM o jogo" exige um **antes**. O antes é uma
+live sem o jogo — e ela não precisa do Studio: a ponte conecta na live e conta
+mesmo sem Roblox do outro lado. Verificado. Estava faltando no roteiro, o que
+deixaria o portão sem base de comparação justamente no dia de julgá-lo.

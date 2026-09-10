@@ -76,6 +76,13 @@
   color: var(--painel-texto-secundario);
 }
 
+/* O segundo número da linha — as animações — recua um passo. Ele é contexto
+   para o primeiro, não concorrente dele: a leitura de canto de olho tem que
+   cair no número do portão. */
+.historico-secundario {
+  opacity: 0.7;
+}
+
 .historico-numero strong {
   color: var(--painel-texto-primario);
 }

@@ -114,6 +114,43 @@ apareceu.
 
 ---
 
+## O portão precisa de DUAS medidas, e a primeira não usa o Studio
+
+O portão da Fase 0 é comparativo: *"os presentes aumentam de forma visível nas
+lives **com** o jogo"*. Isso exige um **antes** — e o antes é uma live sem o
+jogo, que não precisa de Studio nenhum.
+
+### Como medir o "antes"
+
+Suba só a ponte, com a conta da live configurada, e dê **start** numa sessão sem
+abrir o Roblox:
+
+```bash
+npm run ponte
+```
+
+A ponte conecta na live e conta tudo que chega, mesmo sem jogo do outro lado.
+No Stop, o resumo traz **`presentesRecebidos`** — o número do portão.
+Verificado: uma sessão sem Roblox conectado contou os presentes corretamente.
+
+### O número que você compara, e o que NÃO comparar
+
+| Número | O que é | Serve ao portão? |
+|---|---|---|
+| **Presentes recebidos** | o que a plateia mandou | **Sim.** É este |
+| Animações | o que o jogo tocou | Não |
+
+A diferença entre os dois não é erro: presente que chega com o boneco ocupado
+entra no combate e o conjunto vira uma animação só (ADR-012). Medido aqui: uma
+rajada de **18 presentes** virou **2 animações**.
+
+**Por que isso importa para a decisão:** a animação erra mais justamente na live
+com mais hype, que é quando mais presente chega junto. Comparar por animação
+poderia reprovar o portão numa live que passou.
+
+O painel mostra os dois lado a lado — na página **Histórico**, com o do portão em
+destaque, e no resumo que aparece ao dar Stop.
+
 ## Depois da sessão
 
 ```bash
