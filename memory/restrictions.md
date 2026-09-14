@@ -35,6 +35,17 @@
 - Catálogo de presentes da TikTok muda sem aviso. Valores não podem ser
   hardcodados no código. Ver `docs/04_MODELAGEM/catalogo-presentes.md`.
 
+## Restrições de ferramenta do agente
+- **Nenhuma skill ou plugin de terceiro entra neste projeto sem `skillspector
+  scan` limpo antes.** Vale para `/plugin install`, para `git clone` dentro de
+  `.claude/skills/` e para marketplace nova. Plugin publicado pela própria
+  Anthropic na marketplace oficial é a única exceção. Ver ADR-014.
+- Modo estático do SkillSpector apenas. O estágio de análise semântica exige
+  chave de LLM e só é usado quando o estático levantar algo ambíguo.
+- **Fora da camada por consumirem token por execução:** `claude-security`,
+  `strix` e os plugins da `trailofbits/skills`. São decisão do dono, em ADR
+  próprio, e o gatilho natural é a auditoria antes do primeiro cliente pagante.
+
 ## Restrições legais
 - **LGPD:** o sistema recebe nickname e evento de presente de terceiros. Retenção
   máxima é a sessão da live. Nada de nickname em log persistido.

@@ -45,3 +45,17 @@ no painel, ela recebe do jogo via `POST /jogo/estado`. Ver R9.
 Qualquer código que ancore o personagem, desabilite input ou assuma o movimento
 arma um timer independente que força a restauração. Sem exceção. Personagem
 ancorado por bug é live morta. Ver ADR-005 e R11.
+
+## Padrão: o agente também é revisado
+Quem escreveu o código não é bom revisor do próprio código, e isso vale para
+agente igual vale para pessoa. O projeto roda com `security-guidance` (Anthropic,
+escopo de usuário) ativo: ele revisa a mudança que o agente acabou de fazer no
+edit, no fim do turno e no commit. O `VibeSec-Skill` entra como contexto de
+código seguro do agente, em `.claude/skills/vibesec`.
+
+Nada disso toca o caminho crítico do presente: é revisão de quem escreve, não
+de quem roda. Ver ADR-014 e `docs/11_SEGURANCA`, camada 6.
+
+Limite que a ferramenta não cobre: isolamento entre tenants. O `streamerId` já
+existe em todo modelo persistido (ADR-003) e a Fase 3 é multi-tenant. Esse teste
+é manual e obrigatório.

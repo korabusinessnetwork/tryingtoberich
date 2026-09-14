@@ -64,6 +64,44 @@ Risco documentado em ADR-006: a captura de evento usa biblioteca não oficial.
 No Roblox: experiência privada, sem monetização interna, sem troca de valor real
 dentro do jogo. Manter assim.
 
+## Camada 6 — O agente que escreve o código
+As cinco camadas acima falam do que o **código** precisa ter. Esta fala do que o
+**agente que escreve o código** tem em volta dele. Ver ADR-014.
+
+Três ferramentas, todas gratuitas e sem consumo de token por execução:
+
+- **`security-guidance`** (Anthropic, escopo de usuário): revisa a mudança que o
+  próprio agente acabou de fazer, em três pontos — regex no edit, review do diff
+  no fim do turno, review agêntico no commit. Kill switch: `SECURITY_GUIDANCE_DISABLE=1`.
+- **`SkillSpector`** (NVIDIA, modo estático): portão obrigatório antes de
+  qualquer `/plugin install` ou `git clone` de skill que não seja da Anthropic.
+  Procura prompt injection, exfiltração e supply chain.
+- **`VibeSec-Skill`** (comunidade, em `.claude/skills/vibesec`): contexto de
+  código seguro para o agente — IDOR, XSS, SSRF, injeção, JWT, mass assignment.
+
+Fora da camada de propósito, por consumirem token de verdade a cada execução:
+`claude-security`, `strix` e os plugins da `trailofbits/skills`. Entram por
+decisão do dono, em ADR próprio. Ver `memory/restrictions.md`.
+
+### Limite conhecido
+Nenhuma das três valida **isolamento entre tenants**. Elas pegam injeção, XSS,
+desserialização insegura e segredo hardcodado; uma regra de acesso que deixasse
+o streamer A ler a sessão do streamer B passaria batido por todas.
+
+Hoje o produto é single-tenant e o `streamerId` é sempre `"local"` (ADR-003),
+então a falha não existe ainda. Ela nasce na Fase 3. A checagem de isolamento é
+**manual e obrigatória**, e ferramenta nenhuma substitui esse teste.
+
+### Estado da instalação
+- [x] `security-guidance` instalado em escopo de usuário e ativo
+- [ ] `SkillSpector` instalado (`uv tool install git+https://github.com/NVIDIA/skillspector.git`)
+- [ ] `VibeSec-Skill` clonado em `.claude/skills/vibesec`
+
+Enquanto os dois últimos estiverem pendentes, a regra do portão continua valendo
+por processo: nenhuma skill de terceiro entra neste projeto até haver varredura
+limpa. Hoje `.claude/skills/` está vazio e a única marketplace configurada é a
+oficial da Anthropic.
+
 ## Checklist de definição de pronto
 - [x] Túnel publica só `/jogo`, verificado com requisição a `/api/presets` na
       porta do jogo, que retorna `rota_desconhecida` e não dado
@@ -78,3 +116,4 @@ dentro do jogo. Manter assim.
 - [ ] Sessão encerrada some com o detalhe por evento
 - [ ] Nome de doador sanitizado antes de virar texto no jogo
 - [ ] `fs` não aparece fora de `bridge/src/repos/`
+- [ ] Nenhuma skill de terceiro em `.claude/` sem `skillspector scan` limpo (ADR-014)
