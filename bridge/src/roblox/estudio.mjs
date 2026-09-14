@@ -12,7 +12,7 @@
 
 import { execFile, spawn } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { promisify } from "node:util";
 import net from "node:net";
@@ -105,6 +105,8 @@ export function absolutizarCaminhos(no, base) {
  * no repositório. Ver 11_SEGURANCA.
  */
 async function montarPlace({ urlDaPonte, token }) {
+  await limparPlacesAntigos();
+
   const projeto = JSON.parse(await readFile(PROJETO_BASE, "utf8"));
   absolutizarCaminhos(projeto.tree, path.dirname(PROJETO_BASE));
 
@@ -122,15 +124,42 @@ async function montarPlace({ urlDaPonte, token }) {
   const arquivoDoProjeto = path.join(pasta, "kora.project.json");
   const place = path.join(pasta, "KoraStreamGames.rbxlx");
 
-  await writeFile(arquivoDoProjeto, JSON.stringify(projeto, null, 2), "utf8");
+  // `mode: 0o600` porque este arquivo CARREGA O TOKEN da ponte: num
+  // multiusuário, o padrão 0644 o deixa legível por qualquer conta da máquina.
+  // No Windows o modo é ignorado e quem protege é a pasta temporária do
+  // usuário; no Linux e no Mac, isto é a diferença.
+  await writeFile(arquivoDoProjeto, JSON.stringify(projeto, null, 2), { encoding: "utf8", mode: 0o600 });
   await executar(acharRojo(), ["build", arquivoDoProjeto, "--output", place], { cwd: pasta });
 
   return { place, projeto: arquivoDoProjeto };
 }
 
+/** `mode: 0o700`: só o dono entra na pasta que guarda o projeto com o token. */
 async function fsMkdtemp() {
   const { mkdtemp } = await import("node:fs/promises");
-  return mkdtemp(path.join(os.tmpdir(), "kora-place-"));
+  return mkdtemp(path.join(os.tmpdir(), "kora-place-"), { mode: 0o700 });
+}
+
+/**
+ * Apaga os `kora-place-*` de execuções anteriores.
+ *
+ * Cada clique no botão deixava uma pasta nova com o TOKEN dentro, e ninguém
+ * apagava: quem usa o botão toda semana acumula um rastro de tokens em
+ * `%TEMP%`, inclusive os já trocados. Limpar na abertura seguinte é o momento
+ * certo — apagar no fim não dá, porque o Studio ainda está com o arquivo
+ * aberto quando esta função retorna.
+ *
+ * Falha em silêncio: pasta presa por um Studio ainda aberto é o caso comum, e
+ * não pode impedir a abertura de agora.
+ */
+async function limparPlacesAntigos() {
+  try {
+    const temporario = os.tmpdir();
+    const nomes = (await readdir(temporario)).filter((nome) => nome.startsWith("kora-place-"));
+    await Promise.all(
+      nomes.map((nome) => rm(path.join(temporario, nome), { recursive: true, force: true }).catch(() => {})),
+    );
+  } catch { /* sem temporário legível não há o que limpar */ }
 }
 
 export async function abrirNoStudio({ urlDaPonte, token } = {}) {

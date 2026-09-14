@@ -1,10 +1,10 @@
 /** Mapas gerados. A validação de jogabilidade e de acervo acontece no cliente Gemini. */
 
 import { ErroDeDominio } from "../erros.mjs";
-import { apagar, caminhoDeDados, escreverJsonAtomico, existe, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
+import { apagar, caminhoDeDados, escreverJsonAtomico, existe, exigirIdentificador, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
 
-const arquivo = (mapaId) => caminhoDeDados("mapas", `${mapaId}.json`);
+const arquivo = (mapaId) => caminhoDeDados("mapas", `${exigirIdentificador(mapaId, "mapaId")}.json`);
 
 export async function listarMapas() {
   const nomes = await listarJson(caminhoDeDados("mapas"));

@@ -28,6 +28,21 @@ qualquer checagem de "só aceito localhost".
 - Rate limit simples em `/jogo/*`: o Roblox legítimo faz cerca de 3 requisições
   por minuto. Qualquer coisa acima de 60/min é abuso.
 
+### A superfície local e o navegador do próprio streamer
+O bind em `127.0.0.1` resolve "alguém da rede alcança". Não resolve a página
+que o streamer abriu numa aba: ela também fala de `127.0.0.1`, com a porta
+certa. Um `fetch` de um site qualquer para `/api/sessao/stop` derruba a sessão
+no meio da live, e o atacante nem precisa ler a resposta.
+
+Duas travas em `/api/*`, somadas ao bind, nunca no lugar dele:
+
+- **Origin.** O navegador carimba `Origin` em requisição cross-origin e a
+  página não consegue forjá-lo. Origem que não é local: 403. Ausente passa, que
+  é o proxy do Vite, o `EventSource` do overlay e o `curl` do streamer.
+- **Content-Type nas mutantes.** `application/json` obriga preflight, e o
+  preflight morre porque a ponte não responde CORS. Isso barra o formulário
+  disfarçado, que só manda `text/plain`, `form-urlencoded` ou `multipart`.
+
 ## Camada 2 — Segredos
 - `GEMINI_API_KEY` e `BRIDGE_TOKEN` só no `.env` do Node.
 - `.env` no `.gitignore`. Um `.env.example` sem valor real fica versionado.
@@ -41,6 +56,36 @@ qualquer checagem de "só aceito localhost".
 - Saída do Gemini validada contra schema, com verificação de acervo (ver P1).
 - Nome de doador vindo da TikTok é tratado como texto não confiável: sanitizado
   antes de virar texto na tela do jogo, com limite de tamanho.
+
+### Id de rota nunca vira caminho de arquivo direto
+`GET /api/presets/:id` entrega ao repositório o que veio da URL, e o Express
+decodifica `%2F` **depois** de casar a rota: `..%2F..%2Fpackage` chegava como
+`../../package`. Duas travas, e as duas têm teste em
+`bridge/test/caminho-de-dados.test.mjs`:
+
+- `exigirIdentificador` recusa o que não é id, com mensagem legível. É a
+  primeira linha, e é ela que pega `..%2Fconfiguracao` — que **não** sai de
+  `data/`, só pula para o arquivo vizinho com a conta da live.
+- `caminhoDeDados` recusa qualquer caminho que saia de `data/`. É a segunda
+  linha: rota nova que esqueça de validar esbarra nela em vez de virar leitura
+  arbitrária.
+
+### Resposta de API externa é entrada, não verdade
+As APIs web do Roblox não são contratadas e podem mudar sem aviso (ADR-011).
+O que vem delas passa por checagem antes de ser usado:
+
+- `imageUrl` da miniatura é buscada só em `https` e só em host do Roblox,
+  comparado por `hostname` exato. Sem isso, quem responde escolhe o endereço
+  que a máquina do streamer abre, e `127.0.0.1:8788` é um endereço que ela
+  alcança.
+- `userId` só entra na URL seguinte se for inteiro positivo.
+- Cabeçalho `Range` do overlay é interpretado por função pura, e faixa
+  impossível vira 416 em vez de `content-length` negativo.
+
+### Nada em memória cresce sem teto
+Cache de nick e de busca (`CacheComTeto`), esperas de long-poll e janelas do
+rate limit têm limite e descarte. Um `Map` sem teto alimentado por quem chama
+de fora é vazamento, e o rate limit segura a **taxa**, não a variedade.
 
 ## Camada 4 — Dado de terceiro (LGPD)
 O sistema recebe dado de pessoas que não são o usuário: nickname e evento de
@@ -64,6 +109,66 @@ Risco documentado em ADR-006: a captura de evento usa biblioteca não oficial.
 No Roblox: experiência privada, sem monetização interna, sem troca de valor real
 dentro do jogo. Manter assim.
 
+## Camada 6 — O agente que escreve o código
+As cinco camadas acima falam do que o **código** precisa ter. Esta fala do que o
+**agente que escreve o código** tem em volta dele. Ver ADR-014.
+
+Três ferramentas, nenhuma delas gerando cobrança nova:
+
+- **`security-guidance`** (Anthropic, escopo de usuário): revisa a mudança que o
+  próprio agente acabou de fazer, em três pontos — regex no edit, review do diff
+  no fim do turno, review agêntico no commit. Kill switch: `SECURITY_GUIDANCE_DISABLE=1`.
+  **Consome cota do plano**: o review chama `api.anthropic.com` com o token da
+  assinatura, e o modelo padrão é `claude-opus-4-7`. Não chega fatura nova.
+  `SECURITY_REVIEW_MODEL` troca o modelo; `SG_DUAL_OR` dobraria o custo e fica
+  desligado. Ver ADR-014.
+- **`SkillSpector`** (NVIDIA, modo estático): portão obrigatório antes de
+  qualquer `/plugin install` ou `git clone` de skill que não seja da Anthropic.
+  Procura prompt injection, exfiltração e supply chain.
+- **`VibeSec-Skill`** (comunidade, em `.claude/skills/vibesec`): contexto de
+  código seguro para o agente — IDOR, XSS, SSRF, injeção, JWT, mass assignment.
+
+Fora da camada de propósito, por exigirem chave própria, Docker ou fatura
+separada: `claude-security`, `strix` e os plugins da `trailofbits/skills`.
+Entram por decisão do dono, em ADR próprio. Ver `memory/restrictions.md`.
+
+### Limite conhecido
+Nenhuma das três valida **isolamento entre tenants**. Elas pegam injeção, XSS,
+desserialização insegura e segredo hardcodado; uma regra de acesso que deixasse
+o streamer A ler a sessão do streamer B passaria batido por todas.
+
+Hoje o produto é single-tenant e o `streamerId` é sempre `"local"` (ADR-003),
+então a falha não existe ainda. Ela nasce na Fase 3. A checagem de isolamento é
+**manual e obrigatória**, e ferramenta nenhuma substitui esse teste.
+
+### Estado da instalação
+- [x] `security-guidance` 2.0.8 em escopo de usuário, ativo, 5 hooks
+- [x] `SkillSpector` 2.11.2 instalado via `uv tool install`
+- [x] `VibeSec-Skill` em `.claude/skills/vibesec`, versionado com o projeto
+
+### Como rodar o portão
+
+```
+skillspector scan <pasta-da-skill> --no-llm
+```
+
+Sem `--no-llm` ele tenta o estágio semântico, que precisa de chave de LLM e só
+vale quando o estático levantar algo ambíguo.
+
+Para a skill que já está aqui, passe o baseline, senão os 8 falso positivo já
+revisados voltam a aparecer:
+
+```
+skillspector scan .claude/skills/vibesec --no-llm \
+  --baseline .claude/skills/vibesec/.skillspector-baseline.yaml
+```
+
+**Score não é veredito.** As duas primeiras varreduras deste projeto deram
+`CRITICAL / DO_NOT_INSTALL`, e as duas eram falso positivo: ferramenta que
+procura padrão de ataque, apontada para documentação sobre ataque, casa com os
+exemplos dela. Quem decide é a leitura do achado. O detalhe das duas está no
+ADR-014.
+
 ## Checklist de definição de pronto
 - [x] Túnel publica só `/jogo`, verificado com requisição a `/api/presets` na
       porta do jogo, que retorna `rota_desconhecida` e não dado
@@ -78,3 +183,9 @@ dentro do jogo. Manter assim.
 - [ ] Sessão encerrada some com o detalhe por evento
 - [ ] Nome de doador sanitizado antes de virar texto no jogo
 - [ ] `fs` não aparece fora de `bridge/src/repos/`
+- [x] Id de rota não alcança arquivo fora de `data/`
+- [x] `/api/*` recusa origem que não é local e mutação sem JSON
+- [x] URL vinda de resposta externa só é buscada se for host do Roblox em https
+- [x] Cache, esperas de long-poll e janelas de rate limit têm teto
+- [x] O place com o token nasce 0600 e o anterior é apagado na abertura seguinte
+- [x] Nenhuma skill de terceiro em `.claude/` sem `skillspector scan` lido, com falso positivo suprimido em baseline versionado (ADR-014)

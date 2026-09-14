@@ -14,11 +14,73 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 
+import { ErroDeDominio } from "../erros.mjs";
+
 /** Raiz do repositório: bridge/src/repos → ../../.. */
 export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 export const DIR_DADOS = path.join(RAIZ, "data");
 
-export const caminhoDeDados = (...partes) => path.join(DIR_DADOS, ...partes);
+/**
+ * O formato de id que vira nome de arquivo. É o MESMO de
+ * `comuns.schema.json#/$defs/identificador`, repetido aqui de propósito: o
+ * schema valida o CONTEÚDO na hora de gravar, e isto valida o CAMINHO antes de
+ * tocar o disco. Quem lê e quem apaga nunca passam pelo schema.
+ */
+const IDENTIFICADOR = {
+  padrao: /^[a-z0-9][a-z0-9-]{0,63}$/,
+  forma: "letras minúsculas, números e hífen, começando por letra ou número",
+};
+
+/** `acervo.schema.json#/$defs/id` usa sublinhado, não hífen: `textura_gelo`. */
+const ID_DE_ACERVO = {
+  padrao: /^[a-z][a-z0-9_]{0,63}$/,
+  forma: "letras minúsculas, números e sublinhado, começando por letra",
+};
+
+/**
+ * Recusa o que não serve como nome de arquivo, com mensagem legível.
+ *
+ * Existe porque `GET /api/presets/:id` entrega ao repositório o que veio da
+ * URL, e o Express decodifica `%2F` DEPOIS de casar a rota: `..%2F..%2Fpackage`
+ * chega aqui como `../../package`. Sem isto, `path.join` sai de `data/` e o
+ * DELETE apaga arquivo de fora do diretório de dados.
+ */
+function exigir({ padrao, forma }, valor, oQue) {
+  const texto = String(valor ?? "");
+  if (!padrao.test(texto)) {
+    throw new ErroDeDominio(
+      "identificador_invalido",
+      `O ${oQue} "${texto}" não serve: use só ${forma}.`,
+      { status: 400 },
+    );
+  }
+  return texto;
+}
+
+export const exigirIdentificador = (valor, oQue = "id") => exigir(IDENTIFICADOR, valor, oQue);
+
+export const exigirIdDeAcervo = (valor, oQue = "id") => exigir(ID_DE_ACERVO, valor, oQue);
+
+/**
+ * Monta caminho dentro de `data/`, e só dentro.
+ *
+ * A checagem de contenção é a segunda linha, não a primeira: quem recebe id de
+ * fora valida com `exigirIdentificador` antes. Ela fica aqui porque este é o
+ * único módulo que toca disco (ADR-003) — uma rota nova que esqueça de validar
+ * esbarra nesta trava em vez de virar leitura arbitrária. Custo: um `resolve`
+ * por chamada, tudo fora do caminho crítico do presente.
+ */
+export const caminhoDeDados = (...partes) => {
+  const alvo = path.resolve(DIR_DADOS, ...partes);
+  if (alvo !== DIR_DADOS && !alvo.startsWith(DIR_DADOS + path.sep)) {
+    throw new ErroDeDominio(
+      "caminho_invalido",
+      "Esse caminho sai do diretório de dados.",
+      { status: 400 },
+    );
+  }
+  return alvo;
+};
 
 export async function garantirDiretorio(dir) {
   await mkdir(dir, { recursive: true });

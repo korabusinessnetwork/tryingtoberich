@@ -223,9 +223,81 @@ test("gerar mapa sem GEMINI_API_KEY diz que quem chama é a ponte", async () => 
 });
 
 test("stop sem sessão não explode, responde o contrato de erro", async () => {
-  const resposta = await fetch(`${basePainel}/api/sessao/stop`, { method: "POST" });
+  // Com `content-type: application/json`, como toda chamada do painel faz
+  // (`panel/src/lib/api.js`): a superfície local recusa mutação sem ele, e é
+  // isso que barra formulário de página de terceiro. Ver `guardas.mjs`.
+  const resposta = await fetch(`${basePainel}/api/sessao/stop`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+  });
   assert.equal(resposta.status, 409);
   assert.equal((await resposta.json()).erro, "sem_sessao");
+});
+
+/* ---------------------------------------------------------------- */
+/* A superfície local e o navegador do próprio streamer               */
+/* ---------------------------------------------------------------- */
+
+//[[ O bind em 127.0.0.1 não cobre este caso.
+//
+// Ele resolve "alguém da rede alcança". Não resolve a página que o streamer
+// abriu numa aba: ela também fala de 127.0.0.1, com a porta certa. Um
+// `fetch` de sitequalquer.com para /api/sessao/stop derruba a sessão no meio
+// da live, e o atacante nem precisa ler a resposta. ]]
+
+test("página de terceiro não move o painel: Origin de fora é 403", async () => {
+  const deFora = { origin: "https://sitequalquer.com", "content-type": "application/json" };
+
+  const parar = await fetch(`${basePainel}/api/sessao/stop`, { method: "POST", headers: deFora });
+  assert.equal(parar.status, 403);
+  assert.equal((await parar.json()).erro, "origem_recusada");
+
+  // Vale para leitura também: o GET não vaza porque o navegador segura a
+  // resposta, mas quem pergunta de fora não tem o que fazer aqui.
+  const ler = await fetch(`${basePainel}/api/sessao`, { headers: { origin: "https://sitequalquer.com" } });
+  assert.equal(ler.status, 403);
+});
+
+test("o painel de verdade passa: Origin local é aceita em qualquer porta", async () => {
+  for (const origem of ["http://localhost:5173", "http://127.0.0.1:8788", "http://[::1]:5173"]) {
+    const resposta = await fetch(`${basePainel}/api/modalidades`, { headers: { origin: origem } });
+    assert.equal(resposta.status, 200, `${origem} é o painel, não um site`);
+  }
+});
+
+test("sem Origin continua passando: é o proxy do Vite, o EventSource e o curl", async () => {
+  const resposta = await fetch(`${basePainel}/api/modalidades`);
+  assert.equal(resposta.status, 200);
+});
+
+test("mutação sem content-type JSON é 415, que é o que barra formulário", async () => {
+  //[[ Requisição SIMPLES não pede preflight, e é essa a brecha.
+  //
+  // Um <form> cross-origin só consegue mandar form-urlencoded, text/plain ou
+  // multipart, e um `fetch` sem cabeçalho nenhum não manda content-type. Exigir
+  // application/json força o preflight, e o preflight morre porque a ponte não
+  // responde CORS. ]]
+  for (const tipo of ["text/plain", "application/x-www-form-urlencoded", "multipart/form-data"]) {
+    const resposta = await fetch(`${basePainel}/api/sessao/stop`, {
+      method: "POST",
+      headers: { "content-type": tipo },
+      body: "presetId=escalada-padrao",
+    });
+    assert.equal(resposta.status, 415, `${tipo} não pode mover a sessão`);
+    assert.equal((await resposta.json()).erro, "tipo_nao_suportado");
+  }
+
+  const semTipo = await fetch(`${basePainel}/api/sessao/stop`, { method: "POST" });
+  assert.equal(semTipo.status, 415, "fetch sem cabeçalho é requisição simples e não pode passar");
+});
+
+test("o guarda de origem não vale para /jogo, que é protegido por token", async () => {
+  // A superfície pública atravessa o túnel: ali quem manda é o X-Bridge-Token,
+  // e o Roblox não carimba Origin nenhum.
+  const resposta = await fetch(`${base}/jogo/mapa`, {
+    headers: { ...comToken, origin: "https://sitequalquer.com" },
+  });
+  assert.notEqual(resposta.status, 403, "o Roblox não é uma página de navegador");
 });
 
 test("rota desconhecida devolve o contrato de erro, não HTML do Express", async () => {

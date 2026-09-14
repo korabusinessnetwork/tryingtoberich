@@ -1,7 +1,7 @@
 /** Acervo pré-aprovado. Só o que está aprovado pode ser oferecido ao Gemini (ADR-004). */
 
 import { ErroDeDominio } from "../erros.mjs";
-import { caminhoDeDados, escreverJsonAtomico, existe, lerBinario, lerJsonOuPadrao } from "./arquivo.mjs";
+import { caminhoDeDados, escreverJsonAtomico, existe, exigirIdDeAcervo, lerBinario, lerJsonOuPadrao } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
 import { texturasDoMapa } from "../dominio/regras.mjs";
 
@@ -9,6 +9,17 @@ const VAZIO = { skybox: [], texturas: [], props: [] };
 
 /** As duas coleções que passam por moderação do Roblox. `props` são nativas e não têm assetId. */
 const COLECOES_DE_UPLOAD = new Set(["skybox", "texturas"]);
+
+/**
+ * Os quatro estados de moderação, iguais aos de `acervo.schema.json`.
+ *
+ * Repetidos aqui pelo mesmo motivo que a mensagem de "aprovado sem assetId"
+ * existe: o schema RECUSA o acervo inteiro quando o status é desconhecido, e o
+ * streamer lê "Acervo fora do contrato: /texturas/3/status must be equal to one
+ * of the allowed values". Barrar antes devolve o motivo em português e não
+ * reescreve o arquivo por engano.
+ */
+const STATUS_DE_MODERACAO = new Set(["pendente-upload", "em-moderacao", "aprovado", "rejeitado"]);
 
 const arquivo = () => caminhoDeDados("acervo.json");
 
@@ -60,6 +71,14 @@ export async function anotarItemDoAcervo(colecao, id, { assetId, status }) {
   const item = (acervo[colecao] ?? []).find((i) => i.id === id);
   if (!item) {
     throw new ErroDeDominio("item_inexistente", `Não achei "${id}" em acervo.${colecao}.`, { status: 404 });
+  }
+
+  if (status !== undefined && !STATUS_DE_MODERACAO.has(status)) {
+    throw new ErroDeDominio(
+      "status_invalido",
+      `"${status}" não é status de moderação. Use: ${[...STATUS_DE_MODERACAO].join(", ")}.`,
+      { status: 400 },
+    );
   }
 
   const novoStatus = status ?? item.status;
@@ -159,12 +178,13 @@ export const FACES_DO_CEU = Object.freeze(["ft", "bk", "lf", "rt", "up", "dn"]);
  * seria pior que nenhum. Textura vem como `{ png }`.
  */
 export async function imagemDaPeca(colecao, id) {
-  const pasta = caminhoDeDados("acervo-imagens", id);
+  const seguro = exigirIdDeAcervo(id);
+  const pasta = caminhoDeDados("acervo-imagens", seguro);
 
   if (colecao === "skybox") {
     const faces = {};
     for (const face of FACES_DO_CEU) {
-      const arquivo = caminhoDeDados("acervo-imagens", id, `${face}.png`);
+      const arquivo = caminhoDeDados("acervo-imagens", seguro, `${face}.png`);
       if (!(await existe(arquivo))) return null;
       faces[face] = await lerBinario(arquivo);
     }
@@ -178,7 +198,7 @@ export async function imagemDaPeca(colecao, id) {
 /** A miniatura da peça: a face `ft` do céu, ou a imagem única da textura. */
 export async function miniaturaDaPeca(colecao, id) {
   const arquivo = colecao === "skybox"
-    ? caminhoDeDados("acervo-imagens", id, "ft.png")
-    : `${caminhoDeDados("acervo-imagens", id)}.png`;
+    ? caminhoDeDados("acervo-imagens", exigirIdDeAcervo(id), "ft.png")
+    : `${caminhoDeDados("acervo-imagens", exigirIdDeAcervo(id))}.png`;
   return (await existe(arquivo)) ? lerBinario(arquivo) : null;
 }

@@ -14,6 +14,21 @@ import { REGRAS } from "../config.mjs";
 /** Quanto evento recente fica guardado para quem reconecta com cursor atrasado. */
 const TAMANHO_DO_BUFFER = 32;
 
+/**
+ * Teto de esperas seguradas ao mesmo tempo.
+ *
+ * O rate limit da `guardas.mjs` limita a TAXA, não a quantidade aberta: 60
+ * chamadas por minuto, cada uma segurada por 20s, somam dezenas de conexões
+ * vivas ao mesmo tempo — e são 60 por IP, não no total. O jogo legítimo mantém
+ * UMA: ele só pergunta de novo depois que a anterior respondeu.
+ *
+ * 32 é folga grande para o caso real (um servidor do Roblox, mais alguma
+ * sobreposição em reconexão) e teto duro para o resto. Estourar não derruba
+ * nada: a espera MAIS ANTIGA é respondida com 204, que é a resposta normal de
+ * timeout, e o Roblox pergunta de novo na hora.
+ */
+const MAXIMO_DE_ESPERAS = 32;
+
 export class RegistroDeLongPoll {
   #pendentes = new Set();
   #recentes = [];
@@ -67,6 +82,15 @@ export class RegistroDeLongPoll {
     resposta.on?.("close", () => this.#remover(espera));
 
     this.#pendentes.add(espera);
+
+    // Só DEPOIS de entrar: a nova espera é a mais recente, então quem sai é
+    // outra. Dispensar a que acabou de chegar deixaria o jogo legítimo sem
+    // canal justamente quando alguém está abusando.
+    while (this.#pendentes.size > MAXIMO_DE_ESPERAS) {
+      const maisAntiga = this.#pendentes.values().next().value;
+      this.#encerrarPorTimeout(maisAntiga);
+    }
+
     return { tipo: "aguardando" };
   }
 
