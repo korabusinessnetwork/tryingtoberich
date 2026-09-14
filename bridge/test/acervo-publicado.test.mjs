@@ -191,12 +191,10 @@ test("o upload é do tipo IMAGE, e nunca Decal", async () => {
   //
   // Custou 70 uploads aprovados e inúteis, e da tela parecia que a arte não
   // tinha chegado. Vale um teste de uma linha. ]]
-  const fonte = await readFile(
-    caminhoDeDados("..", "bridge", "src", "roblox", "publicador.mjs"), "utf8",
-  ).catch(async () => {
-    const { readFile: ler } = await import("node:fs/promises");
-    return ler(new URL("../src/roblox/publicador.mjs", import.meta.url), "utf8");
-  });
+  // Lido por URL relativa a este arquivo, e não por `caminhoDeDados`: aquele
+  // helper agora recusa sair de `data/` (ADR-003 e 11_SEGURANCA, camada 3), e
+  // o fonte da ponte mora fora de lá.
+  const fonte = await readFile(new URL("../src/roblox/publicador.mjs", import.meta.url), "utf8");
 
   assert.match(fonte, /assetType: "Image"/, "o upload tem que ser de IMAGEM");
   assert.ok(

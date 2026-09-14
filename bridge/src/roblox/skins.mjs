@@ -10,6 +10,7 @@
  * userId num serviço, e a aparência sai de outro.
  */
 
+import { CacheComTeto } from "../cacheComTeto.mjs";
 import { log } from "../log.mjs";
 
 const NICKS = "https://users.roblox.com/v1/usernames/users";
@@ -33,11 +34,13 @@ const camposDaSkin = (corpo) => ({
 });
 
 export class ClienteSkins {
-  #cache = new Map();
+  #cache;
 
-  constructor({ buscarNaRede = fetch, ttlMs = 10 * 60 * 1000 } = {}) {
+  /** `teto`: cada nick diferente deixava um resto para sempre. Ver `CacheComTeto`. */
+  constructor({ buscarNaRede = fetch, ttlMs = 10 * 60 * 1000, teto = 200 } = {}) {
     this.buscarNaRede = buscarNaRede;
     this.ttlMs = ttlMs;
+    this.#cache = new CacheComTeto({ teto, ttlMs });
   }
 
   /**
@@ -58,7 +61,14 @@ export class ClienteSkins {
 
       const corpo = await resposta.json();
       const achado = (corpo?.data ?? [])[0];
-      return achado?.id ?? null;
+
+      //[[ O id entra numa URL logo abaixo, então tem que ser NÚMERO.
+      //
+      // `${AVATAR}/${userId}/avatar` com um id de texto monta o caminho que o
+      // texto quiser. A API é pública, não contratada e pode mudar sem aviso
+      // (ADR-011): o mesmo cuidado que `assets[].id` já tinha em `camposDaSkin`
+      // vale para o id de quem é o dono. ]]
+      return Number.isInteger(achado?.id) && achado.id > 0 ? achado.id : null;
     } catch (erro) {
       log.aviso("roblox_nick_falhou", { motivo: erro.message });
       return null;
@@ -98,8 +108,8 @@ export class ClienteSkins {
    */
   async buscarSkin(nick, { agora = Date.now() } = {}) {
     const chave = String(nick ?? "").trim().toLowerCase();
-    const emCache = this.#cache.get(chave);
-    if (emCache && agora - emCache.em < this.ttlMs) return emCache.skin;
+    const emCache = this.#cache.ler(chave, agora);
+    if (emCache !== undefined) return emCache;
 
     const userId = await this.resolverNick(nick);
     if (!userId) return null;
@@ -113,8 +123,7 @@ export class ClienteSkins {
       const [corpo, imagemUrl] = await Promise.all([resposta.json(), this.buscarMiniatura(userId)]);
 
       const skin = { nick: String(nick).trim(), userId, imagemUrl, ...camposDaSkin(corpo) };
-      this.#cache.set(chave, { em: agora, skin });
-      return skin;
+      return this.#cache.gravar(chave, skin, agora);
     } catch (erro) {
       log.aviso("roblox_skin_falhou", { motivo: erro.message });
       return null;

@@ -17,7 +17,7 @@ import express from "express";
 
 import { corpoDeErro, responderErro } from "../erros.mjs";
 import { log } from "../log.mjs";
-import { exigirToken, limitarTaxa } from "./guardas.mjs";
+import { exigirOrigemLocal, exigirToken, limitarTaxa } from "./guardas.mjs";
 import { rotasDoJogo } from "./rotas-jogo.mjs";
 import { rotasDoPainel } from "./rotas-painel.mjs";
 import { montarOverlay } from "./overlay.mjs";
@@ -57,11 +57,14 @@ export function criarAppDoJogo(nucleo, { token }) {
 
 /**
  * Nunca sai da máquina. Sem autenticação de propósito: o que a protege é o bind
- * em 127.0.0.1 e o fato de o túnel não conhecer esta porta.
+ * em 127.0.0.1, o fato de o túnel não conhecer esta porta, e o guarda de origem
+ * que fecha a brecha do navegador do próprio streamer.
  */
 export function criarAppDoPainel(nucleo) {
   const app = baseComum(nucleo);
-  app.use("/api", rotasDoPainel(nucleo));
+  // O bind em 127.0.0.1 impede a rede de chegar; não impede uma página aberta
+  // no navegador do streamer, que fala de 127.0.0.1 também. Ver `guardas.mjs`.
+  app.use("/api", exigirOrigemLocal(), rotasDoPainel(nucleo));
   //[[ O overlay fica FORA de `/api` de propósito.
   //
   // `/api` é a conversa do painel com a ponte; o overlay é uma página que o OBS

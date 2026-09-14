@@ -1,10 +1,10 @@
 /** Looks do vestiário. Montados dentro do jogo, escolhidos no painel (ADR-011). */
 
 import { ErroDeDominio } from "../erros.mjs";
-import { caminhoDeDados, escreverJsonAtomico, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
+import { caminhoDeDados, escreverJsonAtomico, exigirIdentificador, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
 
-const arquivo = (lookId) => caminhoDeDados("looks", `${lookId}.json`);
+const arquivo = (lookId) => caminhoDeDados("looks", `${exigirIdentificador(lookId, "lookId")}.json`);
 
 export async function listarLooks() {
   const nomes = await listarJson(caminhoDeDados("looks"));

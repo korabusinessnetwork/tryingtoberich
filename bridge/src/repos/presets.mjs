@@ -2,10 +2,10 @@
 
 import { ErroDeDominio } from "../erros.mjs";
 import { presentesRepetidos } from "../dominio/regras.mjs";
-import { apagar, caminhoDeDados, escreverJsonAtomico, existe, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
+import { apagar, caminhoDeDados, escreverJsonAtomico, existe, exigirIdentificador, lerJsonOuPadrao, listarJson } from "./arquivo.mjs";
 import { criarValidador } from "./schemas.mjs";
 
-const arquivo = (presetId) => caminhoDeDados("presets", `${presetId}.json`);
+const arquivo = (presetId) => caminhoDeDados("presets", `${exigirIdentificador(presetId, "presetId")}.json`);
 
 export async function listarPresets() {
   const nomes = await listarJson(caminhoDeDados("presets"));

@@ -123,6 +123,44 @@ const PAGINA = `<!doctype html>
 </body>
 </html>`;
 
+/**
+ * Lê `Range: bytes=inicio-fim` e devolve a faixa que EXISTE no arquivo.
+ *
+ * Devolve `null` quando o pedido não dá para atender, e aí quem chama responde
+ * 416. Só a primeira faixa é considerada: `bytes=0-99,200-299` é legal na
+ * especificação, nenhum player de vídeo manda, e atender exigiria resposta
+ * multipart.
+ *
+ * Função pura para ter teste (CLAUDE.md, Padrões de código).
+ */
+export function interpretarFaixa(cabecalho, tamanho) {
+  if (tamanho <= 0) return null;
+
+  const casou = /^bytes=(\d*)-(\d*)$/.exec(String(cabecalho ?? "").trim());
+  if (!casou) return null;
+
+  const [, inicioBruto, fimBruto] = casou;
+  if (inicioBruto === "" && fimBruto === "") return null;
+
+  // `bytes=-500` são os ÚLTIMOS 500 bytes, não do 0 ao 500. O OBS não usa, o
+  // Safari usa.
+  if (inicioBruto === "") {
+    const quantos = Number(fimBruto);
+    if (quantos === 0) return null;
+    return { inicio: Math.max(0, tamanho - quantos), fim: tamanho - 1 };
+  }
+
+  const inicio = Number(inicioBruto);
+  if (inicio >= tamanho) return null;
+
+  // Fim ausente ou além do arquivo vira o último byte: pedir demais é normal,
+  // o player não sabe o tamanho antes da primeira resposta.
+  const fim = fimBruto === "" ? tamanho - 1 : Math.min(Number(fimBruto), tamanho - 1);
+  if (fim < inicio) return null;
+
+  return { inicio, fim };
+}
+
 /** Registra as rotas do overlay no app do painel. */
 export function montarOverlay(rotas) {
   rotas.get("/overlay", (req, res) => {
@@ -158,10 +196,24 @@ export function montarOverlay(rotas) {
     // o que faz `<video>` funcionar. ]]
     const faixa = req.headers.range;
     if (faixa) {
-      const [inicioBruto, fimBruto] = faixa.replace(/bytes=/, "").split("-");
-      const inicio = Number(inicioBruto) || 0;
-      const fim = fimBruto ? Number(fimBruto) : tamanho - 1;
+      const pedido = interpretarFaixa(faixa, tamanho);
 
+      //[[ Faixa impossível é 416, e não um 206 com número inventado.
+      //
+      // O que estava aqui confiava no cabeçalho: `bytes=abc-xyz` virava
+      // `NaN`, saía no `content-range` e ia para o `createReadStream` como
+      // limite; `bytes=500-100` dava `content-length` NEGATIVO. Nada disso
+      // derruba a live — esta porta nunca sai da máquina — mas é resposta
+      // mentirosa, e o Chromium do OBS trata as duas como vídeo quebrado sem
+      // dizer por quê. ]]
+      if (!pedido) {
+        res.status(416).set({ "content-range": `bytes */${tamanho}` }).json(
+          { erro: "faixa_invalida", mensagem: "O cabeçalho Range não faz sentido para este arquivo." },
+        );
+        return;
+      }
+
+      const { inicio, fim } = pedido;
       res.status(206).set({
         "content-range": `bytes ${inicio}-${fim}/${tamanho}`,
         "accept-ranges": "bytes",

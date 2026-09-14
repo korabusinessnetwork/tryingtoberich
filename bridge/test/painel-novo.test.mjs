@@ -111,7 +111,7 @@ test("o reinício chega ao jogo como COMANDO, não como presente", async () => {
   const pendente = fetch(`${base}/jogo/eventos?desde=0`, { headers: comToken });
   await new Promise((resolve) => setTimeout(resolve, 20));
 
-  const resposta = await fetch(`${basePainel}/api/sessao/reiniciar`, { method: "POST" });
+  const resposta = await fetch(`${basePainel}/api/sessao/reiniciar`, { method: "POST", headers: json });
   const resultado = await resposta.json();
   assert.equal(resposta.status, 200);
   assert.equal(resultado.jogoOnline, true, "o long-poll acabou de bater, o jogo está online");
@@ -142,7 +142,7 @@ test("a vitória do jogo aparece no estado que o painel lê", async () => {
 
   // E o reinício tira a vitória da tela na hora, sem esperar o próximo
   // batimento do jogo — senão o botão parece não ter feito nada.
-  await fetch(`${basePainel}/api/sessao/reiniciar`, { method: "POST" });
+  await fetch(`${basePainel}/api/sessao/reiniciar`, { method: "POST", headers: json });
   const depois = await (await fetch(`${basePainel}/api/sessao`)).json();
   assert.equal(depois.estado.vitoria, false);
 });
@@ -180,10 +180,10 @@ test("o PUT cria o preset que ainda não existe, e o DELETE apaga", async () => 
   assert.equal(criado.presetId, "teste-apagavel");
   assert.equal(criado.streamerId, "local", "o painel não conhece o tenant: quem preenche é a ponte (ADR-003)");
 
-  const apagar = await fetch(`${basePainel}/api/presets/teste-apagavel`, { method: "DELETE" });
+  const apagar = await fetch(`${basePainel}/api/presets/teste-apagavel`, { method: "DELETE", headers: json });
   assert.equal(apagar.status, 200);
 
-  const denovo = await fetch(`${basePainel}/api/presets/teste-apagavel`, { method: "DELETE" });
+  const denovo = await fetch(`${basePainel}/api/presets/teste-apagavel`, { method: "DELETE", headers: json });
   assert.equal(denovo.status, 404, "apagar o que não existe não pode responder sucesso");
 });
 
@@ -306,7 +306,7 @@ test("a vitória não sobrevive ao fim da sessão", async () => {
   const depois = await (await fetch(`${basePainel}/api/sessao`)).json();
   assert.equal(depois.estado.vitoria, false, "sessão nova começa sem a vitória da anterior");
 
-  const resumo = await (await fetch(`${basePainel}/api/sessao/stop`, { method: "POST" })).json();
+  const resumo = await (await fetch(`${basePainel}/api/sessao/stop`, { method: "POST", headers: json })).json();
   assert.ok(resumo.resumo, "e o stop devolve o resumo que o painel mostra (F5.5)");
   assert.equal((await (await fetch(`${basePainel}/api/sessao`)).json()).estado.vitoria, false);
 });
@@ -367,7 +367,7 @@ test("apagar mapa recusa o que qualquer preset ainda usa, não só o ativo", asy
 
   await salvarMapa({ ...modelo, mapaId: "mapa-so-do-teste", nome: "Só do teste" });
 
-  const solto = await fetch(`${basePainel}/api/mapas/mapa-so-do-teste`, { method: "DELETE" });
+  const solto = await fetch(`${basePainel}/api/mapas/mapa-so-do-teste`, { method: "DELETE", headers: json });
   assert.equal(solto.status, 200, "mapa que ninguém usa tem que sair");
 
   // E o que está preso a um preset resiste.
@@ -377,7 +377,7 @@ test("apagar mapa recusa o que qualquer preset ainda usa, não só o ativo", asy
     body: JSON.stringify({ nome: "Segura o mapa", modalidade: "escalada", slots: [], mapaId: "mapa-preso" }),
   });
 
-  const preso = await fetch(`${basePainel}/api/mapas/mapa-preso`, { method: "DELETE" });
+  const preso = await fetch(`${basePainel}/api/mapas/mapa-preso`, { method: "DELETE", headers: json });
   const corpo = await preso.json();
   assert.equal(preso.status, 409);
   assert.equal(corpo.erro, "mapa_em_uso");
@@ -388,5 +388,5 @@ test("apagar mapa recusa o que qualquer preset ainda usa, não só o ativo", asy
     method: "PUT", headers: json,
     body: JSON.stringify({ nome: "Segura o mapa", modalidade: "escalada", slots: [] }),
   });
-  await fetch(`${basePainel}/api/mapas/mapa-preso`, { method: "DELETE" });
+  await fetch(`${basePainel}/api/mapas/mapa-preso`, { method: "DELETE", headers: json });
 });
