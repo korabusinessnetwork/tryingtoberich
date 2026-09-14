@@ -1,0 +1,70 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.11.2
+rules: []
+fingerprints:
+- hash: sha256:98ea4ce6a173f0d211527441f800d08be265a8f81f407a3961c1c4c733b5de56
+  rule_id: PE3
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:7aadd7fa5fe7a3f45b4c2a5f10d4f8e10015a508c5cde8af7308d2d21efdeb8d
+  rule_id: PE3
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:9ac5d93c504fe106337b0611dd2e528657a93880c0461b146d59dff911fd3239
+  rule_id: TM1
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:6b8a0a18f63583cf4af3a4b903f420e26f44a218689f902fb98627f063713823
+  rule_id: TM1
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:39d698142a6b9b687739e1d2047530028951ed57a39c039ad01a10714e23ff4b
+  rule_id: TM1
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:dd69ec46bb02105a8bf7080fd52ed93026a38e74b1fa80f3ac9336865f2af9c0
+  rule_id: TM2
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:198c21979b2c701bbb08db8993d5d958b61d90ceb7bfc50b0d530fb065d04c84
+  rule_id: RA2
+  file: README.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'
+- hash: sha256:a5d5236995b41a2b56b2512ae07bc97039d79ebee3ac8dce5f99f1a52e29734b
+  rule_id: AE4
+  file: SKILL.md
+  reason: 'Falso positivo revisado em 2026-09-14: a skill e um guia de seguranca em
+    markdown e os padroes casam com os exemplos dela (rm -rf / em tabela de injecao
+    em nome de arquivo, /etc/passwd em exemplo de ZIP slip, ''access tokens'' em paragrafo
+    sobre revogacao). Sem script executavel, sem allowed-tools, sem unicode invisivel.
+    Ver ADR-014.'

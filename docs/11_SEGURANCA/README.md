@@ -68,20 +68,24 @@ dentro do jogo. Manter assim.
 As cinco camadas acima falam do que o **código** precisa ter. Esta fala do que o
 **agente que escreve o código** tem em volta dele. Ver ADR-014.
 
-Três ferramentas, todas gratuitas e sem consumo de token por execução:
+Três ferramentas, nenhuma delas gerando cobrança nova:
 
 - **`security-guidance`** (Anthropic, escopo de usuário): revisa a mudança que o
   próprio agente acabou de fazer, em três pontos — regex no edit, review do diff
   no fim do turno, review agêntico no commit. Kill switch: `SECURITY_GUIDANCE_DISABLE=1`.
+  **Consome cota do plano**: o review chama `api.anthropic.com` com o token da
+  assinatura, e o modelo padrão é `claude-opus-4-7`. Não chega fatura nova.
+  `SECURITY_REVIEW_MODEL` troca o modelo; `SG_DUAL_OR` dobraria o custo e fica
+  desligado. Ver ADR-014.
 - **`SkillSpector`** (NVIDIA, modo estático): portão obrigatório antes de
   qualquer `/plugin install` ou `git clone` de skill que não seja da Anthropic.
   Procura prompt injection, exfiltração e supply chain.
 - **`VibeSec-Skill`** (comunidade, em `.claude/skills/vibesec`): contexto de
   código seguro para o agente — IDOR, XSS, SSRF, injeção, JWT, mass assignment.
 
-Fora da camada de propósito, por consumirem token de verdade a cada execução:
-`claude-security`, `strix` e os plugins da `trailofbits/skills`. Entram por
-decisão do dono, em ADR próprio. Ver `memory/restrictions.md`.
+Fora da camada de propósito, por exigirem chave própria, Docker ou fatura
+separada: `claude-security`, `strix` e os plugins da `trailofbits/skills`.
+Entram por decisão do dono, em ADR próprio. Ver `memory/restrictions.md`.
 
 ### Limite conhecido
 Nenhuma das três valida **isolamento entre tenants**. Elas pegam injeção, XSS,
@@ -93,14 +97,32 @@ então a falha não existe ainda. Ela nasce na Fase 3. A checagem de isolamento 
 **manual e obrigatória**, e ferramenta nenhuma substitui esse teste.
 
 ### Estado da instalação
-- [x] `security-guidance` instalado em escopo de usuário e ativo
-- [ ] `SkillSpector` instalado (`uv tool install git+https://github.com/NVIDIA/skillspector.git`)
-- [ ] `VibeSec-Skill` clonado em `.claude/skills/vibesec`
+- [x] `security-guidance` 2.0.8 em escopo de usuário, ativo, 5 hooks
+- [x] `SkillSpector` 2.11.2 instalado via `uv tool install`
+- [x] `VibeSec-Skill` em `.claude/skills/vibesec`, versionado com o projeto
 
-Enquanto os dois últimos estiverem pendentes, a regra do portão continua valendo
-por processo: nenhuma skill de terceiro entra neste projeto até haver varredura
-limpa. Hoje `.claude/skills/` está vazio e a única marketplace configurada é a
-oficial da Anthropic.
+### Como rodar o portão
+
+```
+skillspector scan <pasta-da-skill> --no-llm
+```
+
+Sem `--no-llm` ele tenta o estágio semântico, que precisa de chave de LLM e só
+vale quando o estático levantar algo ambíguo.
+
+Para a skill que já está aqui, passe o baseline, senão os 8 falso positivo já
+revisados voltam a aparecer:
+
+```
+skillspector scan .claude/skills/vibesec --no-llm \
+  --baseline .claude/skills/vibesec/.skillspector-baseline.yaml
+```
+
+**Score não é veredito.** As duas primeiras varreduras deste projeto deram
+`CRITICAL / DO_NOT_INSTALL`, e as duas eram falso positivo: ferramenta que
+procura padrão de ataque, apontada para documentação sobre ataque, casa com os
+exemplos dela. Quem decide é a leitura do achado. O detalhe das duas está no
+ADR-014.
 
 ## Checklist de definição de pronto
 - [x] Túnel publica só `/jogo`, verificado com requisição a `/api/presets` na
@@ -116,4 +138,4 @@ oficial da Anthropic.
 - [ ] Sessão encerrada some com o detalhe por evento
 - [ ] Nome de doador sanitizado antes de virar texto no jogo
 - [ ] `fs` não aparece fora de `bridge/src/repos/`
-- [ ] Nenhuma skill de terceiro em `.claude/` sem `skillspector scan` limpo (ADR-014)
+- [x] Nenhuma skill de terceiro em `.claude/` sem `skillspector scan` lido, com falso positivo suprimido em baseline versionado (ADR-014)

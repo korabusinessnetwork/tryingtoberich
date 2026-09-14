@@ -25,8 +25,8 @@ olhar é dar essa superfície de graça.
 
 ## Decisão
 
-**A camada de segurança do agente tem três peças, e só entra nela o que é
-gratuito e roda sozinho.**
+**A camada de segurança do agente tem três peças, e só entra nela o que não
+gera cobrança nova.**
 
 | # | Ferramenta | Origem | Papel |
 |---|---|---|---|
@@ -36,6 +36,23 @@ gratuito e roda sozinho.**
 
 `security-guidance` é instalado em **escopo de usuário**, para valer em todo
 projeto sem reinstalar. Kill switch por projeto: `SECURITY_GUIDANCE_DISABLE=1`.
+
+### Correção sobre custo, medida na instalação
+
+O material de origem diz que o `security-guidance` é "grátis em todos os planos".
+Isso é verdade sobre **cobrança**, não sobre **consumo**. Lendo o código
+instalado (`hooks/llm.py`): o review do diff e o review de commit fazem chamada
+real a `api.anthropic.com`, autenticada com o token da assinatura, e o modelo
+padrão é `claude-opus-4-7`. Não chega fatura nova; consome cota do plano.
+
+Isso não muda a decisão, e muda o que está escrito: das três peças, só o
+SkillSpector no modo estático e o VibeSec são consumo zero. A diferença para as
+ferramentas que ficaram de fora continua de pé — `strix` e `claude-security`
+exigem chave própria ou Docker e geram custo **novo**, fora do plano.
+
+Duas alavancas ficam registradas para quando a cota apertar:
+`SECURITY_REVIEW_MODEL` troca o modelo do review, e `SG_DUAL_OR` (padrão
+desligado) dobraria o custo por review se fosse ligado. Manter desligado.
 
 ## Alternativas consideradas
 
@@ -70,9 +87,11 @@ que vaza para o log, payload que ninguém validou, skill de terceiro que lê o
   antes.** Vira restrição permanente, registrada em `memory/restrictions.md`.
   Plugin publicado pela própria Anthropic na marketplace oficial é a única
   exceção.
-- A camada é gratuita em todos os planos. Nenhum item dela consome token por
-  execução, o que a mantém dentro do bootstrap gratuito.
-- Ferramenta que custa token por varredura é decisão do dono, nunca default.
+- A camada não gera cobrança nova, o que a mantém dentro do bootstrap gratuito.
+  O `security-guidance` consome cota do plano por review; os outros dois são
+  consumo zero.
+- Ferramenta que exija chave própria, Docker ou fatura separada é decisão do
+  dono, nunca default.
 
 ## O que isto NÃO cobre
 
@@ -86,6 +105,32 @@ todo modelo persistido (ADR-003) justamente porque a Fase 3 é multi-tenant, e �
 lá que a falha apareceria. A checagem de isolamento continua **manual e
 obrigatória**, conforme `docs/11_SEGURANCA`. Ferramenta não substitui esse
 teste.
+
+## O que a primeira varredura devolveu
+
+O SkillSpector foi usado no que ele existe para fazer, antes de o VibeSec entrar
+no projeto. As duas varreduras estáticas deram `DO_NOT_INSTALL`, e as duas são
+**falso positivo pela mesma razão**: ferramenta que procura padrão de ataque,
+apontada para documentação sobre ataque, casa com os exemplos.
+
+| Alvo | Score | Achados | Leitura |
+|---|---|---|---|
+| `VibeSec-Skill` | 95, CRITICAL | 6 HIGH, 2 MEDIUM | `rm -rf /` numa tabela sobre injeção em nome de arquivo, `/etc/passwd` num exemplo de ZIP slip, "access tokens" num parágrafo sobre revogação |
+| `security-guidance` 2.0.8 | 100, CRITICAL | 1 CRITICAL, 24 HIGH, 54 MEDIUM | 81 dos 82 são o corpus de regras do próprio plugin e as fixtures de teste. O CRITICAL é a chamada de rede de `hooks/llm.py`, que vai para `ANTHROPIC_BASE_URL` (padrão `api.anthropic.com`) e é a função do plugin |
+
+O VibeSec foi conferido à mão antes de entrar: três arquivos, nenhum script
+executável, nenhum `allowed-tools`, nenhum caractere unicode invisível, e as
+únicas URLs são exemplos de bypass de SSRF dentro do texto.
+
+Os 8 achados do VibeSec estão suprimidos em
+`.claude/skills/vibesec/.skillspector-baseline.yaml`, com o motivo escrito
+dentro do arquivo. O baseline é versionado de propósito: ele faz a próxima
+varredura reportar só o que for **novo**, que é o caso que importa quando a
+skill for atualizada.
+
+**A lição fica:** score de varredura estática não é veredito. Ele é o começo da
+leitura, e o que decide é olhar o achado. Reprovar por score seria o mesmo erro
+que aprovar sem ler.
 
 ## Referências
 

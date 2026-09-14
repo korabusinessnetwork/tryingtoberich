@@ -56,6 +56,12 @@ código seguro do agente, em `.claude/skills/vibesec`.
 Nada disso toca o caminho crítico do presente: é revisão de quem escreve, não
 de quem roda. Ver ADR-014 e `docs/11_SEGURANCA`, camada 6.
 
+Toda skill de terceiro passa pelo `skillspector scan --no-llm` antes de entrar,
+e o score dele não reprova sozinho: as duas primeiras varreduras deram
+`CRITICAL` por casarem com os exemplos de ataque da própria documentação. Lê-se
+o achado, e falso positivo revisado vai para um baseline versionado ao lado da
+skill, com o motivo dentro.
+
 Limite que a ferramenta não cobre: isolamento entre tenants. O `streamerId` já
 existe em todo modelo persistido (ADR-003) e a Fase 3 é multi-tenant. Esse teste
 é manual e obrigatório.

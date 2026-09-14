@@ -40,11 +40,21 @@
   scan` limpo antes.** Vale para `/plugin install`, para `git clone` dentro de
   `.claude/skills/` e para marketplace nova. Plugin publicado pela própria
   Anthropic na marketplace oficial é a única exceção. Ver ADR-014.
-- Modo estático do SkillSpector apenas. O estágio de análise semântica exige
-  chave de LLM e só é usado quando o estático levantar algo ambíguo.
-- **Fora da camada por consumirem token por execução:** `claude-security`,
-  `strix` e os plugins da `trailofbits/skills`. São decisão do dono, em ADR
-  próprio, e o gatilho natural é a auditoria antes do primeiro cliente pagante.
+- Modo estático do SkillSpector apenas (`--no-llm`). O estágio de análise
+  semântica exige chave de LLM e só é usado quando o estático levantar algo
+  ambíguo.
+- **Score de varredura não reprova sozinho.** Toda varredura das duas primeiras
+  skills deu `CRITICAL / DO_NOT_INSTALL` por falso positivo: a ferramenta casa
+  com os exemplos de ataque que a documentação de segurança contém. O achado se
+  lê antes de decidir, e falso positivo revisado vai para o baseline versionado
+  com o motivo escrito. Ver ADR-014.
+- O `security-guidance` **consome cota do plano** por review (chama
+  `api.anthropic.com`, modelo padrão `claude-opus-4-7`). Não gera fatura nova.
+  `SG_DUAL_OR` dobraria o custo por review e fica desligado.
+- **Fora da camada por exigirem chave própria, Docker ou fatura separada:**
+  `claude-security`, `strix` e os plugins da `trailofbits/skills`. São decisão
+  do dono, em ADR próprio, e o gatilho natural é a auditoria antes do primeiro
+  cliente pagante.
 
 ## Restrições legais
 - **LGPD:** o sistema recebe nickname e evento de presente de terceiros. Retenção
